@@ -847,6 +847,7 @@ pub enum WorldStateTimerOp {
     BatchWriterEncode,
     BatchWriterCommit,
     BatchWriterBackpressureBlock,
+    BatchWriterDurableFlush,
     PropertyListAppendClassify,
     PropertyValueRollupEncode,
     PropertyValueReconstruct,
