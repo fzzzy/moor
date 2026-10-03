@@ -571,6 +571,7 @@ pub fn run(runtime_config: DaemonRuntimeConfig, runtime: DaemonRuntime) -> Resul
         trace_output_path,
     } = runtime_config;
     config.validate().map_err(|e| eyre!(e))?;
+    let persistence = config.storage.persistence_config()?;
     let DaemonKeys {
         private_key,
         public_key,
@@ -657,7 +658,7 @@ pub fn run(runtime_config: DaemonRuntimeConfig, runtime: DaemonRuntime) -> Resul
     let (database, freshly_made) = TxDB::try_open(
         storage,
         config.database.clone().unwrap_or_default(),
-        moor_db::PersistenceConfig::default(),
+        persistence,
     )?;
     let database = Box::new(database);
     info!("Opened world database");
