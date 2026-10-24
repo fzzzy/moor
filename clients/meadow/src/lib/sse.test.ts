@@ -197,6 +197,21 @@ it("retains exact 64-bit sequence values in resume, delivery, and ACK", async ()
     expect(f.requests[1]).toContain(`after=${start}`);
 });
 
+it("delivers ephemeral events without moving the cursor or acknowledging them", async () => {
+    const f = fixture();
+    const received: Uint8Array[] = [];
+    f.transport.onmessage = event => {
+        received.push(new Uint8Array(event.data));
+    };
+    await vi.waitFor(() => expect(f.transport.readyState).toBe(1));
+    const ephemeral = eventBytes(0n);
+    f.frame(`event: ephemeral\ndata: ${btoa(String.fromCharCode(...ephemeral))}\n\n`);
+    f.deliver(1n);
+    await vi.waitFor(() => expect(f.acks).toEqual(["1"]));
+    expect(received).toEqual([ephemeral, eventBytes(1n)]);
+    expect(f.resume.sequence).toBe(1n);
+});
+
 it("rejects gaps without ACK and requests fresh-session recovery", async () => {
     const f = fixture();
     const closed = vi.fn();

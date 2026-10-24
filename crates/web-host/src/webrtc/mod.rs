@@ -39,8 +39,8 @@ use serde_derive::{Deserialize, Serialize};
 use tracing::info;
 
 use self::endpoint::EndpointHandle;
-pub(crate) use self::endpoint::MessageKey;
 pub(crate) use self::peer::{ChannelMessages, WebRtcPeer};
+use crate::latest_queue::MessageKey;
 
 /// Configuration for WebRTC data channel support.
 #[derive(Debug, Clone, Serialize, Deserialize)]

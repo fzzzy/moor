@@ -93,7 +93,7 @@ struct Harness {
     sequence: u64,
     session: tokio::task::JoinHandle<()>,
     /// What the session sent to the client.
-    _sent: mpsc::UnboundedReceiver<Message>,
+    sent: mpsc::UnboundedReceiver<Message>,
 }
 
 impl Harness {
@@ -138,7 +138,7 @@ impl Harness {
             events,
             sequence: 0,
             session,
-            _sent: sent,
+            sent,
         }
     }
 
@@ -171,6 +171,21 @@ impl Harness {
                 },
             })
             .unwrap();
+    }
+
+    /// The next binary message sent to the client, skipping control messages.
+    async fn next_sent(&mut self) -> Vec<u8> {
+        loop {
+            let message = tokio::time::timeout(Duration::from_secs(60), self.sent.recv())
+                .await
+                .expect("nothing was sent to the client")
+                .unwrap();
+            if let Message::Binary(data) = message
+                && data.len() > 1
+            {
+                return data.to_vec();
+            }
+        }
     }
 
     async fn close(mut self) {
@@ -276,5 +291,29 @@ async fn a_full_command_queue_stops_reading_the_socket() {
         harness.next_request().await,
         ClientRequest::ClientData { .. }
     ));
+    harness.close().await;
+}
+
+#[tokio::test]
+async fn ephemeral_events_reach_the_websocket() {
+    use moor_common::tasks::NarrativeEvent;
+    use moor_runtime_api::api_codec::encode_client_event_bytes;
+    use moor_var::Symbol;
+    let mut harness = Harness::start();
+    // The credentials update comes first.
+    harness.next_sent().await;
+    let message = ClientEventMessage::unsequenced(ClientEvent::Narrative {
+        player: Obj::mk_id(1),
+        event: NarrativeEvent::data(
+            v_int(0),
+            Symbol::mk("game"),
+            Symbol::mk("position"),
+            v_int(3),
+            true,
+        ),
+    });
+    let expected = encode_client_event_bytes(&message).unwrap();
+    harness.events.send(message).unwrap();
+    assert_eq!(harness.next_sent().await, expected);
     harness.close().await;
 }

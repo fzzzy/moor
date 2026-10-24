@@ -151,6 +151,10 @@ impl ClientEventSubscription for RecoveringClientEventSubscription {
                     Ok(Err(error)) => return Err(error),
                 };
 
+            // Ephemeral events are outside the queue: no gap to detect, nothing to replay.
+            if !live.is_sequenced() {
+                return Ok(live);
+            }
             if live.sequence <= self.last_delivered {
                 continue;
             }
@@ -189,6 +193,7 @@ mod tests {
     };
 
     use super::RecoveringClientEventSubscription;
+    use crate::api::UNSEQUENCED;
 
     struct TestRuntime {
         replies: Mutex<VecDeque<ClientReply>>,
@@ -298,5 +303,28 @@ mod tests {
         assert_eq!(subscription.recv_client_event().await.unwrap().sequence, 1);
         assert_eq!(subscription.recv_client_event().await.unwrap().sequence, 2);
         assert_eq!(*runtime.acknowledged.lock().unwrap(), vec![0, 0]);
+    }
+
+    #[tokio::test]
+    async fn unsequenced_events_pass_through_without_replay() {
+        let runtime = Arc::new(TestRuntime {
+            replies: Mutex::new(VecDeque::from([ClientReply::ClientEvents {
+                events: vec![],
+                latest_sequence: 4,
+            }])),
+            acknowledged: Mutex::new(Vec::new()),
+        });
+        let mut subscription = subscription(
+            runtime.clone(),
+            vec![Ok(message(UNSEQUENCED)), Ok(message(5))],
+        );
+
+        assert_eq!(
+            subscription.recv_client_event().await.unwrap().sequence,
+            UNSEQUENCED
+        );
+        assert_eq!(subscription.recv_client_event().await.unwrap().sequence, 5);
+        // Only the initial synchronization asked the daemon for events.
+        assert_eq!(*runtime.acknowledged.lock().unwrap(), vec![0]);
     }
 }

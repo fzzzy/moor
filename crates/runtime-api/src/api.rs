@@ -271,8 +271,29 @@ pub struct HistoryResponse {
 /// A decoded per-client event.
 #[derive(Debug, Clone)]
 pub struct ClientEventMessage {
+    /// Position in the client's delivery queue, or [`UNSEQUENCED`] for an ephemeral event,
+    /// which is not queued, acknowledged or replayed.
     pub sequence: u64,
     pub event: ClientEvent,
+}
+
+/// The sequence of an event outside the delivery queue. Queued events start at 1.
+pub const UNSEQUENCED: u64 = 0;
+
+impl ClientEventMessage {
+    /// An ephemeral event, outside the delivery queue.
+    #[must_use]
+    pub fn unsequenced(event: ClientEvent) -> Self {
+        Self {
+            sequence: UNSEQUENCED,
+            event,
+        }
+    }
+
+    #[must_use]
+    pub fn is_sequenced(&self) -> bool {
+        self.sequence != UNSEQUENCED
+    }
 }
 
 /// Operations on the daemon-owned delivery queue. Reads never acknowledge delivery.
@@ -346,6 +367,14 @@ pub enum ClientEvent {
         client_id: Uuid,
         client_token: ClientToken,
     },
+}
+
+impl ClientEvent {
+    /// Whether this is an ephemeral data event, delivered best-effort outside the queue.
+    #[must_use]
+    pub fn is_ephemeral(&self) -> bool {
+        matches!(self, ClientEvent::Narrative { event, .. } if event.is_ephemeral())
+    }
 }
 
 /// A decoded broadcast event.

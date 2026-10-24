@@ -14,6 +14,7 @@
 //! Runtime assembly for the web host.
 
 pub mod host;
+pub(crate) mod latest_queue;
 pub mod listeners;
 pub mod routes;
 pub mod webrtc;

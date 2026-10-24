@@ -19,13 +19,12 @@
 //! it yields a timeout; [`Peer::drain`] does that after each one.
 
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     net::{IpAddr, SocketAddr},
     sync::{Arc, Mutex},
     time::Instant,
 };
 
-use moor_var::Symbol;
 use str0m::{
     Candidate, Event, IceConnectionState, Input, Output, Rtc,
     change::SdpOffer,
@@ -39,6 +38,7 @@ use tokio::{
 use tracing::{debug, info, warn};
 
 use crate::host::client_data::WireFormat;
+use crate::latest_queue::{LatestQueue, MessageKey};
 
 /// Commands queued for the endpoint. Sends beyond this are dropped, and their events
 /// fall back to the WebSocket.
@@ -52,9 +52,6 @@ const CHANNEL_LOW_WATER: usize = 16 * 1024;
 
 /// Client messages waiting for the session. More are dropped until it catches up.
 const INBOUND_CAPACITY: usize = 256;
-
-/// What a channel message supersedes: an older undelivered one with the same namespace and kind.
-pub(crate) type MessageKey = (Symbol, Symbol);
 
 /// Large enough for any datagram on a typical path MTU.
 const RECEIVE_BUFFER: usize = 2048;
@@ -443,44 +440,6 @@ impl Peer {
             }
             _ => {}
         }
-    }
-}
-
-/// Messages waiting to be written, in arrival order, with at most one per key: pushing a
-/// message whose key is already waiting replaces that message's data in place.
-#[derive(Default)]
-pub(super) struct LatestQueue {
-    messages: VecDeque<(MessageKey, Vec<u8>)>,
-}
-
-impl LatestQueue {
-    pub(super) fn push(&mut self, key: MessageKey, data: Vec<u8>) {
-        match self
-            .messages
-            .iter_mut()
-            .find(|(waiting, _)| *waiting == key)
-        {
-            Some((_, waiting)) => *waiting = data,
-            None => self.messages.push_back((key, data)),
-        }
-    }
-
-    pub(super) fn pop(&mut self) -> Option<(MessageKey, Vec<u8>)> {
-        self.messages.pop_front()
-    }
-
-    /// Put back a message that could not be written, ahead of the rest.
-    pub(super) fn unpop(&mut self, key: MessageKey, data: Vec<u8>) {
-        self.messages.push_front((key, data));
-    }
-
-    fn clear(&mut self) {
-        self.messages.clear();
-    }
-
-    #[cfg(test)]
-    pub(super) fn len(&self) -> usize {
-        self.messages.len()
     }
 }
 

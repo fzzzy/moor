@@ -19,8 +19,9 @@ use str0m::{Candidate, change::SdpOffer};
 use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
-use super::endpoint::{Answered, Command, EndpointHandle, MessageKey, PeerId, PeerLink};
+use super::endpoint::{Answered, Command, EndpointHandle, PeerId, PeerLink};
 use crate::host::client_data::WireFormat;
+use crate::latest_queue::MessageKey;
 
 /// One client's WebRTC connection. Dropping it removes the peer from the endpoint.
 pub(crate) struct WebRtcPeer {

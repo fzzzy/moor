@@ -29,7 +29,7 @@ use crate::host::client_data::WireFormat;
 
 const PATIENCE: Duration = Duration::from_secs(10);
 
-fn key() -> endpoint::MessageKey {
+fn key() -> crate::latest_queue::MessageKey {
     (
         moor_var::Symbol::mk("game"),
         moor_var::Symbol::mk("positions"),
@@ -371,23 +371,6 @@ fn advertised_ips_prefer_configuration_then_a_concrete_listen_address() {
         advertised_ips(&concrete).unwrap(),
         vec!["192.0.2.10".parse::<IpAddr>().unwrap()]
     );
-}
-
-#[test]
-fn latest_queue_replaces_in_place_and_puts_back_first() {
-    use super::endpoint::LatestQueue;
-    let positions = key();
-    let score = (moor_var::Symbol::mk("game"), moor_var::Symbol::mk("score"));
-    let mut queue = LatestQueue::default();
-    queue.push(positions, b"p1".to_vec());
-    queue.push(score, b"s1".to_vec());
-    queue.push(positions, b"p2".to_vec());
-    assert_eq!(queue.len(), 2);
-    assert_eq!(queue.pop(), Some((positions, b"p2".to_vec())));
-    queue.unpop(positions, b"p2".to_vec());
-    assert_eq!(queue.pop(), Some((positions, b"p2".to_vec())));
-    assert_eq!(queue.pop(), Some((score, b"s1".to_vec())));
-    assert_eq!(queue.pop(), None);
 }
 
 #[tokio::test]

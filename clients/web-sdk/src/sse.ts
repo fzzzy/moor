@@ -93,6 +93,13 @@ function uuidString(bytes: Uint8Array | null | undefined): string {
     );
 }
 
+function base64Bytes(data: string): Uint8Array<ArrayBuffer> {
+    const decoded = atob(data);
+    const bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    return bytes;
+}
+
 class ExpiredStream extends Error {}
 class UnauthorizedStream extends Error {}
 
@@ -203,10 +210,14 @@ export class SseSessionTransport implements SessionTransport {
             if (frame.event === "retry") throw new Error("Daemon unavailable");
             this.lastNotificationAt = Date.now();
             if (frame.event === "heartbeat") continue;
+            if (frame.event === "ephemeral") {
+                // Ephemeral events are outside the delivery queue: no cursor or acknowledgement.
+                if (!this.onmessage) throw new Error("No event handler is installed");
+                await this.onmessage(new MessageEvent("message", { data: base64Bytes(frame.data).buffer }));
+                continue;
+            }
             if (frame.event !== "delivery") throw new Error("Unexpected SSE event");
-            const decoded = atob(frame.data);
-            const bytes = new Uint8Array(decoded.length);
-            for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+            const bytes = base64Bytes(frame.data);
             const event = ClientEvent.getRootAsClientEvent(new flatbuffers.ByteBuffer(bytes));
             const sequence = event.sequence();
             if (frame.id !== `${this.resume.streamId}:${sequence}`) throw new Error("Invalid stream event ID");

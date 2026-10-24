@@ -55,7 +55,8 @@ use moor_kernel::{
 use crate::runtime::RuntimeApi;
 use moor_runtime_api::{
     AuthToken, ClientToken, HostType, RpcMessageError,
-    api::{BroadcastEvent, ClientEvent, HostBroadcastEvent},
+    api::{BroadcastEvent, ClientEvent, ClientEventMessage, HostBroadcastEvent},
+    api_codec::encode_client_event_bytes,
 };
 use moor_var::{Obj, SYSTEM_OBJECT, Symbol, Var};
 use rusty_paseto::prelude::Key;
@@ -528,6 +529,15 @@ impl RpcMessageHandler {
     }
 
     fn publish_client_event(&self, client_id: Uuid, event: ClientEvent) -> Result<(), Error> {
+        if event.is_ephemeral() {
+            // Ephemeral events bypass the delivery queue: they are never retained, replayed
+            // or counted against the backlog, and a client that misses one misses it.
+            let message = ClientEventMessage::unsequenced(event);
+            let encoded = encode_client_event_bytes(&message)?;
+            return self
+                .transport
+                .publish_client_event(client_id, message, encoded);
+        }
         let (message, encoded) = match self.client_events.push(client_id, event) {
             Ok(published) => published,
             Err(error @ ClientEventBufferError::BacklogExceeded { .. }) => {

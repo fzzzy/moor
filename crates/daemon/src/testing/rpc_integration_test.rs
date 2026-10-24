@@ -162,6 +162,74 @@ mod tests {
         assert_eq!(after.acknowledged_sequence, 1);
     }
 
+    #[test]
+    fn ephemeral_events_bypass_the_delivery_queue() {
+        use crate::rpc::SessionActions;
+        use moor_common::tasks::NarrativeEvent;
+        use moor_runtime_api::api::{ClientReply, ClientRequest};
+        use moor_var::v_int;
+        let env = setup_test_environment();
+        let client = Uuid::new_v4();
+        let (token, connection) = establish_connection(&env, client, "127.0.0.1", 9878);
+        let data = |kind: &str, ephemeral| {
+            Box::new(NarrativeEvent::data(
+                v_int(0),
+                Symbol::mk("game"),
+                Symbol::mk(kind),
+                v_int(1),
+                ephemeral,
+            ))
+        };
+        env.message_handler
+            .handle_session_event(
+                &env.scheduler_client,
+                SessionActions::PublishNarrativeEvents(vec![
+                    (connection, data("position", true)),
+                    (connection, data("score", false)),
+                ]),
+            )
+            .unwrap();
+        let kinds = |events: Vec<ClientEvent>| -> Vec<String> {
+            events
+                .into_iter()
+                .filter_map(|event| match event {
+                    ClientEvent::Narrative { event, .. } => match event.event {
+                        moor_common::tasks::Event::Data { kind, .. } => Some(kind.as_string()),
+                        _ => None,
+                    },
+                    _ => None,
+                })
+                .collect()
+        };
+        // Both reach the client's transport.
+        let published = env.transport.get_client_events();
+        assert_eq!(
+            kinds(published.into_iter().map(|(_, event)| event).collect()),
+            ["position", "score"]
+        );
+        // Only the durable event is queued for acknowledgement and replay.
+        let ClientReply::ClientEvents { events, .. } = env
+            .message_handler
+            .handle_client_request(
+                env.scheduler_client.clone(),
+                client,
+                ClientRequest::ReplayClientEvents {
+                    client_token: token,
+                    after_sequence: 0,
+                    limit: 64,
+                },
+            )
+            .unwrap()
+        else {
+            panic!("expected client events")
+        };
+        assert!(events.iter().all(|event| event.sequence > 0));
+        assert_eq!(
+            kinds(events.into_iter().map(|event| event.event).collect()),
+            ["score"]
+        );
+    }
+
     fn systemtime_to_nanos(time: SystemTime) -> u64 {
         time.duration_since(UNIX_EPOCH)
             .expect("Time went backwards")

@@ -34,6 +34,7 @@ use moor_runtime_api::{
         ClientEventSubscription, ClientReply, ClientRequest, EventStreamOperation,
         EventStreamRequest, EventStreamState, InvocationMode, RuntimeClient,
     },
+    api_codec::encode_client_event_bytes,
 };
 use moor_schema::{convert::var_from_flatbuffer_ref, rpc as moor_rpc, var::VarRef};
 use moor_var::v_str;
@@ -41,6 +42,7 @@ use planus::ReadAsRoot;
 use serde::Deserialize;
 use serde_json::json;
 use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
+use tracing::warn;
 use uuid::Uuid;
 
 fn rpc_status(error: RpcError) -> StatusCode {
@@ -259,11 +261,29 @@ impl DeliveryStream {
                 // Notifications only wake delivery; authenticated reads supply the payloads.
                 // The immediate first tick closes the subscribe race. Later ticks recover loss.
                 let notification = tokio::select! {
-                    event = self.subscription.recv_client_event() => event.map(|event| Some(event.sequence)),
+                    event = self.subscription.recv_client_event() => event.map(Some),
                     _ = self.tick.tick() => Ok(None),
                 };
                 match notification {
-                    Ok(Some(sequence)) if sequence <= self.cursor => continue,
+                    // Ephemeral events are not queued, so they arrive whole here. They carry
+                    // no id: they are never acknowledged or resumed from.
+                    Ok(Some(message)) if !message.is_sequenced() => {
+                        if !message.event.is_ephemeral() {
+                            continue;
+                        }
+                        match encode_client_event_bytes(&message) {
+                            Ok(bytes) => {
+                                return Event::default()
+                                    .event("ephemeral")
+                                    .data(STANDARD.encode(&bytes));
+                            }
+                            Err(e) => {
+                                warn!("Failed to encode an ephemeral event: {e}");
+                                continue;
+                            }
+                        }
+                    }
+                    Ok(Some(message)) if message.sequence <= self.cursor => continue,
                     Ok(_) | Err(RpcError::Recoverable(_)) => {}
                     Err(_) => return self.failure(StatusCode::BAD_GATEWAY),
                 }
@@ -464,6 +484,8 @@ mod tests {
         requests: Mutex<Vec<EventStreamRequest>>,
         invocations: Mutex<Vec<ClientRequest>>,
         events: Mutex<Vec<Arc<[u8]>>>,
+        /// What the next notification subscription receives.
+        notifications: Mutex<std::collections::VecDeque<moor_runtime_api::api::ClientEventMessage>>,
         denied: bool,
         subscription_closed: bool,
     }
@@ -514,16 +536,22 @@ mod tests {
             panic!("unexpected host request")
         }
     }
-    struct Notifications(bool);
+    struct Notifications {
+        closed: bool,
+        queued: std::collections::VecDeque<moor_runtime_api::api::ClientEventMessage>,
+    }
     #[async_trait]
     impl ClientEventSubscription for Notifications {
         async fn recv_client_event(
             &mut self,
         ) -> Result<moor_runtime_api::api::ClientEventMessage, RpcError> {
-            if self.0 {
+            if self.closed {
                 return Err(RpcError::Daemon(RpcMessageError::NoConnection));
             }
-            std::future::pending().await
+            match self.queued.pop_front() {
+                Some(message) => Ok(message),
+                None => std::future::pending().await,
+            }
         }
     }
     struct Services(Arc<Runtime>);
@@ -543,7 +571,10 @@ mod tests {
             _: Uuid,
         ) -> Result<Box<dyn ClientEventSubscription>, RpcError> {
             assert!(!self.0.denied, "unauthenticated subscription allocation");
-            Ok(Box::new(Notifications(self.0.subscription_closed)))
+            Ok(Box::new(Notifications {
+                closed: self.0.subscription_closed,
+                queued: std::mem::take(&mut *self.0.notifications.lock().unwrap()),
+            }))
         }
         fn host_events(&self) -> Result<Box<dyn HostEventSubscription>, RpcError> {
             panic!("unexpected subscription")
@@ -583,6 +614,7 @@ mod tests {
             requests: Mutex::new(vec![]),
             invocations: Mutex::new(vec![]),
             events: Mutex::new(vec![]),
+            notifications: Mutex::default(),
             denied: false,
             subscription_closed: false,
         })
@@ -717,6 +749,45 @@ mod tests {
                 .all(|r| r.operation == EventStreamOperation::Read)
         );
         drop(body);
+    }
+
+    #[tokio::test]
+    async fn ephemeral_events_stream_without_an_id() {
+        use moor_runtime_api::api::{ClientEvent, ClientEventMessage};
+        let runtime = runtime();
+        let message = ClientEventMessage::unsequenced(ClientEvent::Narrative {
+            player: moor_var::Obj::mk_id(1),
+            event: moor_common::tasks::NarrativeEvent::data(
+                moor_var::v_int(0),
+                moor_var::Symbol::mk("game"),
+                moor_var::Symbol::mk("position"),
+                moor_var::v_int(3),
+                true,
+            ),
+        });
+        let expected = encode_client_event_bytes(&message).unwrap();
+        runtime.notifications.lock().unwrap().push_back(message);
+        let response = event_stream_handler(
+            State(host(runtime.clone())),
+            client(runtime.clone()),
+            query(runtime.id),
+        )
+        .await;
+        let mut body = response.into_body().into_data_stream();
+        // The first wake-up may be the immediate read tick's heartbeat.
+        for _ in 0..2 {
+            let frame = body.next().await.unwrap().unwrap();
+            let text = std::str::from_utf8(&frame).unwrap();
+            if text.contains("event: heartbeat") {
+                continue;
+            }
+            assert!(text.contains("event: ephemeral"), "{text}");
+            assert!(!text.contains("id:"), "{text}");
+            let data = text.lines().find_map(|l| l.strip_prefix("data: ")).unwrap();
+            assert_eq!(STANDARD.decode(data).unwrap(), expected);
+            return;
+        }
+        panic!("no ephemeral event was streamed");
     }
 
     #[tokio::test]

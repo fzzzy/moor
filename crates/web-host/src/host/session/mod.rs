@@ -13,13 +13,14 @@
 
 //! Per-client session event loop and realtime transport coordination.
 
+mod outbox;
 mod websocket;
 
 #[cfg(test)]
 mod tests;
 
 use axum::extract::ws::{Message, WebSocket};
-use futures_util::{Sink, SinkExt, Stream, StreamExt};
+use futures_util::{Sink, Stream, StreamExt};
 use moor_runtime_api::{
     AuthToken, ClientToken, HostType,
     api::{
@@ -41,6 +42,7 @@ use tokio::{select, sync::watch};
 use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 
+use self::outbox::Outbox;
 use self::websocket::{ReadEvent, read_websocket_event};
 use crate::host::actions::{action_request, is_action_frame};
 use crate::host::client_data::{self, WireFormat};
@@ -128,10 +130,10 @@ impl ClientSession {
     async fn run<W, R>(
         &mut self,
         connect_type: moor_rpc::ConnectType,
-        mut ws_sender: W,
+        ws_sender: W,
         mut ws_receiver: R,
     ) where
-        W: Sink<Message, Error = axum::Error> + Unpin,
+        W: Sink<Message, Error = axum::Error> + Unpin + Send + 'static,
         R: Stream<Item = Result<Message, axum::Error>> + Unpin,
     {
         // Send credentials at the start of every connection.
@@ -144,11 +146,9 @@ impl ClientSession {
                 return;
             }
         };
-        if let Err(e) = ws_sender
-            .send(Message::Binary(credentials_bytes.into()))
-            .await
-        {
-            error!("Failed to send credentials update: {}", e);
+        let outbox = Outbox::start(ws_sender);
+        if !outbox.send(Message::Binary(credentials_bytes.into())).await {
+            error!("Failed to send credentials update");
             return;
         }
         debug!(client_id = ?self.client_id, "Sent credentials update to client");
@@ -238,8 +238,7 @@ impl ClientSession {
                         }
                         ReadEvent::Ping(payload) => {
                             trace!("Responding to client ping with pong");
-                            if let Err(e) = ws_sender.send(Message::Pong(payload.into())).await {
-                                error!("Failed to send pong response: {}", e);
+                            if !outbox.send(Message::Pong(payload.into())).await {
                                 break;
                             }
                         }
@@ -248,7 +247,7 @@ impl ClientSession {
                             pending_heartbeat = None;
                         }
                         ReadEvent::WebRtcSignaling(data) => {
-                            if !self.handle_webrtc_signaling(&data, &mut ws_sender, &mut channel_messages, &mut channel_open).await {
+                            if !self.handle_webrtc_signaling(&data, &outbox, &mut channel_messages, &mut channel_open).await {
                                 break;
                             }
                         }
@@ -274,16 +273,14 @@ impl ClientSession {
                     // Send application-level heartbeat request
                     // Client must respond with HEARTBEAT_RESPONSE to prove JS is processing
                     trace!("Sending heartbeat request");
-                    if let Err(e) = ws_sender.send(Message::Binary(vec![HEARTBEAT_REQUEST].into())).await {
-                        error!("Failed to send heartbeat request: {}", e);
+                    if !outbox.send(Message::Binary(vec![HEARTBEAT_REQUEST].into())).await {
                         break;
                     }
                     pending_heartbeat = Some(Instant::now());
                 }
                 _ = ping_interval.tick() => {
                     trace!("Sending WebSocket ping");
-                    if let Err(e) = ws_sender.send(Message::Ping(vec![].into())).await {
-                        error!("Failed to send WebSocket ping: {}", e);
+                    if !outbox.send(Message::Ping(vec![].into())).await {
                         break;
                     }
                 }
@@ -371,8 +368,7 @@ impl ClientSession {
                             break;
                         }
                     };
-                    let channel_message = self.channel_message(&event_msg.event, &event_bytes);
-                    if !self.forward_event_bytes(event_bytes, channel_message, &mut ws_sender).await {
+                    if !self.forward_event(&event_msg.event, event_bytes, &outbox).await {
                         break;
                     }
                 }
@@ -513,7 +509,7 @@ impl ClientSession {
     async fn handle_webrtc_signaling(
         &mut self,
         data: &[u8],
-        ws_sender: &mut (impl Sink<Message, Error = axum::Error> + Unpin),
+        outbox: &Outbox,
         channel_messages: &mut Option<ChannelMessages>,
         channel_open: &mut Option<watch::Receiver<bool>>,
     ) -> bool {
@@ -544,11 +540,7 @@ impl ClientSession {
                 *channel_messages = Some(messages);
                 let answer =
                     encode_signaling_message(&SignalingMessage::Answer { sdp: answer_sdp });
-                if let Err(e) = ws_sender.send(Message::Binary(answer.into())).await {
-                    error!("Failed to send WebRTC answer: {e}");
-                    return false;
-                }
-                true
+                outbox.send(Message::Binary(answer.into())).await
             }
             SignalingMessage::IceCandidate { candidate } => {
                 if let Some(peer) = &self.webrtc_peer
@@ -617,50 +609,40 @@ impl ClientSession {
         }
     }
 
-    /// The data channel message for an event: an ephemeral data event, when the channel is
-    /// open, encoded in the channel's format. FlatBuffers channels carry the WebSocket bytes.
-    fn channel_message(
-        &self,
-        event: &ClientEvent,
-        websocket_bytes: &[u8],
-    ) -> Option<(webrtc::MessageKey, Vec<u8>)> {
-        let key = webrtc::channel_key(event)?;
+    /// The data channel message for an ephemeral event, when the channel is open, encoded
+    /// in the channel's format. FlatBuffers channels carry the WebSocket bytes.
+    fn channel_message(&self, event: &ClientEvent, websocket_bytes: &[u8]) -> Option<Vec<u8>> {
         let peer = self.webrtc_peer.as_ref().filter(|peer| peer.is_open())?;
-        let bytes = match (peer.format(), event) {
-            (WireFormat::FlatBuffers, _) => websocket_bytes.to_vec(),
+        match (peer.format(), event) {
+            (WireFormat::FlatBuffers, _) => Some(websocket_bytes.to_vec()),
             (WireFormat::Json, ClientEvent::Narrative { event, .. }) => {
-                client_data::event_json(event)?
+                client_data::event_json(event)
             }
-            (WireFormat::Json, _) => return None,
-        };
-        Some((key, bytes))
+            (WireFormat::Json, _) => None,
+        }
     }
 
-    /// Send an event on the data channel when it has a channel message, otherwise, or if the
-    /// channel refuses it, as WebSocket bytes.
-    async fn forward_event_bytes(
+    /// Send an event to the client. Ephemeral events take the data channel when it is open
+    /// and accepts them, and otherwise the WebSocket's latest-wins queue; everything else is
+    /// queued on the WebSocket in order. Returns false once the WebSocket has failed.
+    async fn forward_event(
         &mut self,
+        event: &ClientEvent,
         bytes: Vec<u8>,
-        channel_message: Option<(webrtc::MessageKey, Vec<u8>)>,
-        ws_sender: &mut (impl Sink<Message, Error = axum::Error> + Unpin),
+        outbox: &Outbox,
     ) -> bool {
-        if let Some((key, message)) = channel_message
+        let Some(key) = webrtc::channel_key(event) else {
+            return outbox.send(Message::Binary(bytes.into())).await;
+        };
+        if let Some(message) = self.channel_message(event, &bytes)
             && let Some(peer) = &self.webrtc_peer
         {
             match peer.send(key, &message) {
                 Ok(()) => return true,
-                Err(e) => {
-                    debug!("Data channel send failed, falling back to WS: {e}");
-                }
+                Err(e) => debug!("Data channel send failed, falling back to WS: {e}"),
             }
         }
-
-        let msg = Message::Binary(bytes.into());
-        if let Err(e) = ws_sender.send(msg).await {
-            error!("Failed to send message to websocket: {}", e);
-            return false;
-        }
-        true
+        outbox.send_latest(key, bytes)
     }
 
     fn set_pending_task(&mut self, task_id: usize) -> bool {
