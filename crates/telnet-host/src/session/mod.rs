@@ -1957,6 +1957,7 @@ fn event_frames(view: &OutputView<'_>, event: Event) -> Vec<ConnectionFrame> {
             namespace,
             kind,
             payload,
+            ..
         } => data_frame(
             view.negotiator,
             &namespace.as_arc_str(),
@@ -2126,6 +2127,7 @@ mod tests {
             namespace: Symbol::mk("gmcp"),
             kind: Symbol::mk(kind),
             payload: v_map(&[]),
+            ephemeral: false,
         }
     }
 

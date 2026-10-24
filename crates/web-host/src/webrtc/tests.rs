@@ -280,6 +280,31 @@ fn advertised_ips_prefer_configuration_then_a_concrete_listen_address() {
     );
 }
 
+#[test]
+fn only_ephemeral_data_events_use_the_channel() {
+    use moor_common::tasks::NarrativeEvent;
+    use moor_runtime_api::api::ClientEvent;
+    use moor_var::{Obj, Symbol, v_int};
+    let player = Obj::mk_id(5);
+    let data = |ephemeral| ClientEvent::Narrative {
+        player,
+        event: NarrativeEvent::data(
+            v_int(0),
+            Symbol::mk("game"),
+            Symbol::mk("positions"),
+            v_int(1),
+            ephemeral,
+        ),
+    };
+    assert!(is_channel_event(&data(true)));
+    assert!(!is_channel_event(&data(false)));
+    let narrative = ClientEvent::Narrative {
+        player,
+        event: NarrativeEvent::notify(v_int(0), v_int(1), None, false, false, None),
+    };
+    assert!(!is_channel_event(&narrative));
+}
+
 #[tokio::test]
 async fn disabled_webrtc_starts_nothing() {
     assert!(

@@ -88,22 +88,11 @@ struct Args {
     /// Enable WebRTC data channel for realtime event delivery.
     #[arg(long, help = "Enable WebRTC data channel")]
     pub webrtc_enabled: Option<bool>,
-
-    /// Domains eligible for WebRTC data channel delivery (comma-separated).
-    #[arg(
-        long,
-        help = "Comma-separated realtime domains for WebRTC",
-        value_delimiter = ','
-    )]
-    pub webrtc_realtime_domains: Option<Vec<String>>,
 }
 
 fn apply_cli_overrides(args: &mut Args) {
     if let Some(enabled) = args.webrtc_enabled {
         args.webrtc.enabled = enabled;
-    }
-    if let Some(domains) = args.webrtc_realtime_domains.take() {
-        args.webrtc.realtime_domains = domains;
     }
 }
 

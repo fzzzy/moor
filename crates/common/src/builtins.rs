@@ -271,8 +271,14 @@ fn mk_builtin_table() -> Vec<Builtin> {
         mk_builtin(
             "emit_data",
             Q(4),
-            Q(4),
-            vec![Typed(TYPE_OBJ), Typed(TYPE_SYMBOL), Typed(TYPE_SYMBOL), Any],
+            Q(5),
+            vec![
+                Any,
+                Typed(TYPE_SYMBOL),
+                Typed(TYPE_SYMBOL),
+                Any,
+                Typed(TYPE_MAP),
+            ],
             true,
         ),
     ]);

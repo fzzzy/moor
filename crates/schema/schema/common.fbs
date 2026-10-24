@@ -149,6 +149,8 @@ table DataEvent {
     domain: Symbol (required);
     kind: Symbol (required);
     payload: MoorVar.Var (required);
+    // Never logged; delivered best-effort over the fastest transport.
+    ephemeral: bool = false;
 }
 
 table Event {

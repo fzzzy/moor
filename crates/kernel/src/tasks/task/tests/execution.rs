@@ -94,6 +94,74 @@ fn test_notify_invocation() {
     assert_eq!(result, v_int(123));
 }
 
+/// Run `code` as an eval with symbols and booleans enabled; return its result and the
+/// events it committed.
+fn eval_capturing(
+    code: &str,
+) -> (
+    Result<Var, SchedulerError>,
+    Vec<moor_common::tasks::NarrativeEvent>,
+) {
+    let (client, _sched) = setup_scheduler(&[]);
+    let session = Arc::new(MockClientSession::new());
+    let features = FeaturesConfig {
+        symbol_type: true,
+        bool_type: true,
+        ..Default::default()
+    };
+    let handle = client
+        .submit_eval_task(
+            &SYSTEM_OBJECT,
+            &SYSTEM_OBJECT,
+            code.to_string(),
+            None,
+            session.clone(),
+            Arc::new(features),
+        )
+        .unwrap();
+    let result = wait_result(&handle);
+    (result, session.committed())
+}
+
+fn aborted_with(result: Result<Var, SchedulerError>) -> moor_var::ErrorCode {
+    match result {
+        Err(SchedulerError::TaskAbortedException(ex)) => ex.error.err_type(),
+        other => panic!("expected an aborted task, got {other:?}"),
+    }
+}
+
+/// emit_data() sends one event per recipient, flagged ephemeral only when asked.
+#[test]
+fn test_emit_data_recipients_and_ephemeral_option() {
+    let (result, events) = eval_capturing(
+        "emit_data({#0, #0}, 'game, 'positions, 1, ['ephemeral -> true]); \
+         emit_data(#0, 'state, 'room, 2, ['ephemeral -> false]); \
+         emit_data(#0, 'state, 'room, 3); return 1;",
+    );
+    assert_eq!(result, Ok(v_int(1)));
+    let flags: Vec<bool> = events.iter().map(|event| event.is_ephemeral()).collect();
+    assert_eq!(flags, vec![true, true, false, false]);
+}
+
+/// emit_data() rejects unknown options, non-boolean flags, and non-object recipients.
+#[test]
+fn test_emit_data_rejects_bad_arguments() {
+    use moor_var::{E_INVARG, E_TYPE};
+    for (code, error) in [
+        ("emit_data(#0, 'a, 'b, 1, ['loud -> true]);", E_INVARG),
+        ("emit_data(#0, 'a, 'b, 1, ['ephemeral -> 1]);", E_TYPE),
+        ("emit_data({#0, 1}, 'a, 'b, 1);", E_TYPE),
+        ("emit_data(\"#0\", 'a, 'b, 1);", E_TYPE),
+    ] {
+        let (result, events) = eval_capturing(code);
+        assert_eq!(aborted_with(result), error, "{code}");
+        let emitted = events
+            .iter()
+            .any(|event| matches!(event.event, moor_common::tasks::Event::Data { .. }));
+        assert!(!emitted, "{code} emitted data");
+    }
+}
+
 /// Trigger a task-suspend-resume via suspend(0) (commit-and-continue)
 #[test]
 fn test_simple_run_suspend() {

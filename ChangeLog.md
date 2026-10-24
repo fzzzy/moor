@@ -14,6 +14,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `emit_data()` takes a list of recipients and an optional options map. With `['ephemeral -> true]`,
+  the event is never written to the event log and is delivered best-effort over the fastest
+  transport each connection has: a web client's WebRTC data channel when it is open, otherwise the
+  WebSocket. Only ephemeral events use the data channel, so the web host's `webrtc.realtime_domains`
+  setting and `--webrtc-realtime-domains` flag are removed.
+
 - WebRTC data channels in the web host use `str0m` on one shared UDP endpoint. Open the single
   `webrtc.udp_listen` port (default `0.0.0.0:7882`), and set `webrtc.advertised_ips` when clients
   reach the host on another address, such as behind NAT or in a container. The server answers as

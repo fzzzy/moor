@@ -24,7 +24,7 @@ use moor_common::tasks::Event::{Present, Unpresent};
 use moor_common::tasks::{NarrativeEvent, Presentation, SessionError};
 use moor_var::VarType::TYPE_STR;
 use moor_var::{
-    E_ARGS, E_INVARG, E_PERM, E_TYPE, Symbol, Var, Variant, v_arc_str, v_float, v_int, v_list,
+    E_ARGS, E_INVARG, E_PERM, E_TYPE, Obj, Symbol, Var, Variant, v_arc_str, v_float, v_int, v_list,
     v_list_iter, v_map, v_obj, v_str, v_string, v_sym,
 };
 use std::time::{Duration, SystemTime};
@@ -749,33 +749,88 @@ fn bf_notify(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     Ok(Ret(v_int(1)))
 }
 
-/// Usage: `int emit_data(obj player, symbol namespace, symbol kind, any payload)`
-/// Emits a non-visual structured data event to a player connection stream.
+/// Usage: `int emit_data(obj|list recipients, symbol namespace, symbol kind, any payload [, map options])`
+/// Emits a non-visual structured data event to each recipient's connections.
 /// Clients may use this for UI state channels without rendering narrative text.
+///
+/// Options:
+/// - `'ephemeral -> bool`: when true, the event is never written to the event log and is
+///   delivered best-effort over the fastest transport each connection has. Use it for
+///   rapidly superseded state, such as positions.
 fn bf_emit_data(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
-    if bf_args.args.len() != 4 {
+    if !(4..=5).contains(&bf_args.args.len()) {
         return Err(ErrValue(
-            E_ARGS.msg("emit_data() requires exactly 4 arguments"),
+            E_ARGS.msg("emit_data() requires 4 or 5 arguments"),
         ));
     }
 
-    let Some(player) = bf_args.args[0].as_object() else {
-        return Err(ErrValue(
-            E_TYPE.msg("emit_data() requires an object as the first argument"),
-        ));
+    let recipients: Vec<Obj> = match bf_args.args[0].variant() {
+        Variant::Obj(recipient) => vec![recipient],
+        Variant::List(list) => list
+            .iter()
+            .map(|recipient| {
+                recipient
+                    .as_object()
+                    .ok_or_else(|| ErrValue(E_TYPE.msg("emit_data() recipients must be objects")))
+            })
+            .collect::<Result<_, _>>()?,
+        _ => {
+            return Err(ErrValue(E_TYPE.msg(
+                "emit_data() requires an object or a list of objects as the first argument",
+            )));
+        }
     };
 
     let namespace = bf_args.args[1].as_symbol().map_err(ErrValue)?;
     let kind = bf_args.args[2].as_symbol().map_err(ErrValue)?;
     let payload = bf_args.args[3].clone();
+    let ephemeral = if bf_args.args.len() == 5 {
+        emit_data_ephemeral(&bf_args.args[4])?
+    } else {
+        false
+    };
 
-    // Caller must be the target player or a wizard.
-    bf_args.require_controls_or_builtin_call(&player)?;
-
-    let event = NarrativeEvent::data(bf_args.exec_state.this(), namespace, kind, payload);
-    current_task_scheduler_client().notify(player, Box::new(event));
+    // Check every recipient before emitting, so a refused one emits nothing.
+    // Caller must control each recipient or be a wizard.
+    for recipient in &recipients {
+        bf_args.require_controls_or_builtin_call(recipient)?;
+    }
+    for recipient in recipients {
+        let event = NarrativeEvent::data(
+            bf_args.exec_state.this(),
+            namespace,
+            kind,
+            payload.clone(),
+            ephemeral,
+        );
+        current_task_scheduler_client().notify(recipient, Box::new(event));
+    }
 
     Ok(Ret(v_int(1)))
+}
+
+/// Read `emit_data()` options, returning whether the event is ephemeral.
+fn emit_data_ephemeral(options: &Var) -> Result<bool, BfErr> {
+    let Variant::Map(options) = options.variant() else {
+        return Err(ErrValue(E_TYPE.msg("emit_data() options must be a map")));
+    };
+    let mut ephemeral = false;
+    for (key, value) in options.iter() {
+        let key = key.as_symbol().map_err(ErrValue)?;
+        match key.as_string().as_str() {
+            "ephemeral" => {
+                ephemeral = value.as_bool().ok_or_else(|| {
+                    ErrValue(E_TYPE.msg("emit_data() 'ephemeral option must be a boolean"))
+                })?;
+            }
+            other => {
+                return Err(ErrValue(
+                    E_INVARG.with_msg(|| format!("emit_data() has no option {other:?}")),
+                ));
+            }
+        }
+    }
+    Ok(ephemeral)
 }
 
 /// Usage: `int event_log(obj player, str|any message [, symbol content_type [, map metadata]])`

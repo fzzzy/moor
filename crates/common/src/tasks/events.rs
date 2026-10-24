@@ -57,6 +57,9 @@ pub enum Event {
         namespace: Symbol,
         kind: Symbol,
         payload: Var,
+        /// Rapidly superseded state, such as positions: never written to the event log, and
+        /// delivered best-effort over the fastest transport the connection has.
+        ephemeral: bool,
     },
     /// Set a connection option. This goes through the event stream to ensure proper ordering
     /// with other events (e.g., set binary mode before notify, then unset after).
@@ -130,6 +133,7 @@ impl ByteSized for NarrativeEvent {
                     namespace,
                     kind,
                     payload,
+                    ..
                 } => namespace.as_str().len() + kind.as_str().len() + payload.size_bytes(),
                 Event::SetConnectionOption { option, value, .. } => {
                     option.as_str().len() + value.size_bytes()
@@ -192,7 +196,13 @@ impl NarrativeEvent {
     }
 
     #[must_use]
-    pub fn data(author: Var, namespace: Symbol, kind: Symbol, payload: Var) -> Self {
+    pub fn data(
+        author: Var,
+        namespace: Symbol,
+        kind: Symbol,
+        payload: Var,
+        ephemeral: bool,
+    ) -> Self {
         Self {
             event_id: Uuid::now_v7(),
             timestamp: SystemTime::now(),
@@ -201,8 +211,21 @@ impl NarrativeEvent {
                 namespace,
                 kind,
                 payload,
+                ephemeral,
             },
         }
+    }
+
+    /// Whether this event may be dropped and must not be logged.
+    #[must_use]
+    pub fn is_ephemeral(&self) -> bool {
+        matches!(
+            self.event,
+            Event::Data {
+                ephemeral: true,
+                ..
+            }
+        )
     }
 
     #[must_use]

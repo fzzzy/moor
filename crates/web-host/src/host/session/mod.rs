@@ -41,7 +41,7 @@ use uuid::Uuid;
 use self::websocket::{ReadEvent, read_websocket_event};
 use crate::host::actions::{action_request, is_action_frame};
 use crate::webrtc::{
-    WebRtc, WebRtcPeer,
+    self, WebRtc, WebRtcPeer,
     signaling::{SignalingMessage, encode_signaling_message, parse_signaling_message},
 };
 
@@ -279,8 +279,8 @@ impl ClientSession {
 
                     // Check if this is a DataEvent in a realtime-eligible domain
                     // and route over data channel if available.
-                    let use_data_channel = self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open)
-                        && self.webrtc.as_ref().is_some_and(|webrtc| webrtc.is_realtime(&event_msg.event));
+                    let use_data_channel = webrtc::is_channel_event(&event_msg.event)
+                        && self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open);
 
                     let event_bytes = match encode_client_event_bytes(&event_msg) {
                         Ok(bytes) => bytes,

@@ -100,10 +100,12 @@ pub fn event_from_ref(event_ref: common::EventRef<'_>) -> Result<Event, String> 
             let kind = symbol_from_ref(fb_read!(data, kind))?;
             let payload_ref = fb_read!(data, payload);
             let payload = var_from_flatbuffer_ref(payload_ref).str_err()?;
+            let ephemeral = fb_read!(data, ephemeral);
             Ok(Event::Data {
                 namespace,
                 kind,
                 payload,
+                ephemeral,
             })
         }
     }
@@ -257,6 +259,7 @@ pub fn event_to_flatbuffer_struct(event: &Event) -> Result<common::Event, moor_v
             namespace,
             kind,
             payload,
+            ephemeral,
         } => {
             let payload_fb = var_to_flatbuffer(payload).map_err(|e| {
                 moor_var::EncodingError::CouldNotEncode(format!(
@@ -271,6 +274,7 @@ pub fn event_to_flatbuffer_struct(event: &Event) -> Result<common::Event, moor_v
                     value: kind.as_string(),
                 }),
                 payload: Box::new(payload_fb),
+                ephemeral: *ephemeral,
             }))
         }
         Event::SetConnectionOption { .. } => {

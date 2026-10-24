@@ -293,6 +293,28 @@ mod tests {
     }
 
     #[test]
+    fn commit_publishes_ephemeral_events_without_logging_them() {
+        let h = harness();
+        let data = |ephemeral| {
+            Box::new(NarrativeEvent::data(
+                v_obj(Obj::mk_id(1)),
+                Symbol::mk("game"),
+                Symbol::mk("positions"),
+                v_str("payload"),
+                ephemeral,
+            ))
+        };
+
+        h.session.send_event(h.player, data(true)).unwrap();
+        h.session.send_event(h.player, data(false)).unwrap();
+        h.session.commit().unwrap();
+
+        // Both are delivered; only the durable one is logged.
+        assert_eq!(published(&h.actions).len(), 2);
+        assert_eq!(h.log.narrative_event_count(), 1);
+    }
+
+    #[test]
     fn rollback_discards_buffered_events() {
         let h = harness();
 

@@ -13,11 +13,11 @@
 
 //! WebRTC data channels for realtime event delivery.
 //!
-//! A client may open a WebRTC data channel alongside its WebSocket. Events whose
-//! namespace is in the configured realtime domains then travel over that channel,
-//! which the client creates with the ordering and reliability it wants (typically
-//! unordered and unreliable, for the lowest latency). Everything else, and any
-//! realtime event the channel cannot take, stays on the WebSocket.
+//! A client may open a WebRTC data channel alongside its WebSocket. Ephemeral data
+//! events (`emit_data(..., ['ephemeral -> true])`) then travel over that channel, which
+//! the client creates with the ordering and reliability it wants (typically unordered
+//! and unreliable, for the lowest latency). Everything else, and any ephemeral event
+//! the channel cannot take, stays on the WebSocket.
 //!
 //! The host runs one [`str0m`] endpoint: a single UDP socket and task serving every
 //! peer, so a firewall or container needs only that one port open. The server is
@@ -32,12 +32,8 @@ pub(crate) mod signaling;
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::HashSet,
-    net::{IpAddr, SocketAddr},
-};
+use std::net::{IpAddr, SocketAddr};
 
-use moor_common::tasks::Event as NarrativeEventKind;
 use moor_runtime_api::api::ClientEvent;
 use serde_derive::{Deserialize, Serialize};
 use tracing::info;
@@ -62,10 +58,6 @@ pub struct WebRtcConfig {
     /// on its default route is.
     #[serde(default)]
     pub advertised_ips: Vec<IpAddr>,
-
-    /// Event namespaces delivered over the data channel when it is open.
-    #[serde(default)]
-    pub realtime_domains: Vec<String>,
 }
 
 impl WebRtcConfig {
@@ -80,15 +72,13 @@ impl Default for WebRtcConfig {
             enabled: false,
             udp_listen: Self::default_udp_listen(),
             advertised_ips: vec![],
-            realtime_domains: vec![],
         }
     }
 }
 
-/// The host's WebRTC service: the shared endpoint and the realtime routing policy.
+/// The host's WebRTC service: the shared endpoint that clients' data channels join.
 pub struct WebRtc {
     endpoint: EndpointHandle,
-    realtime_domains: HashSet<String>,
 }
 
 impl WebRtc {
@@ -104,27 +94,18 @@ impl WebRtc {
             endpoint.local_addr(),
             endpoint.advertised()
         );
-        Ok(Some(Self {
-            endpoint,
-            realtime_domains: config.realtime_domains.iter().cloned().collect(),
-        }))
+        Ok(Some(Self { endpoint }))
     }
 
     /// Answer a client's SDP offer with a new peer on the shared endpoint.
     pub(crate) async fn answer(&self, offer_sdp: &str) -> eyre::Result<(WebRtcPeer, String)> {
         WebRtcPeer::answer(self.endpoint.clone(), offer_sdp).await
     }
+}
 
-    /// Whether an event belongs on the data channel: a data event in a realtime domain.
-    pub(crate) fn is_realtime(&self, event: &ClientEvent) -> bool {
-        let ClientEvent::Narrative { event, .. } = event else {
-            return false;
-        };
-        let NarrativeEventKind::Data { namespace, .. } = &event.event else {
-            return false;
-        };
-        self.realtime_domains.contains(&namespace.as_string())
-    }
+/// Whether an event belongs on the data channel: only ephemeral data events do.
+pub(crate) fn is_channel_event(event: &ClientEvent) -> bool {
+    matches!(event, ClientEvent::Narrative { event, .. } if event.is_ephemeral())
 }
 
 /// The IPs to advertise, before the endpoint's port is known.

@@ -101,9 +101,14 @@ impl SessionEventBuffer {
 
         let identity = self.identity();
 
-        // Log events from both buffers to the event log. Only events addressed to the active
-        // player follow the session's selected history owner; events for other players do not.
-        for (player, event) in events.iter().chain(log_only_events.iter()) {
+        // Log events from both buffers to the event log, except ephemeral ones. Only events
+        // addressed to the active player follow the session's selected history owner; events
+        // for other players do not.
+        for (player, event) in events
+            .iter()
+            .chain(log_only_events.iter())
+            .filter(|(_, event)| !event.is_ephemeral())
+        {
             let history_player = if *player == identity.active_player {
                 identity.history_player
             } else {
