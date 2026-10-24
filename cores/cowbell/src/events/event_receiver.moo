@@ -326,7 +326,8 @@ object EVENT_RECEIVER [
     const snapshot = $look:panel(view);
     this.location == room || return;
     view['exit_revision] == room.exit_revision || return false;
-    emit_data(this, 'state, 'room_snapshot, snapshot);
+    "Panel state is superseded by the next snapshot, so it is not kept in history.";
+    emit_data(this, 'state, 'room_snapshot, snapshot, ['ephemeral -> true]);
     return true;
   endmethod
 

@@ -237,6 +237,9 @@ Cowbell entries.
 
 ### Fixed
 
+- Room panel snapshots are sent as ephemeral data, so they no longer fill each player's event
+  history. Clients receive them as before.
+
 - Agent and coding room requests start and finish about 3 seconds sooner. The room runtime woke on a
   one-second timer to dispatch and retire jobs; it is now woken as soon as there is work.
 
