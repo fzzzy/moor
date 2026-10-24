@@ -208,19 +208,49 @@ object LOOK [
     return content;
   endmethod
 
+  method _lines_block owner: HACKER
+    "Join generated lines into one paragraph, a line break apart.";
+    const {lines} = args;
+    let content = {};
+    for line in (lines)
+      if (length(content))
+        content = {@content, $document_node:mk('hard_break)};
+      endif
+      content = {@content, @line};
+    endfor
+    return length(content) ? {$document_node:mk('paragraph, content)} | {};
+  endmethod
+
+  method _actor_lines owner: HACKER
+    "Sentences for the actors not integrated into the description: those here, then those asleep.";
+    const {view} = args;
+    let lines = {};
+    for sleeping in ({false, true})
+      const actors = {actor for actor in (view['actors]) if (
+        !actor['integrated] && ((actor['status] == "deeply asleep") == sleeping))};
+      if (length(actors))
+        const ending = ((length(actors) > 1 || actors[1]['plural]) ? " are" | " is")
+          + (sleeping ? " deeply asleep." | " here.");
+        "Sleeping is already expressed by the sentence, so omit the status suffix.";
+        let labels = sleeping ? {sleeping_actor['bare] for sleeping_actor in (actors)} | actors;
+        "A long list names the first few and counts the rest.";
+        if (length(labels) > $look.actor_listing_limit)
+          const shown = $look.actor_listing_shown;
+          const others = length(labels) - shown;
+          labels = {@labels[1..shown], ['content -> $format:literal_inline(tostr(others, " others"))]};
+        endif
+        "A player's chosen name is shown as written, even at the start of the sentence.";
+        const joined = $look:_join(labels);
+        const opening = is_player(actors[1]['object]) ? joined | $document_resolver:_capitalize(joined)[1];
+        lines = {@lines, {@opening, @$format:literal_inline(ending)}};
+      endif
+    endfor
+    return lines;
+  endmethod
+
   method narrative owner: HACKER
     "Assemble a narrative event from an inert LookView. No object labels or content are reread.";
     const {view} = args;
-    fn lines_block(lines)
-      let content = {};
-      for line in (lines)
-        if (length(content))
-          content = {@content, $document_node:mk('hard_break)};
-        endif
-        content = {@content, @line};
-      endfor
-      return length(content) ? {$document_node:mk('paragraph, content)} | {};
-    endfn
     let lines = {};
     let blocks = {$document_node:mk('heading, view['title], ['level -> 3]),
       @flycontents(view['description])};
@@ -244,7 +274,7 @@ object LOOK [
       endif
     endfor
     if (length(view['actions]))
-      blocks = {@blocks, @lines_block(lines), $look:_list(view['actions])};
+      blocks = {@blocks, @$look:_lines_block(lines), $look:_list(view['actions])};
       lines = {};
     endif
     const things = {thing for thing in (view['things]) if (!thing['integrated])};
@@ -253,27 +283,8 @@ object LOOK [
         @$format:literal_inline("You see "), @$look:_join(things),
         @$format:literal_inline(" here.")}};
     endif
-    for sleeping in ({false, true})
-      const actors = {actor for actor in (view['actors]) if (
-        !actor['integrated] && ((actor['status] == "deeply asleep") == sleeping))};
-      if (length(actors))
-        const ending = ((length(actors) > 1 || actors[1]['plural]) ? " are" | " is")
-          + (sleeping ? " deeply asleep." | " here.");
-        "Sleeping is already expressed by the sentence, so omit the status suffix.";
-        let labels = sleeping ? {sleeping_actor['bare] for sleeping_actor in (actors)} | actors;
-        "A long list names the first few and counts the rest.";
-        if (length(labels) > $look.actor_listing_limit)
-          const shown = $look.actor_listing_shown;
-          const others = length(labels) - shown;
-          labels = {@labels[1..shown], ['content -> $format:literal_inline(tostr(others, " others"))]};
-        endif
-        "A player's chosen name is shown as written, even at the start of the sentence.";
-        const joined = $look:_join(labels);
-        const opening = is_player(actors[1]['object]) ? joined | $document_resolver:_capitalize(joined)[1];
-        lines = {@lines, {@opening, @$format:literal_inline(ending)}};
-      endif
-    endfor
-    let event = toflyweight($event, flyslots(view['event]), {@blocks, @lines_block(lines)});
+    lines = {@lines, @$look:_actor_lines(view)};
+    let event = toflyweight($event, flyslots(view['event]), {@blocks, @$look:_lines_block(lines)});
     if (typeof(view['thumbnail]) == TYPE_LIST && length(view['thumbnail]) == 2)
       event = event:with_metadata('thumbnail, view['thumbnail]);
     endif
@@ -291,14 +302,19 @@ object LOOK [
     "Render a panel from the captured description and entry groups. Its title stays separate.";
     const {view, ?format = 'text_html} = args;
     let blocks = flycontents(view['description]);
-    for section in ({{"Exits", view['exits]}, {"Things", {@view['actions], @view['things]}},
-        {"People", view['actors]}})
+    for section in ({{"Exits", view['exits]}, {"Things", {@view['actions], @view['things]}}})
       const {label, entries} = section;
       if (length(entries))
         blocks = {@blocks, $document_node:mk('heading, $format:literal_inline(label),
           ['level -> 4]), $look:_list(entries)};
       endif
     endfor
+    "People read as the narrative does, so a crowd of sleepers is counted, not listed.";
+    const people = $look:_actor_lines(view);
+    if (length(people))
+      blocks = {@blocks, $document_node:mk('heading, $format:literal_inline("People"),
+        ['level -> 4]), @$look:_lines_block(people)};
+    endif
     const result = $document:render($document:mk(blocks), format);
     return ["room" -> view['room_ref], "title" -> view['title_text],
       "content" -> result['body], "content_type" -> strsub(tostr(format), "_", "/", 1),

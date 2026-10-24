@@ -237,6 +237,9 @@ Cowbell entries.
 
 ### Fixed
 
+- The room panel lists people the way the room description does: those here, then those asleep,
+  with a long list cut to the first few names and a count of the rest.
+
 - Room panel snapshots are sent as ephemeral data, so they no longer fill each player's event
   history. Clients receive them as before.
 
