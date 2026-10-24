@@ -13,12 +13,10 @@
 
 //! Per-client session event loop and realtime transport coordination.
 
-pub(crate) mod webrtc;
 mod websocket;
 
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{SinkExt, StreamExt, stream::SplitSink};
-use moor_common::tasks::Event as NarrativeEventKind;
 use moor_runtime_api::{
     AuthToken, ClientToken, HostType,
     api::{
@@ -31,7 +29,7 @@ use moor_schema::{convert::var_from_flatbuffer_ref, rpc as moor_rpc, var as moor
 use moor_var::{Obj, Var, v_str};
 use planus::ReadAsRoot;
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::VecDeque,
     net::SocketAddr,
     sync::Arc,
     time::{Duration, Instant, SystemTime},
@@ -40,11 +38,12 @@ use tokio::select;
 use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 
-use self::webrtc::{
-    SignalingMessage, WebRtcConfig, WebRtcPeer, encode_signaling_message, parse_signaling_message,
-};
 use self::websocket::{ReadEvent, read_websocket_event};
 use crate::host::actions::{action_request, is_action_frame};
+use crate::webrtc::{
+    WebRtc, WebRtcPeer,
+    signaling::{SignalingMessage, encode_signaling_message, parse_signaling_message},
+};
 
 const WEBSOCKET_PING_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -68,8 +67,9 @@ pub struct ClientSession {
     pub(crate) pending_task: Option<PendingTask>,
     pub(crate) close_code: Option<u16>,
     pub(crate) is_logout: bool,
-    pub(crate) webrtc_config: Arc<WebRtcConfig>,
-    pub(crate) realtime_domains: HashSet<String>,
+    /// The host's WebRTC service, when enabled.
+    pub(crate) webrtc: Option<Arc<WebRtc>>,
+    /// This client's data channel connection, once it has made an offer.
     pub(crate) webrtc_peer: Option<WebRtcPeer>,
 }
 
@@ -139,8 +139,6 @@ impl ClientSession {
         let mut ping_interval = tokio::time::interval(WEBSOCKET_PING_INTERVAL);
         let mut heartbeat_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
         let mut pending_heartbeat: Option<Instant> = None;
-        let mut ice_candidate_rx: Option<tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>> =
-            None;
         loop {
             if expecting_input.is_empty()
                 && self.pending_task.is_none()
@@ -203,7 +201,7 @@ impl ClientSession {
                             pending_heartbeat = None;
                         }
                         ReadEvent::WebRtcSignaling(data) => {
-                            if !self.handle_webrtc_signaling(&data, &mut ws_sender, &mut ice_candidate_rx).await {
+                            if !self.handle_webrtc_signaling(&data, &mut ws_sender).await {
                                 break;
                             }
                         }
@@ -223,18 +221,6 @@ impl ClientSession {
                     trace!("Sending WebSocket ping");
                     if let Err(e) = ws_sender.send(Message::Ping(vec![].into())).await {
                         error!("Failed to send WebSocket ping: {}", e);
-                        break;
-                    }
-                }
-                Some(ice_msg) = async {
-                    match ice_candidate_rx.as_mut() {
-                        Some(rx) => rx.recv().await,
-                        None => std::future::pending().await,
-                    }
-                } => {
-                    let frame = encode_signaling_message(&ice_msg);
-                    if let Err(e) = ws_sender.send(Message::Binary(frame.into())).await {
-                        error!("Failed to send ICE candidate: {e}");
                         break;
                     }
                 }
@@ -293,13 +279,8 @@ impl ClientSession {
 
                     // Check if this is a DataEvent in a realtime-eligible domain
                     // and route over data channel if available.
-                    let dc_open = self.webrtc_peer.as_ref().is_some_and(|p| p.is_open());
-                    let is_realtime = !self.realtime_domains.is_empty()
-                        && is_realtime_eligible(&event_msg.event, &self.realtime_domains);
-                    if is_realtime {
-                        debug!("Realtime event: dc_open={dc_open} peer={}", self.webrtc_peer.is_some());
-                    }
-                    let use_data_channel = dc_open && is_realtime;
+                    let use_data_channel = self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open)
+                        && self.webrtc.as_ref().is_some_and(|webrtc| webrtc.is_realtime(&event_msg.event));
 
                     let event_bytes = match encode_client_event_bytes(&event_msg) {
                         Ok(bytes) => bytes,
@@ -315,8 +296,8 @@ impl ClientSession {
             }
         }
 
-        // Close WebRTC peer if one was established.
-        self.close_webrtc().await;
+        // Leave the WebRTC endpoint if this client joined it.
+        self.webrtc_peer = None;
 
         // Detach transport
         // Use the is_logout flag from the close reason to determine if session should be destroyed
@@ -397,13 +378,6 @@ impl ClientSession {
         }
     }
 
-    /// Close the WebRTC peer connection if one exists.
-    async fn close_webrtc(&mut self) {
-        if let Some(peer) = self.webrtc_peer.take() {
-            peer.close().await;
-        }
-    }
-
     async fn process_requested_input_line(
         &mut self,
         message: Message,
@@ -452,91 +426,52 @@ impl ClientSession {
         }
     }
 
+    /// Handle a WebRTC signaling frame. Returns false if the WebSocket has failed.
     async fn handle_webrtc_signaling(
         &mut self,
         data: &[u8],
         ws_sender: &mut SplitSink<WebSocket, Message>,
-        ice_candidate_rx: &mut Option<tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>>,
     ) -> bool {
-        if !self.webrtc_config.enabled {
+        let Some(webrtc) = self.webrtc.clone() else {
             debug!("WebRTC signaling received but WebRTC is disabled");
             return true;
-        }
-
+        };
         let Some(msg) = parse_signaling_message(data) else {
             warn!("Failed to parse WebRTC signaling message");
             return true;
         };
-
         match msg {
             SignalingMessage::Offer { sdp } => {
-                self.handle_webrtc_offer(sdp, ws_sender, ice_candidate_rx)
-                    .await
+                // A new offer replaces any earlier connection.
+                self.webrtc_peer = None;
+                let (peer, answer_sdp) = match webrtc.answer(&sdp).await {
+                    Ok(answered) => answered,
+                    Err(e) => {
+                        warn!("Failed to answer WebRTC offer: {e}");
+                        return true;
+                    }
+                };
+                self.webrtc_peer = Some(peer);
+                let answer =
+                    encode_signaling_message(&SignalingMessage::Answer { sdp: answer_sdp });
+                if let Err(e) = ws_sender.send(Message::Binary(answer.into())).await {
+                    error!("Failed to send WebRTC answer: {e}");
+                    return false;
+                }
+                true
             }
-            SignalingMessage::IceCandidate {
-                candidate,
-                sdp_mid,
-                sdp_mline_index,
-            } => {
-                self.add_webrtc_ice_candidate(candidate, sdp_mid, sdp_mline_index)
-                    .await;
+            SignalingMessage::IceCandidate { candidate } => {
+                if let Some(peer) = &self.webrtc_peer
+                    && let Err(e) = peer.add_ice_candidate(&candidate).await
+                {
+                    warn!("Failed to add ICE candidate: {e}");
+                }
                 true
             }
             SignalingMessage::Answer { .. } => {
-                // Server shouldn't receive answers; we send them.
                 warn!("Received unexpected SDP answer from client");
                 true
             }
-        }
-    }
-
-    async fn handle_webrtc_offer(
-        &mut self,
-        sdp: String,
-        ws_sender: &mut SplitSink<WebSocket, Message>,
-        ice_candidate_rx: &mut Option<tokio::sync::mpsc::UnboundedReceiver<SignalingMessage>>,
-    ) -> bool {
-        let (peer, answer_sdp) = match WebRtcPeer::new(&self.webrtc_config, &sdp).await {
-            Ok(peer_and_answer) => peer_and_answer,
-            Err(e) => {
-                warn!("Failed to create WebRTC peer: {e}");
-                return true;
-            }
-        };
-
-        let (ice_tx, ice_rx) = tokio::sync::mpsc::unbounded_channel();
-        peer.on_ice_candidate(ice_tx);
-        *ice_candidate_rx = Some(ice_rx);
-
-        let answer = encode_signaling_message(&SignalingMessage::Answer { sdp: answer_sdp });
-        if let Err(e) = ws_sender.send(Message::Binary(answer.into())).await {
-            error!("Failed to send WebRTC answer: {e}");
-            return false;
-        }
-
-        self.webrtc_peer = Some(peer);
-        info!("WebRTC peer connection established");
-        true
-    }
-
-    async fn add_webrtc_ice_candidate(
-        &mut self,
-        candidate: String,
-        sdp_mid: Option<String>,
-        sdp_mline_index: Option<u16>,
-    ) {
-        let Some(peer) = &self.webrtc_peer else {
-            return;
-        };
-
-        let candidate_json = serde_json::json!({
-            "candidate": candidate,
-            "sdpMid": sdp_mid,
-            "sdpMLineIndex": sdp_mline_index,
-        })
-        .to_string();
-        if let Err(e) = peer.add_ice_candidate(&candidate_json).await {
-            warn!("Failed to add ICE candidate: {e}");
         }
     }
 
@@ -547,7 +482,7 @@ impl ClientSession {
         ws_sender: &mut SplitSink<WebSocket, Message>,
     ) -> bool {
         if use_data_channel && let Some(peer) = &self.webrtc_peer {
-            match peer.send(&bytes).await {
+            match peer.send(&bytes) {
                 Ok(()) => return true,
                 Err(e) => {
                     debug!("Data channel send failed, falling back to WS: {e}");
@@ -599,15 +534,4 @@ fn var_from_binary_input(bytes: &[u8]) -> Option<Var> {
             None
         }
     }
-}
-
-/// Check if a client event is a DataEvent whose domain is in the realtime set.
-fn is_realtime_eligible(event: &ClientEvent, realtime_domains: &HashSet<String>) -> bool {
-    let ClientEvent::Narrative { event, .. } = event else {
-        return false;
-    };
-    let NarrativeEventKind::Data { namespace, .. } = &event.event else {
-        return false;
-    };
-    realtime_domains.contains(&namespace.as_string())
 }

@@ -40,8 +40,9 @@ use moor_runtime_api::{api::HostServices, load_keypair};
 use moor_telnet_host::{HostRuntime as TelnetHostRuntime, TelnetHostConfig, TelnetProtocolConfig};
 use moor_web_host::{
     WebHostConfig,
-    host::{OAuth2Config, WebRtcConfig},
+    host::OAuth2Config,
     routes::{CorsConfig, RateLimitConfig},
+    webrtc::WebRtcConfig,
 };
 use serde::{Deserialize, Serialize};
 use tokio::{task::JoinHandle, time::timeout};

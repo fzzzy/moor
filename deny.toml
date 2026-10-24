@@ -10,6 +10,9 @@ ignore = [
     # SSH-RSA exposure is documented in book/src/the-moo-programming-language/built-in-functions/crypto.md.
     # Revisit when patched versions or Age's RSA implementation change.
     { id = "RUSTSEC-2023-0071", reason = "Preserve Age SSH-RSA compatibility; secret-key decryption of untrusted ciphertext must not be exposed by MOO verbs" },
+    # Age 0.12 reaches crypto-bigint 0.5 through hpke and p256, and no 0.5 release is fixed.
+    # Remove once Age moves to elliptic-curve 0.14.
+    { id = "RUSTSEC-2026-0387", reason = "Age uses P-256 only for its tag and post-quantum recipient types; mooR's age_encrypt and age_decrypt accept X25519 and SSH keys only, and the event log uses X25519, so the affected arithmetic is unreachable" },
 ]
 
 [bans]

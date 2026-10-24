@@ -22,8 +22,9 @@ use crate::host::{
         BOTH_FORMATS, ResponseFormat, TEXT_PLAIN_CONTENT_TYPE, invocation_response_to_json,
         negotiate_response_format, reply_result_to_json, require_content_type,
     },
-    session::{ClientSession, webrtc::WebRtcConfig},
+    session::ClientSession,
 };
+use crate::webrtc::WebRtc;
 use axum::{
     Json,
     body::Bytes,
@@ -338,6 +339,17 @@ struct WsAttachInfo {
     is_initial_attach: bool,
 }
 
+/// Host-wide services shared by every listener's [`WebHost`].
+#[derive(Clone)]
+pub struct HostShared {
+    pub host_id: Uuid,
+    pub last_daemon_ping: Arc<AtomicU64>,
+    pub host_services: Arc<dyn HostServices>,
+    pub trusted_proxy_cidrs: Arc<Vec<IpNet>>,
+    /// The WebRTC service, when enabled.
+    pub webrtc: Option<Arc<WebRtc>>,
+}
+
 #[derive(Clone)]
 pub struct WebHost {
     pub(crate) handler_object: Obj,
@@ -348,7 +360,7 @@ pub struct WebHost {
     pub(crate) trusted_proxy_cidrs: Arc<Vec<IpNet>>,
     /// Cached server features response (features don't change at runtime).
     features_cache: Arc<tokio::sync::OnceCell<Vec<u8>>>,
-    pub(crate) webrtc_config: Arc<WebRtcConfig>,
+    pub(crate) webrtc: Option<Arc<WebRtc>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -362,15 +374,14 @@ pub enum WsHostError {
 }
 
 impl WebHost {
-    pub fn new(
-        handler_object: Obj,
-        local_port: u16,
-        host_id: Uuid,
-        last_daemon_ping: Arc<AtomicU64>,
-        host_services: Arc<dyn HostServices>,
-        trusted_proxy_cidrs: Arc<Vec<IpNet>>,
-        webrtc_config: Arc<WebRtcConfig>,
-    ) -> Self {
+    pub fn new(handler_object: Obj, local_port: u16, shared: HostShared) -> Self {
+        let HostShared {
+            host_id,
+            last_daemon_ping,
+            host_services,
+            trusted_proxy_cidrs,
+            webrtc,
+        } = shared;
         Self {
             handler_object,
             local_port,
@@ -379,7 +390,7 @@ impl WebHost {
             host_services,
             trusted_proxy_cidrs,
             features_cache: Arc::new(tokio::sync::OnceCell::new()),
-            webrtc_config,
+            webrtc,
         }
     }
 }
@@ -573,12 +584,6 @@ impl WebHost {
             .client_subscriptions(client_id, client_token.clone())
             .map_err(|e| eyre::eyre!("Unable to subscribe to client events: {}", e))?;
 
-        let realtime_domains: std::collections::HashSet<String> = self
-            .webrtc_config
-            .realtime_domains
-            .iter()
-            .cloned()
-            .collect();
         Ok(ClientSession {
             handler_object: *handler_object,
             player: *player,
@@ -592,8 +597,7 @@ impl WebHost {
             pending_task: None,
             close_code: None,
             is_logout: false,
-            webrtc_config: self.webrtc_config.clone(),
-            realtime_domains,
+            webrtc: self.webrtc.clone(),
             webrtc_peer: None,
         })
     }

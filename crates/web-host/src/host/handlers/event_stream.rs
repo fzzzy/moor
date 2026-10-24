@@ -553,11 +553,13 @@ mod tests {
         WebHost::new(
             moor_var::Obj::mk_id(0),
             8081,
-            Uuid::new_v4(),
-            Arc::new(std::sync::atomic::AtomicU64::new(0)),
-            Arc::new(Services(runtime)),
-            Arc::new(vec![]),
-            Arc::new(crate::host::WebRtcConfig::default()),
+            crate::host::HostShared {
+                host_id: Uuid::new_v4(),
+                last_daemon_ping: Arc::new(std::sync::atomic::AtomicU64::new(0)),
+                host_services: Arc::new(Services(runtime)),
+                trusted_proxy_cidrs: Arc::new(vec![]),
+                webrtc: None,
+            },
         )
     }
     fn client(runtime: Arc<Runtime>) -> StreamClient {

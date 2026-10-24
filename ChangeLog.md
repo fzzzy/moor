@@ -14,6 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- WebRTC data channels in the web host use `str0m` on one shared UDP endpoint. Open the single
+  `webrtc.udp_listen` port (default `0.0.0.0:7882`), and set `webrtc.advertised_ips` when clients
+  reach the host on another address, such as behind NAT or in a container. The server answers as
+  ICE-lite with its candidates in the SDP answer, so `webrtc.ice_servers`, `webrtc.ordered`, and
+  `webrtc.max_retransmits` are gone. Server sends now honor the ordering and reliability the client
+  chose for its channel.
+
 - The daemon and the combined `moor` server accept `--startup-config FILE` to pass a JSON object to
   `#0:server_started` on each startup. Startup fails if the configured hook fails or times out.
   Cowbell uses this for LLM setup from the development launcher.

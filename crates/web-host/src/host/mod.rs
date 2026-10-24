@@ -20,9 +20,6 @@ pub(crate) mod negotiate;
 mod session;
 pub mod web_host;
 
-pub(crate) use session::webrtc;
-pub use session::webrtc::WebRtcConfig;
-
 pub use auth::{
     OAuth2Config, OAuth2Manager, OAuth2State, PendingOAuth2Store, oauth2_account_choice_handler,
     oauth2_app_account_choice_handler, oauth2_app_exchange_handler, oauth2_app_start_handler,
@@ -39,9 +36,9 @@ pub use handlers::{
     verb_retrieval_handler, verbs_handler, web_hook_handler,
 };
 pub use web_host::{
-    WebHost, eval_handler, features_handler, health_handler, invoke_welcome_message_handler,
-    openapi_handler, resolve_objref_handler, system_property_handler, version_handler,
-    ws_connect_attach_handler, ws_create_attach_handler,
+    HostShared, WebHost, eval_handler, features_handler, health_handler,
+    invoke_welcome_message_handler, openapi_handler, resolve_objref_handler,
+    system_property_handler, version_handler, ws_connect_attach_handler, ws_create_attach_handler,
 };
 
 pub(crate) use negotiate::flatbuffer_response;

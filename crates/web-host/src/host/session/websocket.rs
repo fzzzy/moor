@@ -18,8 +18,9 @@ use futures_util::{Stream, StreamExt};
 use std::time::Duration;
 use tracing::{debug, error, trace};
 
-use super::{PendingTask, webrtc};
+use super::PendingTask;
 use crate::host::actions::is_action_frame;
+use crate::webrtc::signaling::SIGNALING_PREFIX;
 
 const TASK_TIMEOUT: Duration = Duration::from_secs(10);
 const HEARTBEAT_RESPONSE: u8 = 0x01;
@@ -72,9 +73,7 @@ pub async fn read_websocket_event(
                 trace!("Received heartbeat response from client");
                 return ReadEvent::HeartbeatResponse;
             }
-            Message::Binary(ref data)
-                if !data.is_empty() && data[0] == webrtc::SIGNALING_PREFIX =>
-            {
+            Message::Binary(ref data) if !data.is_empty() && data[0] == SIGNALING_PREFIX => {
                 return ReadEvent::WebRtcSignaling(data.to_vec());
             }
             Message::Binary(ref data) if is_action_frame(data) => {

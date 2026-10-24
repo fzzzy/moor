@@ -16,6 +16,7 @@
 pub mod host;
 pub mod listeners;
 pub mod routes;
+pub mod webrtc;
 
 use std::{
     net::SocketAddr,
@@ -26,7 +27,7 @@ use std::{
 };
 
 use eyre::{Result, eyre};
-use host::{OAuth2Config, OAuth2Manager, WebRtcConfig};
+use host::{HostShared, OAuth2Config, OAuth2Manager};
 use ipnet::IpNet;
 use listeners::Listeners;
 use moor_runtime_api::{HostType, api::HostServices, client_args::RpcClientConfig};
@@ -34,10 +35,11 @@ use moor_var::SYSTEM_OBJECT;
 use moor_zmq_client::{
     ZmqHostServices, process_hosts_events_with_services, start_host_session_with_services,
 };
-use routes::{CorsConfig, RateLimitConfig};
+use routes::{CorsConfig, RateLimitConfig, RouteOptions};
 use tokio::select;
 use tracing::{error, info};
 use uuid::Uuid;
+use webrtc::{WebRtc, WebRtcConfig};
 
 #[derive(Clone, Debug)]
 pub struct WebHostConfig {
@@ -106,17 +108,24 @@ async fn run_with_host_services(
 
     let host_id = Uuid::new_v4();
     let last_daemon_ping = Arc::new(AtomicU64::new(0));
-    let (mut listeners_server, listeners_channel, listeners) = Listeners::new(
+    let webrtc = WebRtc::start(&config.webrtc).await?.map(Arc::new);
+    let shared = HostShared {
         host_id,
-        runtime.kill_switch.clone(),
-        oauth2_manager,
-        host_services.clone(),
-        config.enable_webhooks,
-        last_daemon_ping.clone(),
-        config.cors.clone(),
-        config.rate_limit.clone(),
+        last_daemon_ping: last_daemon_ping.clone(),
+        host_services: host_services.clone(),
         trusted_proxy_cidrs,
-        Arc::new(config.webrtc.clone()),
+        webrtc,
+    };
+    let route_options = RouteOptions {
+        enable_webhooks: config.enable_webhooks,
+        cors: config.cors.clone(),
+        rate_limit: config.rate_limit.clone(),
+    };
+    let (mut listeners_server, listeners_channel, listeners) = Listeners::new(
+        runtime.kill_switch.clone(),
+        shared,
+        oauth2_manager,
+        route_options,
     );
 
     info!("Starting up listener thread...");

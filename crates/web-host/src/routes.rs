@@ -133,14 +133,21 @@ impl Default for RateLimitConfig {
     }
 }
 
+/// HTTP routing options shared by every listener.
+#[derive(Debug, Clone)]
+pub struct RouteOptions {
+    pub enable_webhooks: bool,
+    pub cors: CorsConfig,
+    pub rate_limit: RateLimitConfig,
+}
+
 pub fn mk_routes(
     web_host: WebHost,
     oauth2_state: Option<OAuth2State>,
-    enable_webhooks: bool,
-    cors_config: &CorsConfig,
-    rate_limit_config: &RateLimitConfig,
-    trusted_proxy_cidrs: &Arc<Vec<IpNet>>,
+    options: &RouteOptions,
 ) -> eyre::Result<Router> {
+    let rate_limit_config = &options.rate_limit;
+    let trusted_proxy_cidrs = web_host.trusted_proxy_cidrs.clone();
     let mut auth_routes = Router::new()
         .route("/auth/connect", post(host::connect_auth_handler))
         .route("/auth/create", post(host::create_auth_handler))
@@ -149,7 +156,7 @@ pub fn mk_routes(
 
     if rate_limit_config.enabled {
         let key_extractor = TrustedProxyKeyExtractor {
-            trusted_cidrs: Arc::clone(trusted_proxy_cidrs),
+            trusted_cidrs: trusted_proxy_cidrs,
         };
         let governor_conf = GovernorConfigBuilder::default()
             .per_second(rate_limit_config.requests_per_second)
@@ -269,7 +276,7 @@ pub fn mk_routes(
 
     webhost_router = webhost_router.layer(DefaultBodyLimit::max(1024 * 1024));
 
-    if enable_webhooks {
+    if options.enable_webhooks {
         let webhook_router = Router::new()
             .route(
                 "/webhooks/{*path}",
@@ -280,7 +287,7 @@ pub fn mk_routes(
         webhost_router = webhost_router.merge(webhook_router);
     }
 
-    if let Some(cors_layer) = build_cors_layer(cors_config)? {
+    if let Some(cors_layer) = build_cors_layer(&options.cors)? {
         info!("CORS policy enabled");
         webhost_router = webhost_router.layer(cors_layer);
     }

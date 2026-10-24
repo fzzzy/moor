@@ -19,8 +19,9 @@ use clap_derive::Parser;
 use moor_runtime_api::client_args::{RpcClientArgs, RpcClientConfig};
 use moor_web_host::{
     HostRuntime, WebHostConfig, ZmqWebHostConfig,
-    host::{OAuth2Config, WebRtcConfig},
+    host::OAuth2Config,
     routes::{CorsConfig, RateLimitConfig},
+    webrtc::WebRtcConfig,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::sync::{LazyLock, atomic::AtomicBool};

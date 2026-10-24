@@ -60,10 +60,10 @@ ipnet.workspace = true
 r0z-async.workspace = true
 reqwest = { workspace = true, features = ["json"] }
 rustls.workspace = true
+str0m.workspace = true
 tower-http.workspace = true
 tower_governor.workspace = true
 webpki-roots.workspace = true
-webrtc.workspace = true
 
 # Async Runtime & Concurrency
 futures-util.workspace = true

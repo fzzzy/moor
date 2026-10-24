@@ -18,51 +18,35 @@ use std::{
     net::SocketAddr,
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use axum::Router;
-use ipnet::IpNet;
-use moor_runtime_api::api::HostServices;
 use moor_var::Obj;
 use moor_zmq_client::{ListenerInfo, ListenersClient, ListenersError, ListenersMessage};
 use tokio::{net::TcpListener, select};
 use tracing::{error, info, warn};
-use uuid::Uuid;
 
 use crate::{
-    host::{OAuth2Manager, OAuth2State, PendingOAuth2Store, WebHost, webrtc::WebRtcConfig},
-    routes::{CorsConfig, RateLimitConfig, mk_routes},
+    host::{HostShared, OAuth2Manager, OAuth2State, PendingOAuth2Store, WebHost},
+    routes::{RouteOptions, mk_routes},
 };
 
 pub struct Listeners {
-    host_id: Uuid,
     listeners: HashMap<SocketAddr, Listener>,
     kill_switch: Arc<AtomicBool>,
+    shared: HostShared,
     oauth2_manager: Option<Arc<OAuth2Manager>>,
-    host_services: Arc<dyn HostServices>,
-    enable_webhooks: bool,
-    last_daemon_ping: Arc<AtomicU64>,
-    cors_config: CorsConfig,
-    rate_limit_config: RateLimitConfig,
-    trusted_proxy_cidrs: Arc<Vec<IpNet>>,
-    webrtc_config: Arc<WebRtcConfig>,
+    route_options: RouteOptions,
 }
 
 impl Listeners {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        host_id: Uuid,
         kill_switch: Arc<AtomicBool>,
+        shared: HostShared,
         oauth2_manager: Option<Arc<OAuth2Manager>>,
-        host_services: Arc<dyn HostServices>,
-        enable_webhooks: bool,
-        last_daemon_ping: Arc<AtomicU64>,
-        cors_config: CorsConfig,
-        rate_limit_config: RateLimitConfig,
-        trusted_proxy_cidrs: Arc<Vec<IpNet>>,
-        webrtc_config: Arc<WebRtcConfig>,
+        route_options: RouteOptions,
     ) -> (
         Self,
         tokio::sync::mpsc::Receiver<ListenersMessage>,
@@ -70,17 +54,11 @@ impl Listeners {
     ) {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
         let listeners = Self {
-            host_id,
             listeners: HashMap::new(),
             kill_switch,
+            shared,
             oauth2_manager,
-            host_services,
-            enable_webhooks,
-            last_daemon_ping,
-            cors_config,
-            rate_limit_config,
-            trusted_proxy_cidrs,
-            webrtc_config,
+            route_options,
         };
         let listeners_client = ListenersClient::new(tx);
         (listeners, rx, listeners_client)
@@ -148,24 +126,9 @@ impl Listeners {
             }
         };
 
-        let web_host = WebHost::new(
-            handler,
-            local_addr.port(),
-            self.host_id,
-            self.last_daemon_ping.clone(),
-            self.host_services.clone(),
-            self.trusted_proxy_cidrs.clone(),
-            self.webrtc_config.clone(),
-        );
+        let web_host = WebHost::new(handler, local_addr.port(), self.shared.clone());
         let oauth2_state = self.oauth2_state(&web_host);
-        let main_router = match mk_routes(
-            web_host,
-            oauth2_state,
-            self.enable_webhooks,
-            &self.cors_config,
-            &self.rate_limit_config,
-            &self.trusted_proxy_cidrs,
-        ) {
+        let main_router = match mk_routes(web_host, oauth2_state, &self.route_options) {
             Ok(router) => router,
             Err(e) => {
                 warn!(?e, "Unable to create main router");

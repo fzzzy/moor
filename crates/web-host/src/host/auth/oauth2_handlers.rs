@@ -1015,11 +1015,13 @@ mod tests {
             web_host: WebHost::new(
                 Obj::mk_id(99),
                 8080,
-                Uuid::new_v4(),
-                Arc::new(AtomicU64::new(0)),
-                Arc::new(Services(runtime)),
-                Arc::new(vec![]),
-                Arc::new(Default::default()),
+                crate::host::HostShared {
+                    host_id: Uuid::new_v4(),
+                    last_daemon_ping: Arc::new(AtomicU64::new(0)),
+                    host_services: Arc::new(Services(runtime)),
+                    trusted_proxy_cidrs: Arc::new(vec![]),
+                    webrtc: None,
+                },
             ),
             pending: Arc::new(PendingOAuth2Store::new()),
         }
