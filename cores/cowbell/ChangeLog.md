@@ -237,6 +237,9 @@ Cowbell entries.
 
 ### Fixed
 
+- Agent and coding room requests start and finish about 3 seconds sooner. The room runtime woke on a
+  one-second timer to dispatch and retire jobs; it is now woken as soon as there is work.
+
 - `stand` and `stand up` get you off the furniture you are sitting on; before, only
   `stand from <seat>` worked.
 

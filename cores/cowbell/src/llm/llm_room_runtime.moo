@@ -89,7 +89,12 @@ object LLM_ROOM_RUNTIME [
     caller_perms().wizard || raise(E_PERM);
     const {room, request} = args;
     const job = this:_admit(room, request);
+    "The monitor wakes this task when it retires the job.";
+    job.waiter = task_id();
     this:_ensure_monitor(room);
+    "A forked monitor starts at once, so commit the admission before waking it.";
+    suspend(0);
+    `task_send(room.loop_task, ["type" -> "job_admitted"]) ! ANY';
     while (job in room.jobs)
       task_recv(1);
       this:_ensure_monitor(room);
@@ -128,20 +133,32 @@ object LLM_ROOM_RUNTIME [
     "Reconcile dead workers, enforce deadlines including setup, and dispatch up to max_workers.";
     this == $llm_room_runtime && caller == this && caller_perms().wizard || raise(E_PERM);
     const {room} = args;
+    "Admissions and finished workers wake the monitor; the one-second timeout is a fallback.";
     while (true)
       task_recv(1);
       room.loop_task == task_id() || return;
+      let waiters = {};
       for job in (room.jobs)
         if (job.parent_task > 0)
           if (!valid_task(job.parent_task) || time() >= job.deadline)
             job:cancel(time() >= job.deadline ? 'timed_out | 'cancelled);
             `kill_task(job.parent_task) ! E_INVARG';
+            job.waiter > 0 && (waiters = {@waiters, job.waiter});
             this:_retire(room, job);
           endif
         elseif (job.state != 'queued)
+          job.waiter > 0 && (waiters = {@waiters, job.waiter});
           this:_retire(room, job);
         endif
       endfor
+      if (length(waiters))
+        "Commit the retirement before waking waiters, so they see the job gone.";
+        suspend(0);
+        for waiter in (waiters)
+          `task_send(waiter, ["type" -> "job_retired"]) ! ANY';
+        endfor
+        room.loop_task == task_id() || return;
+      endif
       const configured = room.max_workers;
       const workers = typeof(configured) == TYPE_INT && configured >= 1 && configured <= 8 ? configured | 1;
       let active = length({running for running in (room.jobs) if (running.parent_task > 0)});
@@ -193,6 +210,9 @@ object LLM_ROOM_RUNTIME [
       server_log("LLM job result delivery failed: " + tostr(delivery_error[1]));
     endtry
     job.parent_task = 0;
+    "Commit the finished job, then wake the monitor to retire it now rather than on its next timeout.";
+    suspend(0);
+    `task_send(room.loop_task, ["type" -> "job_done"]) ! ANY';
   endmethod
 
   method _retire owner: ARCH_WIZARD

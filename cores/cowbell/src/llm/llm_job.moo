@@ -17,6 +17,7 @@ object LLM_JOB [
   property result (owner: ARCH_WIZARD, flags: "") = "";
   property worker_task (owner: ARCH_WIZARD, flags: "") = 0;
   property parent_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property waiter (owner: ARCH_WIZARD, flags: "") = 0;
   property timeout_seconds (owner: ARCH_WIZARD, flags: "") = 180;
   property deadline (owner: ARCH_WIZARD, flags: "") = 0;
   property finished_at (owner: ARCH_WIZARD, flags: "") = 0;
