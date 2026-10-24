@@ -13,12 +13,11 @@
 
 //! Source-side conformance corpus for the persistence-oriented codec.
 //!
-//! §8 and §15.2 of `pluggable-persistence-and-postgresql.md` require canonical decompiled MOO
-//! source that compiles back to equivalent behavior. This file establishes the compiler-visible
-//! half of that target: canonical source must be a fixed point (compile → decompile → recompile →
-//! decompile produces identical text). Lambda *values* and behavioral equivalence after reload
-//! need a runtime lambda, so those cases live with the kernel/VM tests that accompany the
-//! fallible codec in §16 step 4.
+//! Storage that keeps verb programs as source must store canonical decompiled MOO source that
+//! compiles back to equivalent behavior. This file establishes the compiler-visible half of that
+//! target: canonical source must be a fixed point (compile → decompile → recompile → decompile
+//! produces identical text). Lambda *values* and behavioral equivalence after reload need a
+//! runtime lambda, so those cases live with the kernel/VM tests of the fallible codec.
 
 use moor_compiler::{CompileOptions, compile, program_to_tree, unparse};
 
