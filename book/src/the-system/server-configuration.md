@@ -54,6 +54,20 @@ removed when each request finishes. Limits apply to individual requests; excess 
 receives a busy response. Invalid limits or inaccessible job storage prevent startup before database
 import. Shutdown terminates active Git child processes before the worker detaches.
 
+The web service limits the client data each connection may send, in messages per second (`0` means
+unlimited), and can accept WebRTC data channels. See
+[Structured Client Data](../the-moo-programming-language/client-data.md) and
+[WebRTC data channels](../web-client/deployment.md#webrtc-data-channels).
+
+```yaml
+services:
+  web:
+    client_data_rate: 50
+    webrtc:
+      enabled: false
+      udp_listen: 0.0.0.0:7882
+```
+
 ## Daemon, Hosts, Workers, and RPC (Advanced)
 
 For split-process or clustered deployment, the server is broken into separate binaries:

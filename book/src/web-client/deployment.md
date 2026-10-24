@@ -215,10 +215,13 @@ can reach different web-host instances connected to the same daemon. No sticky r
 An open SSE response occupies one HTTP connection and holds at most one bounded daemon batch. The
 browser resumes from its last processed sequence; this cursor does not acknowledge delivery.
 
-The daemon limits retention to 8,192 events and 16 MiB per connection, with a 256 MiB global payload
-limit. Browser-owned payloads expire after five minutes. A backlog that exceeds a limit disconnects
-the connection. Connections without liveness updates expire after 30 seconds, which can shorten the
-reconnect window.
+Ephemeral data events are not retained. The SSE response carries them as `ephemeral` events with no
+id, and the browser does not acknowledge them. One that arrives while a connection is down is lost.
+
+The daemon limits retained events to 8,192 events and 16 MiB per connection, with a 256 MiB global
+payload limit. Browser-owned payloads expire after five minutes. A backlog that exceeds a limit
+disconnects the connection. Connections without liveness updates expire after 30 seconds, which can
+shorten the reconnect window.
 
 An expired connection or delivery gap requires a fresh session. Meadow then uses history and current
 presentation snapshots for recovery. This recovery depends on the existing event-log configuration
@@ -231,3 +234,39 @@ because its authentication headers do not fit the native EventSource constructor
 
 The [HTTP API reference](http-api-reference.md#eventdelivery) describes the session, streaming, and
 acknowledgement endpoints. SSE delivery does not establish a WebRTC data channel.
+
+## WebRTC data channels
+
+A web client can open a WebRTC data channel beside its WebSocket. Ephemeral data events then reach
+it with the lowest latency the network allows, and it can send client data on the same channel. See
+[Structured Client Data](../the-moo-programming-language/client-data.md#the-data-channel) for the
+protocol. WebRTC is off by default, and nothing else depends on it: without a channel, the same
+events use the WebSocket.
+
+The web host runs one WebRTC endpoint on one UDP port for every client. It answers as an ICE-lite
+peer and lists its own addresses in its answer, so it needs no STUN or TURN server. Clients that
+cannot reach the UDP port keep using the WebSocket.
+
+| Setting                 | Default        | Meaning                                                                    |
+| ----------------------- | -------------- | -------------------------------------------------------------------------- |
+| `webrtc.enabled`        | `false`        | Accept data channel offers. `moor-web-host` also takes `--webrtc-enabled`. |
+| `webrtc.udp_listen`     | `0.0.0.0:7882` | The endpoint's UDP address.                                                |
+| `webrtc.advertised_ips` | none           | Addresses clients reach the endpoint on, with the endpoint's port.         |
+
+For the combined `moor` server, these settings go under `services.web.webrtc`:
+
+```yaml
+services:
+  web:
+    webrtc:
+      enabled: true
+      udp_listen: 0.0.0.0:7882
+      advertised_ips: [203.0.113.10]
+```
+
+Set `advertised_ips` whenever clients see the host on a different address from the one it listens
+on, such as behind NAT or in a container. Without it, the host advertises a concrete `udp_listen`
+address as it is, or, for a wildcard address, its address on the default route.
+
+The UDP port does not pass through the HTTP proxy. Open it in the firewall, and publish it from a
+container (for example `7882:7882/udp`).

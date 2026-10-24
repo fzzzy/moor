@@ -67,6 +67,7 @@
   - [Telnet-Host Commands and Assumptions](the-system/telnet-host-commands-and-assumptions.md)
   - [Emergency Medical Hologram Tool (moor-emh)](the-system/moor-emh-tool.md)
   - [Networking](./the-moo-programming-language/networking.md)
+  - [Structured Client Data](./the-moo-programming-language/client-data.md)
   - [Controlling the Execution of Tasks](the-system/controlling-the-execution-of-tasks.md)
   - [Scheduled Tasks](the-system/scheduled-tasks.md)
 - [Client Applications](web-client/index.md)
