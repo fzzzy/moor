@@ -21,6 +21,12 @@ use moor_var::{
 /// Global registry of built-in function names.
 use std::{collections::HashMap, sync::LazyLock};
 
+use fnv::Fnv;
+pub use legacy::legacy_builtin_signature_matches;
+
+mod legacy;
+mod legacy_table;
+
 /// The global builtins table which describes the set of builtins available to the mooR runtime.
 /// Used by:
 ///   * the compiler to identify which builtins are available at compile time and
@@ -1487,41 +1493,21 @@ pub fn offset_for_builtin(bf_name: &str) -> usize {
     builtin.0 as usize
 }
 
+/// The builtin fingerprint of a program stored as version 7 or later, over the builtins it
+/// calls: each id, the name and implementation it binds to, and its flags. A stored program
+/// whose fingerprint differs was compiled against a table where some id meant something
+/// else. Declared argument counts and types are not part of it: builtins check their own
+/// arguments, so a declaration can widen without invalidating stored programs.
+///
+/// Programs stored before version 7 use [`legacy_builtin_signature_matches`].
 pub fn builtin_signature_for_ids<I>(ids: I) -> u64
 where
     I: IntoIterator<Item = BuiltinId>,
 {
-    const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
-
-    fn hash_bytes(hash: &mut u64, bytes: &[u8]) {
-        for byte in bytes {
-            *hash ^= *byte as u64;
-            *hash = hash.wrapping_mul(FNV_PRIME);
-        }
-    }
-
-    fn hash_u8(hash: &mut u64, value: u8) {
-        hash_bytes(hash, &[value]);
-    }
-
-    fn hash_u16(hash: &mut u64, value: u16) {
-        hash_bytes(hash, &value.to_le_bytes());
-    }
-
-    fn hash_u64(hash: &mut u64, value: u64) {
-        hash_bytes(hash, &value.to_le_bytes());
-    }
-
-    fn hash_str(hash: &mut u64, value: &str) {
-        hash_u64(hash, value.len() as u64);
-        hash_bytes(hash, value.as_bytes());
-    }
-
     let mut ids: Vec<BuiltinId> = ids.into_iter().collect();
     ids.sort_by_key(|id| id.0);
 
-    let mut hash = FNV_OFFSET_BASIS;
+    let mut hash = Fnv::new();
     for id in ids {
         let builtin = BUILTIN_DESCRIPTORS.get(id.0 as usize).unwrap_or_else(|| {
             panic!(
@@ -1530,45 +1516,55 @@ where
                 id.0
             )
         });
-
-        hash_u16(&mut hash, id.0);
-        let name = builtin.name.as_arc_str();
-        hash_str(&mut hash, name.as_str());
-        let override_name = builtin.bf_override_name.as_arc_str();
-        hash_str(&mut hash, override_name.as_str());
-
-        match builtin.min_args {
-            ArgCount::Q(value) => {
-                hash_u8(&mut hash, 0);
-                hash_u64(&mut hash, value as u64);
-            }
-            ArgCount::U => hash_u8(&mut hash, 1),
-        }
-        match builtin.max_args {
-            ArgCount::Q(value) => {
-                hash_u8(&mut hash, 0);
-                hash_u64(&mut hash, value as u64);
-            }
-            ArgCount::U => hash_u8(&mut hash, 1),
-        }
-
-        hash_u64(&mut hash, builtin.types.len() as u64);
-        for arg_type in &builtin.types {
-            match arg_type {
-                ArgType::Any => hash_u8(&mut hash, 0),
-                ArgType::AnyNum => hash_u8(&mut hash, 1),
-                ArgType::Typed(var_type) => {
-                    hash_u8(&mut hash, 2);
-                    hash_u8(&mut hash, *var_type as u8);
-                }
-            }
-        }
-
-        hash_u8(&mut hash, builtin.implemented as u8);
-        hash_u8(&mut hash, builtin.exposed as u8);
+        hash.u16(id.0);
+        hash.str(builtin.name.as_arc_str().as_str());
+        hash.str(builtin.bf_override_name.as_arc_str().as_str());
+        hash.u8(builtin.implemented as u8);
+        hash.u8(builtin.exposed as u8);
     }
+    hash.finish()
+}
 
-    hash
+mod fnv {
+    /// FNV-1a, as program fingerprints use it.
+    pub(crate) struct Fnv(u64);
+
+    impl Fnv {
+        const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+        const PRIME: u64 = 0x100000001b3;
+
+        pub(crate) fn new() -> Self {
+            Self(Self::OFFSET_BASIS)
+        }
+
+        fn bytes(&mut self, bytes: &[u8]) {
+            for byte in bytes {
+                self.0 ^= *byte as u64;
+                self.0 = self.0.wrapping_mul(Self::PRIME);
+            }
+        }
+
+        pub(crate) fn u8(&mut self, value: u8) {
+            self.bytes(&[value]);
+        }
+
+        pub(crate) fn u16(&mut self, value: u16) {
+            self.bytes(&value.to_le_bytes());
+        }
+
+        pub(crate) fn u64(&mut self, value: u64) {
+            self.bytes(&value.to_le_bytes());
+        }
+
+        pub(crate) fn str(&mut self, value: &str) {
+            self.u64(value.len() as u64);
+            self.bytes(value.as_bytes());
+        }
+
+        pub(crate) fn finish(&self) -> u64 {
+            self.0
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1590,6 +1586,23 @@ mod tests {
         let sig_a = builtin_signature_for_ids([BuiltinId(0)]);
         let sig_b = builtin_signature_for_ids([BuiltinId(0), BuiltinId(1)]);
         assert_ne!(sig_a, sig_b);
+    }
+
+    #[test]
+    fn frozen_legacy_table_names_match_the_live_table() {
+        // Version 6 programs refer to these ids; reusing one for another builtin would
+        // change what an old program calls.
+        for declaration in super::legacy_table::FROZEN_TABLE {
+            assert_eq!(
+                BUILTINS
+                    .name_of(BuiltinId(declaration.id))
+                    .map(|name| name.as_arc_str().to_string())
+                    .as_deref(),
+                Some(declaration.name),
+                "builtin id {}",
+                declaration.id
+            );
+        }
     }
 
     #[test]

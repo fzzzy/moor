@@ -409,6 +409,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Databases created since format 3.0.0 load again when their verbs call `complex_matches`,
+  `parse_command`, `load_object`, `reload_object` or `emit_data`. Changing those builtins' declared
+  arguments made such verbs fail to load with "Stored program builtin signature mismatch". Verbs
+  stored from now on are checked only against the builtins' identities, so a builtin can accept new
+  arguments without making existing databases fail to load. Older mooR builds cannot load verbs
+  stored by this one.
+
 - Updated TLS certificate verification and bundled roots to reject distrusted emSign intermediates
   whose private keys are publicly known (RUSTSEC-2026-0381, RUSTSEC-2026-0382, and
   RUSTSEC-2026-0383).

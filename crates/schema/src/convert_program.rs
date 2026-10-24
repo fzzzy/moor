@@ -36,7 +36,7 @@ define_enum_mapping! {
 }
 use crate::convert::var_from_db_flatbuffer_ref;
 use byteview::ByteView;
-use moor_common::builtins::builtin_signature_for_ids;
+use moor_common::builtins::{builtin_signature_for_ids, legacy_builtin_signature_matches};
 use moor_var::program::{
     labels::{JumpLabel, Label, Offset},
     names::{Name, VarName},
@@ -50,7 +50,9 @@ use triomphe::Arc;
 
 const MIN_SUPPORTED_STORED_PROGRAM_VERSION: u16 = 3;
 const STORED_PROGRAM_VERSION_WITH_STACK_DEPTHS: u16 = 4;
-const STORED_PROGRAM_VERSION: u16 = 6;
+/// From this version the builtin fingerprint leaves out declared arguments.
+const STORED_PROGRAM_VERSION_WITH_BUILTIN_IDENTITY_SIGNATURE: u16 = 7;
+const STORED_PROGRAM_VERSION: u16 = 7;
 
 define_enum_mapping! {
     DeclarationKind <=> fb::DeclarationKind {
@@ -795,8 +797,13 @@ pub fn decode_fb_program(fb_prog_ref: fb::StoredMooRProgramRef) -> Result<Progra
         source_declarations,
     }));
 
-    let actual_builtin_signature = builtin_signature_for_ids(used_builtin_ids(&program));
-    if actual_builtin_signature != expected_builtin_signature {
+    let used_builtins = used_builtin_ids(&program);
+    let builtins_match = if version >= STORED_PROGRAM_VERSION_WITH_BUILTIN_IDENTITY_SIGNATURE {
+        builtin_signature_for_ids(used_builtins) == expected_builtin_signature
+    } else {
+        legacy_builtin_signature_matches(used_builtins, expected_builtin_signature)
+    };
+    if !builtins_match {
         return Err(DecodeError::DecodeFailed(
             "Stored program builtin signature mismatch; \
              program data is corrupt or builtin table changed"
@@ -1354,5 +1361,102 @@ mod tests {
             decoded.fork_vector_max_scope_depth(Offset(0)),
             decoded.fork_vector(Offset(0)).len()
         );
+    }
+
+    mod legacy_fixtures;
+
+    /// The builtins a program calls, by name, with lambdas included.
+    fn called_builtins(program: &Program) -> Vec<String> {
+        let mut names: Vec<String> = used_builtin_ids(program)
+            .into_iter()
+            .map(|id| {
+                moor_common::builtins::BUILTINS
+                    .name_of(id)
+                    .unwrap()
+                    .as_arc_str()
+                    .to_string()
+            })
+            .collect();
+        for lambda in &program.0.lambda_programs {
+            names.extend(called_builtins(lambda));
+        }
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    fn legacy_fixture(bytes: &'static [u8]) -> StoredProgram {
+        StoredProgram::from_bytes(byteview::ByteView::from(bytes))
+    }
+
+    #[test]
+    fn programs_from_earlier_builds_still_load() {
+        for (build, bytes) in [
+            ("e0dcf9f90", legacy_fixtures::PROGRAM_V6_E0DCF9F90),
+            ("c53a5d2a6", legacy_fixtures::PROGRAM_V6_C53A5D2A6),
+        ] {
+            let program = stored_to_program(&legacy_fixture(bytes))
+                .unwrap_or_else(|e| panic!("program from {build} did not load: {e:?}"));
+            assert_eq!(
+                called_builtins(&program),
+                [
+                    "complex_matches",
+                    "emit_data",
+                    "length",
+                    "load_object",
+                    "parse_command",
+                    "reload_object"
+                ],
+                "program from {build} calls the same builtins"
+            );
+            // Stored again, it uses the current format and loads as such.
+            let restored = stored_to_program(&program_to_stored(&program).unwrap()).unwrap();
+            assert_eq!(restored, program);
+        }
+    }
+
+    #[test]
+    fn a_legacy_fingerprint_that_matches_no_table_is_rejected() {
+        let mut bytes = legacy_fixtures::PROGRAM_V6_C53A5D2A6.to_vec();
+        let program =
+            stored_to_program(&legacy_fixture(legacy_fixtures::PROGRAM_V6_C53A5D2A6)).unwrap();
+        let ids = used_builtin_ids(&program);
+        let signature = fb::StoredProgramRef::read_as_root(&bytes)
+            .ok()
+            .and_then(|stored| match stored.language().ok()? {
+                fb::StoredProgramLanguageRef::StoredMooRProgram(p) => p.builtin_signature().ok(),
+            })
+            .unwrap();
+        assert!(moor_common::builtins::legacy_builtin_signature_matches(
+            ids.clone(),
+            signature
+        ));
+        assert!(!moor_common::builtins::legacy_builtin_signature_matches(
+            ids,
+            signature ^ 1
+        ));
+        // Corrupting the stored fingerprint makes the program fail to load.
+        let at = bytes
+            .windows(8)
+            .position(|window| window == signature.to_le_bytes())
+            .unwrap();
+        bytes[at] ^= 1;
+        let corrupted = StoredProgram::from_bytes(byteview::ByteView::from(bytes.as_slice()));
+        assert!(stored_to_program(&corrupted).is_err());
+    }
+
+    #[test]
+    fn new_fingerprints_leave_out_declared_arguments() {
+        use moor_common::builtins::offset_for_builtin;
+        let id = |name| BuiltinId(offset_for_builtin(name) as u16);
+        // Ids and names matter; a version 7 fingerprint is not a version 6 one.
+        assert_ne!(
+            builtin_signature_for_ids([id("emit_data")]),
+            builtin_signature_for_ids([id("length")])
+        );
+        assert!(!legacy_builtin_signature_matches(
+            [id("emit_data")],
+            builtin_signature_for_ids([id("emit_data")])
+        ));
     }
 }
