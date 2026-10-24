@@ -98,11 +98,11 @@ class CoreMakefiles(unittest.TestCase):
     def test_compiler_modes_and_core_options(self):
         for core in NAMES:
             with self.subTest(core=core):
-                profile = "release" if core == "benches" else "dev"
+                profile = "release" if core == "benches" else "release-check"
                 cargo = self.make(core, "-n", "build", "MOORC_TYPE=cargo", fake=False)
                 self.assertIn(f"cargo run --profile {profile} -p moorc --", cargo)
                 direct = self.make(core, "-n", "build", "MOORC_TYPE=direct", "CARGO_TARGET_DIR=/tmp/core-target", fake=False)
-                self.assertIn(f"/tmp/core-target/{'release' if core == 'benches' else 'debug'}/moorc", direct)
+                self.assertIn(f"/tmp/core-target/{profile}/moorc", direct)
                 docker = self.make(core, "-n", "test", "MOORC_TYPE=docker", fake=False)
                 self.assertIn('-w /work moor-moor-daemon /moor/moorc', docker)
                 self.assertIn("--use-boolean-returns true", docker)
@@ -124,7 +124,7 @@ class CoreMakefiles(unittest.TestCase):
             self.assertEqual(len(cargo), 1, output)
             self.assertTrue(cargo[0].startswith("cargo build --locked "), cargo)
             self.assertNotIn("cargo run", output)
-            self.assertEqual("/debug/core-session-runner --cowbell" in output, target == "check-full")
+            self.assertEqual("/release-check/core-session-runner --cowbell" in output, target == "check-full")
 
     def test_textdump_and_legacy_aliases(self):
         self.make("lambda-moor", "output")

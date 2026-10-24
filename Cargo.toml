@@ -98,6 +98,14 @@ codegen-units = 16 # Use default parallelism for faster compilation
 lto = "thin" # Lighter LTO - faster to compile, still gets most benefits
 debug = false # No debug symbols to save memory/disk during build
 
+# Optimized build for core test tools: release speed without LTO, so rebuilds stay quick.
+[profile.release-check]
+inherits = "release"
+codegen-units = 16
+lto = false
+incremental = true
+debug = false
+
 [workspace.dependencies]
 # Core Runtime & System
 cap-std = "4.0"

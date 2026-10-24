@@ -85,7 +85,7 @@ help:
 		'make check             Run shared Makefile tests, then: $(CHECK_TARGETS).' \
 		'make clean             Remove generated output; keep sources and running databases.' \
 		'MOORC_TYPE=cargo|direct|docker  Choose the compiler launcher (default: cargo).' \
-		'MOORC_PROFILE=dev|release      Choose the build profile (default: $(MOORC_PROFILE)).' \
+		'MOORC_PROFILE=release-check|dev|release  Choose the build profile (default: $(MOORC_PROFILE)).' \
 		'MOORC=...              Override the compiler command; core OPTIONS still apply.' \
 		'DEBUG=1                Run a host compiler under gdb.' \
 		$(CORE_HELP)
