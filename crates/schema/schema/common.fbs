@@ -153,6 +153,13 @@ table DataEvent {
     ephemeral: bool = false;
 }
 
+// Data a web client sends for handler:do_client_data, as a FlatBuffers WebSocket frame or
+// data channel message. The kind stays a string: clients must not create symbols.
+table ClientDataMessage {
+    kind: string (required);
+    payload: MoorVar.Var (required);
+}
+
 table Event {
     event: EventUnion (required);
 }

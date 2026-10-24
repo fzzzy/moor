@@ -20,6 +20,7 @@ use tracing::{debug, error, trace};
 
 use super::PendingTask;
 use crate::host::actions::is_action_frame;
+use crate::host::client_data::CLIENT_DATA_PREFIX;
 use crate::webrtc::signaling::SIGNALING_PREFIX;
 
 const TASK_TIMEOUT: Duration = Duration::from_secs(10);
@@ -36,6 +37,8 @@ pub enum ReadEvent {
     Ping(Vec<u8>),
     HeartbeatResponse,
     WebRtcSignaling(Vec<u8>),
+    /// A client data frame, without its prefix byte.
+    ClientData(Vec<u8>),
 }
 
 pub async fn read_websocket_event(
@@ -75,6 +78,9 @@ pub async fn read_websocket_event(
             }
             Message::Binary(ref data) if !data.is_empty() && data[0] == SIGNALING_PREFIX => {
                 return ReadEvent::WebRtcSignaling(data.to_vec());
+            }
+            Message::Binary(ref data) if data.first() == Some(&CLIENT_DATA_PREFIX) => {
+                return ReadEvent::ClientData(data[1..].to_vec());
             }
             Message::Binary(ref data) if is_action_frame(data) => {
                 // An action is never a reply to an outstanding read().
@@ -138,6 +144,15 @@ mod tests {
         ));
         assert!(
             matches!(read_websocket_event(&mut messages, true, &mut pending).await, ReadEvent::InputReply(Message::Text(text)) if text == "the prompt answer")
+        );
+    }
+
+    #[tokio::test]
+    async fn client_data_frames_are_not_prompt_replies() {
+        let data = Message::Binary(b"\x05{\"kind\":\"move\"}".to_vec().into());
+        let mut messages = stream::iter(vec![Ok(data)]);
+        assert!(
+            matches!(read_websocket_event(&mut messages, true, &mut None).await, ReadEvent::ClientData(body) if body == b"{\"kind\":\"move\"}")
         );
     }
 

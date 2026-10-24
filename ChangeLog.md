@@ -14,6 +14,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Web clients can send structured data to `do_client_data`, as telnet clients do with GMCP. A
+  WebSocket binary frame `0x05` followed by a JSON object `{"kind": "...", "payload": ...}` or a
+  FlatBuffers `ClientDataMessage` arrives as `do_client_data(connection, 'web, kind, payload)`, and
+  so do messages on the client's WebRTC data channel. The channel's sub-protocol chooses its format
+  in both directions: `moor.json`, or `moor.fb` (the default). The web host's `--client-data-rate`
+  setting limits each connection, at 50 messages per second by default.
+
 - `emit_data()` takes a list of recipients and an optional options map. With `['ephemeral -> true]`,
   the event is never written to the event log and is delivered best-effort over the fastest
   transport each connection has: a web client's WebRTC data channel when it is open, otherwise the

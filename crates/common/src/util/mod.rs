@@ -18,6 +18,7 @@ mod instant;
 mod metric_entries;
 mod time;
 mod timing_policy;
+mod token_bucket;
 mod trace_events;
 mod xdg;
 
@@ -31,6 +32,7 @@ pub use timing_policy::{
     PerfTimingPolicy, hot_stride, perf_timing_policy, rare_stride, scale_hot_sample_sum_nanos,
     scale_rare_sample_sum_nanos, set_perf_timing_policy,
 };
+pub use token_bucket::TokenBucket;
 pub use trace_events::*;
 pub use xdg::*;
 

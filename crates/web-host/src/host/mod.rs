@@ -15,6 +15,7 @@
 
 mod actions;
 mod auth;
+pub(crate) mod client_data;
 mod handlers;
 pub(crate) mod negotiate;
 mod session;

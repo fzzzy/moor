@@ -37,6 +37,7 @@ use futures_util::{
     SinkExt, StreamExt,
     stream::{SplitSink, SplitStream},
 };
+use moor_common::util::TokenBucket;
 use moor_common::{
     model::{CompileError, ObjectRef},
     tasks::{AbortLimitReason, CommandError, Event, SchedulerError, VerbProgramError},
@@ -51,7 +52,6 @@ use moor_runtime_api::{
     },
 };
 use moor_var::{List, Obj, Symbol, Var, Variant, v_str, v_string};
-pub(crate) use protocol::ClientDataLimiter;
 use socket2::{SockRef, TcpKeepalive};
 use std::pin::Pin;
 use tokio::{
@@ -159,7 +159,7 @@ pub(crate) struct TelnetConnection {
     /// Telnet option state and protocol handlers.
     pub(crate) negotiator: TelnetNegotiator,
     /// Rate limit on inbound `ClientData`.
-    pub(crate) client_data_limiter: ClientDataLimiter,
+    pub(crate) client_data_limiter: TokenBucket,
     /// When the host started, Unix seconds (MSSP `UPTIME`).
     pub(crate) host_started_at: u64,
     pub(crate) host_id: Uuid,

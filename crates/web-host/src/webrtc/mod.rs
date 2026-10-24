@@ -40,7 +40,7 @@ use tracing::info;
 
 use self::endpoint::EndpointHandle;
 pub(crate) use self::endpoint::MessageKey;
-pub(crate) use self::peer::WebRtcPeer;
+pub(crate) use self::peer::{ChannelMessages, WebRtcPeer};
 
 /// Configuration for WebRTC data channel support.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,8 +98,12 @@ impl WebRtc {
         Ok(Some(Self { endpoint }))
     }
 
-    /// Answer a client's SDP offer with a new peer on the shared endpoint.
-    pub(crate) async fn answer(&self, offer_sdp: &str) -> eyre::Result<(WebRtcPeer, String)> {
+    /// Answer a client's SDP offer with a new peer on the shared endpoint. Returns the
+    /// peer, the SDP answer, and the messages the client sends on its channel.
+    pub(crate) async fn answer(
+        &self,
+        offer_sdp: &str,
+    ) -> eyre::Result<(WebRtcPeer, String, ChannelMessages)> {
         WebRtcPeer::answer(self.endpoint.clone(), offer_sdp).await
     }
 }

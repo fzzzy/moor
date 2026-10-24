@@ -18,7 +18,7 @@ use clap_derive::Parser;
 
 use moor_runtime_api::client_args::{RpcClientArgs, RpcClientConfig};
 use moor_web_host::{
-    HostRuntime, WebHostConfig, ZmqWebHostConfig,
+    DEFAULT_CLIENT_DATA_RATE, HostRuntime, WebHostConfig, ZmqWebHostConfig,
     host::OAuth2Config,
     routes::{CorsConfig, RateLimitConfig},
     webrtc::WebRtcConfig,
@@ -85,9 +85,22 @@ struct Args {
     #[arg(skip)]
     pub webrtc: WebRtcConfig,
 
+    /// Client data messages each connection may send per second.
+    #[serde(default = "default_client_data_rate")]
+    #[arg(
+        long,
+        help = "Client data messages each connection may send per second (0 = unlimited)",
+        default_value_t = DEFAULT_CLIENT_DATA_RATE
+    )]
+    pub client_data_rate: u32,
+
     /// Enable WebRTC data channel for realtime event delivery.
     #[arg(long, help = "Enable WebRTC data channel")]
     pub webrtc_enabled: Option<bool>,
+}
+
+fn default_client_data_rate() -> u32 {
+    DEFAULT_CLIENT_DATA_RATE
 }
 
 fn apply_cli_overrides(args: &mut Args) {
@@ -146,6 +159,7 @@ async fn main() -> Result<(), eyre::Error> {
             rate_limit: args.rate_limit,
             trusted_proxy_cidrs: args.trusted_proxy_cidrs,
             webrtc: args.webrtc,
+            client_data_rate: args.client_data_rate,
         },
     };
     let runtime = HostRuntime {

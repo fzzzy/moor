@@ -40,10 +40,12 @@ use uuid::Uuid;
 
 use self::websocket::{ReadEvent, read_websocket_event};
 use crate::host::actions::{action_request, is_action_frame};
+use crate::host::client_data::{self, WireFormat};
 use crate::webrtc::{
-    self, WebRtc, WebRtcPeer,
+    self, ChannelMessages, WebRtc, WebRtcPeer,
     signaling::{SignalingMessage, encode_signaling_message, parse_signaling_message},
 };
+use moor_common::util::TokenBucket;
 
 const WEBSOCKET_PING_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -71,6 +73,8 @@ pub struct ClientSession {
     pub(crate) webrtc: Option<Arc<WebRtc>>,
     /// This client's data channel connection, once it has made an offer.
     pub(crate) webrtc_peer: Option<WebRtcPeer>,
+    /// Limits client data from the WebSocket and the data channel together.
+    pub(crate) client_data_limiter: TokenBucket,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -139,6 +143,8 @@ impl ClientSession {
         let mut ping_interval = tokio::time::interval(WEBSOCKET_PING_INTERVAL);
         let mut heartbeat_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
         let mut pending_heartbeat: Option<Instant> = None;
+        // Held outside `self` so the select below can wait on it beside the other branches.
+        let mut channel_messages: Option<ChannelMessages> = None;
         loop {
             if expecting_input.is_empty()
                 && self.pending_task.is_none()
@@ -201,9 +207,12 @@ impl ClientSession {
                             pending_heartbeat = None;
                         }
                         ReadEvent::WebRtcSignaling(data) => {
-                            if !self.handle_webrtc_signaling(&data, &mut ws_sender).await {
+                            if !self.handle_webrtc_signaling(&data, &mut ws_sender, &mut channel_messages).await {
                                 break;
                             }
+                        }
+                        ReadEvent::ClientData(body) => {
+                            self.submit_client_data(WireFormat::of_frame_body(&body), &body).await;
                         }
                     }
                 }
@@ -223,6 +232,15 @@ impl ClientSession {
                         error!("Failed to send WebSocket ping: {}", e);
                         break;
                     }
+                }
+                Some(message) = async {
+                    match channel_messages.as_mut() {
+                        Some(messages) => messages.recv().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    let format = self.webrtc_peer.as_ref().map(WebRtcPeer::format).unwrap_or_default();
+                    self.submit_client_data(format, &message).await;
                 }
                 Ok(event_msg) = self.broadcast_sub.recv_client_broadcast() => {
                     trace!("broadcast_event");
@@ -277,10 +295,6 @@ impl ClientSession {
                         _ => {}
                     }
 
-                    // Ephemeral data events use the data channel when it is open.
-                    let channel_key = webrtc::channel_key(&event_msg.event)
-                        .filter(|_| self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open));
-
                     let event_bytes = match encode_client_event_bytes(&event_msg) {
                         Ok(bytes) => bytes,
                         Err(e) => {
@@ -288,7 +302,8 @@ impl ClientSession {
                             break;
                         }
                     };
-                    if !self.forward_event_bytes(event_bytes, channel_key, &mut ws_sender).await {
+                    let channel_message = self.channel_message(&event_msg.event, &event_bytes);
+                    if !self.forward_event_bytes(event_bytes, channel_message, &mut ws_sender).await {
                         break;
                     }
                 }
@@ -430,6 +445,7 @@ impl ClientSession {
         &mut self,
         data: &[u8],
         ws_sender: &mut SplitSink<WebSocket, Message>,
+        channel_messages: &mut Option<ChannelMessages>,
     ) -> bool {
         let Some(webrtc) = self.webrtc.clone() else {
             debug!("WebRTC signaling received but WebRTC is disabled");
@@ -443,7 +459,8 @@ impl ClientSession {
             SignalingMessage::Offer { sdp } => {
                 // A new offer replaces any earlier connection.
                 self.webrtc_peer = None;
-                let (peer, answer_sdp) = match webrtc.answer(&sdp).await {
+                *channel_messages = None;
+                let (peer, answer_sdp, messages) = match webrtc.answer(&sdp).await {
                     Ok(answered) => answered,
                     Err(e) => {
                         warn!("Failed to answer WebRTC offer: {e}");
@@ -451,6 +468,7 @@ impl ClientSession {
                     }
                 };
                 self.webrtc_peer = Some(peer);
+                *channel_messages = Some(messages);
                 let answer =
                     encode_signaling_message(&SignalingMessage::Answer { sdp: answer_sdp });
                 if let Err(e) = ws_sender.send(Message::Binary(answer.into())).await {
@@ -474,18 +492,66 @@ impl ClientSession {
         }
     }
 
-    /// Send encoded event bytes on the data channel when they have a channel key and a peer,
-    /// otherwise, or if the channel refuses them, on the WebSocket.
+    /// Deliver a client data message to `do_client_data`, if the rate allows.
+    async fn submit_client_data(&mut self, format: WireFormat, body: &[u8]) {
+        if !self.client_data_limiter.allow(Instant::now()) {
+            trace!("Client data over the rate limit; dropped");
+            return;
+        }
+        let (kind, payload) = match client_data::decode(format, body) {
+            Ok(message) => message,
+            Err(error) => {
+                warn!(%error, "Invalid client data");
+                return;
+            }
+        };
+        let request = client_data::request(
+            kind,
+            payload,
+            self.handler_object,
+            self.auth_token.clone(),
+            self.client_token.clone(),
+        );
+        if let Err(e) = self
+            .daemon_client
+            .client_call(self.client_id, request)
+            .await
+        {
+            warn!("Unable to send client data to RPC server: {e}");
+        }
+    }
+
+    /// The data channel message for an event: an ephemeral data event, when the channel is
+    /// open, encoded in the channel's format. FlatBuffers channels carry the WebSocket bytes.
+    fn channel_message(
+        &self,
+        event: &ClientEvent,
+        websocket_bytes: &[u8],
+    ) -> Option<(webrtc::MessageKey, Vec<u8>)> {
+        let key = webrtc::channel_key(event)?;
+        let peer = self.webrtc_peer.as_ref().filter(|peer| peer.is_open())?;
+        let bytes = match (peer.format(), event) {
+            (WireFormat::FlatBuffers, _) => websocket_bytes.to_vec(),
+            (WireFormat::Json, ClientEvent::Narrative { event, .. }) => {
+                client_data::event_json(event)?
+            }
+            (WireFormat::Json, _) => return None,
+        };
+        Some((key, bytes))
+    }
+
+    /// Send an event on the data channel when it has a channel message, otherwise, or if the
+    /// channel refuses it, as WebSocket bytes.
     async fn forward_event_bytes(
         &mut self,
         bytes: Vec<u8>,
-        channel_key: Option<webrtc::MessageKey>,
+        channel_message: Option<(webrtc::MessageKey, Vec<u8>)>,
         ws_sender: &mut SplitSink<WebSocket, Message>,
     ) -> bool {
-        if let Some(key) = channel_key
+        if let Some((key, message)) = channel_message
             && let Some(peer) = &self.webrtc_peer
         {
-            match peer.send(key, &bytes) {
+            match peer.send(key, &message) {
                 Ok(()) => return true,
                 Err(e) => {
                     debug!("Data channel send failed, falling back to WS: {e}");

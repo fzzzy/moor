@@ -5318,10 +5318,296 @@ mod root {
             }
         }
 
+        /// The table `ClientDataMessage` in the namespace `MoorCommon`
+        ///
+        /// Generated from these locations:
+        /// * Table `ClientDataMessage` in the file `common.fbs:158`
+        #[derive(Clone, Debug, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        pub struct ClientDataMessage {
+            /// The field `kind` in the table `ClientDataMessage`
+            pub kind: ::planus::alloc::string::String,
+            /// The field `payload` in the table `ClientDataMessage`
+            pub payload: ::planus::alloc::boxed::Box<super::moor_var::Var>,
+        }
+
+        impl ClientDataMessage {
+            /// Creates a [ClientDataMessageBuilder] for serializing an instance of this table.
+            #[inline]
+            pub fn builder() -> ClientDataMessageBuilder<()> {
+                ClientDataMessageBuilder(())
+            }
+
+            #[allow(clippy::too_many_arguments)]
+            pub fn create(
+                builder: &mut ::planus::Builder,
+                field_kind: impl ::planus::WriteAs<::planus::Offset<str>>,
+                field_payload: impl ::planus::WriteAs<::planus::Offset<super::moor_var::Var>>,
+            ) -> ::planus::Offset<Self> {
+                let prepared_kind = field_kind.prepare(builder);
+                let prepared_payload = field_payload.prepare(builder);
+
+                let mut table_writer: ::planus::table_writer::TableWriter<8> =
+                    ::core::default::Default::default();
+                table_writer.write_entry::<::planus::Offset<str>>(0);
+                table_writer.write_entry::<::planus::Offset<super::moor_var::Var>>(1);
+
+                unsafe {
+                    table_writer.finish(builder, |object_writer| {
+                        object_writer.write::<_, _, 4>(&prepared_kind);
+                        object_writer.write::<_, _, 4>(&prepared_payload);
+                    });
+                }
+                builder.current_offset()
+            }
+        }
+
+        impl ::planus::WriteAs<::planus::Offset<ClientDataMessage>> for ClientDataMessage {
+            type Prepared = ::planus::Offset<Self>;
+
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::planus::Offset<ClientDataMessage> {
+                ::planus::WriteAsOffset::prepare(self, builder)
+            }
+        }
+
+        impl ::planus::WriteAsOptional<::planus::Offset<ClientDataMessage>> for ClientDataMessage {
+            type Prepared = ::planus::Offset<Self>;
+
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::core::option::Option<::planus::Offset<ClientDataMessage>> {
+                ::core::option::Option::Some(::planus::WriteAsOffset::prepare(self, builder))
+            }
+        }
+
+        impl ::planus::WriteAsOffset<ClientDataMessage> for ClientDataMessage {
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::planus::Offset<ClientDataMessage> {
+                ClientDataMessage::create(builder, &self.kind, &self.payload)
+            }
+        }
+
+        /// Builder for serializing an instance of the [ClientDataMessage] type.
+        ///
+        /// Can be created using the [ClientDataMessage::builder] method.
+        #[derive(Debug)]
+        #[must_use]
+        pub struct ClientDataMessageBuilder<State>(State);
+
+        impl ClientDataMessageBuilder<()> {
+            /// Setter for the [`kind` field](ClientDataMessage#structfield.kind).
+            #[inline]
+            #[allow(clippy::type_complexity)]
+            pub fn kind<T0>(self, value: T0) -> ClientDataMessageBuilder<(T0,)>
+            where
+                T0: ::planus::WriteAs<::planus::Offset<str>>,
+            {
+                ClientDataMessageBuilder((value,))
+            }
+        }
+
+        impl<T0> ClientDataMessageBuilder<(T0,)> {
+            /// Setter for the [`payload` field](ClientDataMessage#structfield.payload).
+            #[inline]
+            #[allow(clippy::type_complexity)]
+            pub fn payload<T1>(self, value: T1) -> ClientDataMessageBuilder<(T0, T1)>
+            where
+                T1: ::planus::WriteAs<::planus::Offset<super::moor_var::Var>>,
+            {
+                let (v0,) = self.0;
+                ClientDataMessageBuilder((v0, value))
+            }
+        }
+
+        impl<T0, T1> ClientDataMessageBuilder<(T0, T1)> {
+            /// Finish writing the builder to get an [Offset](::planus::Offset) to a serialized [ClientDataMessage].
+            #[inline]
+            pub fn finish(
+                self,
+                builder: &mut ::planus::Builder,
+            ) -> ::planus::Offset<ClientDataMessage>
+            where
+                Self: ::planus::WriteAsOffset<ClientDataMessage>,
+            {
+                ::planus::WriteAsOffset::prepare(&self, builder)
+            }
+        }
+
+        impl<
+            T0: ::planus::WriteAs<::planus::Offset<str>>,
+            T1: ::planus::WriteAs<::planus::Offset<super::moor_var::Var>>,
+        > ::planus::WriteAs<::planus::Offset<ClientDataMessage>>
+            for ClientDataMessageBuilder<(T0, T1)>
+        {
+            type Prepared = ::planus::Offset<ClientDataMessage>;
+
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::planus::Offset<ClientDataMessage> {
+                ::planus::WriteAsOffset::prepare(self, builder)
+            }
+        }
+
+        impl<
+            T0: ::planus::WriteAs<::planus::Offset<str>>,
+            T1: ::planus::WriteAs<::planus::Offset<super::moor_var::Var>>,
+        > ::planus::WriteAsOptional<::planus::Offset<ClientDataMessage>>
+            for ClientDataMessageBuilder<(T0, T1)>
+        {
+            type Prepared = ::planus::Offset<ClientDataMessage>;
+
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::core::option::Option<::planus::Offset<ClientDataMessage>> {
+                ::core::option::Option::Some(::planus::WriteAsOffset::prepare(self, builder))
+            }
+        }
+
+        impl<
+            T0: ::planus::WriteAs<::planus::Offset<str>>,
+            T1: ::planus::WriteAs<::planus::Offset<super::moor_var::Var>>,
+        > ::planus::WriteAsOffset<ClientDataMessage> for ClientDataMessageBuilder<(T0, T1)>
+        {
+            #[inline]
+            fn prepare(
+                &self,
+                builder: &mut ::planus::Builder,
+            ) -> ::planus::Offset<ClientDataMessage> {
+                let (v0, v1) = &self.0;
+                ClientDataMessage::create(builder, v0, v1)
+            }
+        }
+
+        /// Reference to a deserialized [ClientDataMessage].
+        #[derive(Copy, Clone)]
+        pub struct ClientDataMessageRef<'a>(#[allow(dead_code)] ::planus::table_reader::Table<'a>);
+
+        impl<'a> ClientDataMessageRef<'a> {
+            /// Getter for the [`kind` field](ClientDataMessage#structfield.kind).
+            #[inline]
+            pub fn kind(&self) -> ::planus::Result<&'a ::core::primitive::str> {
+                self.0.access_required(0, "ClientDataMessage", "kind")
+            }
+
+            /// Getter for the [`payload` field](ClientDataMessage#structfield.payload).
+            #[inline]
+            pub fn payload(&self) -> ::planus::Result<super::moor_var::VarRef<'a>> {
+                self.0.access_required(1, "ClientDataMessage", "payload")
+            }
+        }
+
+        impl<'a> ::core::fmt::Debug for ClientDataMessageRef<'a> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut f = f.debug_struct("ClientDataMessageRef");
+                f.field("kind", &self.kind());
+                f.field("payload", &self.payload());
+                f.finish()
+            }
+        }
+
+        impl<'a> ::core::convert::TryFrom<ClientDataMessageRef<'a>> for ClientDataMessage {
+            type Error = ::planus::Error;
+
+            #[allow(unreachable_code)]
+            fn try_from(value: ClientDataMessageRef<'a>) -> ::planus::Result<Self> {
+                ::core::result::Result::Ok(Self {
+                    kind: ::core::convert::Into::into(value.kind()?),
+                    payload: ::planus::alloc::boxed::Box::new(::core::convert::TryInto::try_into(
+                        value.payload()?,
+                    )?),
+                })
+            }
+        }
+
+        impl<'a> ::planus::TableRead<'a> for ClientDataMessageRef<'a> {
+            #[inline]
+            fn from_buffer(
+                buffer: ::planus::SliceWithStartOffset<'a>,
+                offset: usize,
+            ) -> ::core::result::Result<Self, ::planus::errors::ErrorKind> {
+                ::core::result::Result::Ok(Self(::planus::table_reader::Table::from_buffer(
+                    buffer, offset,
+                )?))
+            }
+        }
+
+        impl<'a> ::planus::VectorReadInner<'a> for ClientDataMessageRef<'a> {
+            type Error = ::planus::Error;
+            const STRIDE: usize = 4;
+
+            unsafe fn from_buffer(
+                buffer: ::planus::SliceWithStartOffset<'a>,
+                offset: usize,
+            ) -> ::planus::Result<Self> {
+                ::planus::TableRead::from_buffer(buffer, offset).map_err(|error_kind| {
+                    error_kind.with_error_location(
+                        "[ClientDataMessageRef]",
+                        "get",
+                        buffer.offset_from_start,
+                    )
+                })
+            }
+        }
+
+        /// # Safety
+        /// The planus compiler generates implementations that initialize
+        /// the bytes in `write_values`.
+        unsafe impl ::planus::VectorWrite<::planus::Offset<ClientDataMessage>> for ClientDataMessage {
+            type Value = ::planus::Offset<ClientDataMessage>;
+            const STRIDE: usize = 4;
+            #[inline]
+            fn prepare(&self, builder: &mut ::planus::Builder) -> Self::Value {
+                ::planus::WriteAs::prepare(self, builder)
+            }
+
+            #[inline]
+            unsafe fn write_values(
+                values: &[::planus::Offset<ClientDataMessage>],
+                bytes: *mut ::core::mem::MaybeUninit<u8>,
+                buffer_position: u32,
+            ) {
+                let bytes = bytes as *mut [::core::mem::MaybeUninit<u8>; 4];
+                for (i, v) in ::core::iter::Iterator::enumerate(values.iter()) {
+                    ::planus::WriteAsPrimitive::write(
+                        v,
+                        ::planus::Cursor::new(unsafe { &mut *bytes.add(i) }),
+                        buffer_position - (Self::STRIDE * i) as u32,
+                    );
+                }
+            }
+        }
+
+        impl<'a> ::planus::ReadAsRoot<'a> for ClientDataMessageRef<'a> {
+            fn read_as_root(slice: &'a [u8]) -> ::planus::Result<Self> {
+                ::planus::TableRead::from_buffer(
+                    ::planus::SliceWithStartOffset {
+                        buffer: slice,
+                        offset_from_start: 0,
+                    },
+                    0,
+                )
+                .map_err(|error_kind| {
+                    error_kind.with_error_location("[ClientDataMessageRef]", "read_as_root", 0)
+                })
+            }
+        }
+
         /// The table `Event` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `Event` in the file `common.fbs:156`
+        /// * Table `Event` in the file `common.fbs:163`
         #[derive(Clone, Debug, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         pub struct Event {
             /// The field `event` in the table `Event`
@@ -5553,7 +5839,7 @@ mod root {
         /// The table `Presentation` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `Presentation` in the file `common.fbs:160`
+        /// * Table `Presentation` in the file `common.fbs:167`
         #[derive(
             Clone,
             Debug,
@@ -5950,7 +6236,7 @@ mod root {
         /// The table `PresentationAttribute` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PresentationAttribute` in the file `common.fbs:168`
+        /// * Table `PresentationAttribute` in the file `common.fbs:175`
         #[derive(
             Clone,
             Debug,
@@ -6259,7 +6545,7 @@ mod root {
         /// The table `Exception` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `Exception` in the file `common.fbs:173`
+        /// * Table `Exception` in the file `common.fbs:180`
         #[derive(Clone, Debug, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         pub struct Exception {
             /// The field `error` in the table `Exception`
@@ -6582,7 +6868,7 @@ mod root {
         /// The table `CompileContext` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `CompileContext` in the file `common.fbs:183`
+        /// * Table `CompileContext` in the file `common.fbs:190`
         #[derive(
             Clone,
             Debug,
@@ -6884,7 +7170,7 @@ mod root {
         /// The table `StringLexError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `StringLexError` in the file `common.fbs:188`
+        /// * Table `StringLexError` in the file `common.fbs:195`
         #[derive(
             Clone,
             Debug,
@@ -7174,7 +7460,7 @@ mod root {
         /// The table `ParseError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ParseError` in the file `common.fbs:193`
+        /// * Table `ParseError` in the file `common.fbs:200`
         #[derive(
             Clone,
             Debug,
@@ -7925,7 +8211,7 @@ mod root {
         /// The table `UnknownBuiltinFunction` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `UnknownBuiltinFunction` in the file `common.fbs:207`
+        /// * Table `UnknownBuiltinFunction` in the file `common.fbs:214`
         #[derive(
             Clone,
             Debug,
@@ -8239,7 +8525,7 @@ mod root {
         /// The table `UnknownTypeConstant` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `UnknownTypeConstant` in the file `common.fbs:212`
+        /// * Table `UnknownTypeConstant` in the file `common.fbs:219`
         #[derive(
             Clone,
             Debug,
@@ -8547,7 +8833,7 @@ mod root {
         /// The table `UnknownLoopLabel` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `UnknownLoopLabel` in the file `common.fbs:217`
+        /// * Table `UnknownLoopLabel` in the file `common.fbs:224`
         #[derive(
             Clone,
             Debug,
@@ -8853,7 +9139,7 @@ mod root {
         /// The table `DuplicateVariable` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `DuplicateVariable` in the file `common.fbs:222`
+        /// * Table `DuplicateVariable` in the file `common.fbs:229`
         #[derive(
             Clone,
             Debug,
@@ -9161,7 +9447,7 @@ mod root {
         /// The table `AssignToConst` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `AssignToConst` in the file `common.fbs:227`
+        /// * Table `AssignToConst` in the file `common.fbs:234`
         #[derive(
             Clone,
             Debug,
@@ -9453,7 +9739,7 @@ mod root {
         /// The table `DisabledFeature` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `DisabledFeature` in the file `common.fbs:232`
+        /// * Table `DisabledFeature` in the file `common.fbs:239`
         #[derive(
             Clone,
             Debug,
@@ -9759,7 +10045,7 @@ mod root {
         /// The table `BadSlotName` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `BadSlotName` in the file `common.fbs:237`
+        /// * Table `BadSlotName` in the file `common.fbs:244`
         #[derive(
             Clone,
             Debug,
@@ -10049,7 +10335,7 @@ mod root {
         /// The table `InvalidAssignment` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `InvalidAssignment` in the file `common.fbs:242`
+        /// * Table `InvalidAssignment` in the file `common.fbs:249`
         #[derive(
             Clone,
             Debug,
@@ -10321,7 +10607,7 @@ mod root {
         /// The table `InvalidTypeLiteralAssignment` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `InvalidTypeLiteralAssignment` in the file `common.fbs:246`
+        /// * Table `InvalidTypeLiteralAssignment` in the file `common.fbs:253`
         #[derive(
             Clone,
             Debug,
@@ -10646,7 +10932,7 @@ mod root {
         /// The table `AssignmentToCapturedVariable` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `AssignmentToCapturedVariable` in the file `common.fbs:251`
+        /// * Table `AssignmentToCapturedVariable` in the file `common.fbs:258`
         #[derive(
             Clone,
             Debug,
@@ -10973,7 +11259,7 @@ mod root {
         /// The union `CompileErrorUnion` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Union `CompileErrorUnion` in the file `common.fbs:256`
+        /// * Union `CompileErrorUnion` in the file `common.fbs:263`
         #[derive(
             Clone,
             Debug,
@@ -11823,7 +12109,7 @@ mod root {
         /// The table `CompileError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `CompileError` in the file `common.fbs:271`
+        /// * Table `CompileError` in the file `common.fbs:278`
         #[derive(
             Clone,
             Debug,
@@ -12070,7 +12356,7 @@ mod root {
         /// The union `ObjectRefUnion` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Union `ObjectRefUnion` in the file `common.fbs:279`
+        /// * Union `ObjectRefUnion` in the file `common.fbs:286`
         #[derive(
             Clone,
             Debug,
@@ -12353,7 +12639,7 @@ mod root {
         /// The table `ObjectRefId` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectRefId` in the file `common.fbs:285`
+        /// * Table `ObjectRefId` in the file `common.fbs:292`
         #[derive(
             Clone,
             Debug,
@@ -12599,7 +12885,7 @@ mod root {
         /// The table `ObjectRefSysObj` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectRefSysObj` in the file `common.fbs:289`
+        /// * Table `ObjectRefSysObj` in the file `common.fbs:296`
         #[derive(
             Clone,
             Debug,
@@ -12873,7 +13159,7 @@ mod root {
         /// The table `ObjectRefMatch` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectRefMatch` in the file `common.fbs:293`
+        /// * Table `ObjectRefMatch` in the file `common.fbs:300`
         #[derive(
             Clone,
             Debug,
@@ -13127,7 +13413,7 @@ mod root {
         /// The table `ObjectRef` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectRef` in the file `common.fbs:297`
+        /// * Table `ObjectRef` in the file `common.fbs:304`
         #[derive(
             Clone,
             Debug,
@@ -13373,7 +13659,7 @@ mod root {
         /// The union `WorldStateErrorUnion` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Union `WorldStateErrorUnion` in the file `common.fbs:305`
+        /// * Union `WorldStateErrorUnion` in the file `common.fbs:312`
         #[derive(
             Clone,
             Debug,
@@ -14719,7 +15005,7 @@ mod root {
         /// The table `ObjectNotFound` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectNotFound` in the file `common.fbs:328`
+        /// * Table `ObjectNotFound` in the file `common.fbs:335`
         #[derive(
             Clone,
             Debug,
@@ -14966,7 +15252,7 @@ mod root {
         /// The table `ObjectAlreadyExists` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectAlreadyExists` in the file `common.fbs:332`
+        /// * Table `ObjectAlreadyExists` in the file `common.fbs:339`
         #[derive(
             Clone,
             Debug,
@@ -15231,7 +15517,7 @@ mod root {
         /// The table `RecursiveMove` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `RecursiveMove` in the file `common.fbs:336`
+        /// * Table `RecursiveMove` in the file `common.fbs:343`
         #[derive(
             Clone,
             Debug,
@@ -15513,7 +15799,7 @@ mod root {
         /// The table `ObjectPermissionDenied` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjectPermissionDenied` in the file `common.fbs:341`
+        /// * Table `ObjectPermissionDenied` in the file `common.fbs:348`
         #[derive(
             Clone,
             Debug,
@@ -15749,7 +16035,7 @@ mod root {
         /// The table `PropertyNotFound` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropertyNotFound` in the file `common.fbs:344`
+        /// * Table `PropertyNotFound` in the file `common.fbs:351`
         #[derive(
             Clone,
             Debug,
@@ -16045,7 +16331,7 @@ mod root {
         /// The table `PropertyPermissionDenied` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropertyPermissionDenied` in the file `common.fbs:349`
+        /// * Table `PropertyPermissionDenied` in the file `common.fbs:356`
         #[derive(
             Clone,
             Debug,
@@ -16285,7 +16571,7 @@ mod root {
         /// The table `PropertyDefinitionNotFound` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropertyDefinitionNotFound` in the file `common.fbs:352`
+        /// * Table `PropertyDefinitionNotFound` in the file `common.fbs:359`
         #[derive(
             Clone,
             Debug,
@@ -16598,7 +16884,7 @@ mod root {
         /// The table `DuplicatePropertyDefinition` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `DuplicatePropertyDefinition` in the file `common.fbs:357`
+        /// * Table `DuplicatePropertyDefinition` in the file `common.fbs:364`
         #[derive(
             Clone,
             Debug,
@@ -16911,7 +17197,7 @@ mod root {
         /// The table `ChparentPropertyNameConflict` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ChparentPropertyNameConflict` in the file `common.fbs:362`
+        /// * Table `ChparentPropertyNameConflict` in the file `common.fbs:369`
         #[derive(
             Clone,
             Debug,
@@ -17267,7 +17553,7 @@ mod root {
         /// The table `PropertyTypeMismatch` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropertyTypeMismatch` in the file `common.fbs:368`
+        /// * Table `PropertyTypeMismatch` in the file `common.fbs:375`
         #[derive(
             Clone,
             Debug,
@@ -17497,7 +17783,7 @@ mod root {
         /// The table `VerbNotFound` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbNotFound` in the file `common.fbs:371`
+        /// * Table `VerbNotFound` in the file `common.fbs:378`
         #[derive(
             Clone,
             Debug,
@@ -17777,7 +18063,7 @@ mod root {
         /// The table `InvalidVerb` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `InvalidVerb` in the file `common.fbs:376`
+        /// * Table `InvalidVerb` in the file `common.fbs:383`
         #[derive(
             Clone,
             Debug,
@@ -18039,7 +18325,7 @@ mod root {
         /// The table `VerbDecodeError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbDecodeError` in the file `common.fbs:380`
+        /// * Table `VerbDecodeError` in the file `common.fbs:387`
         #[derive(
             Clone,
             Debug,
@@ -18337,7 +18623,7 @@ mod root {
         /// The table `VerbPermissionDenied` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbPermissionDenied` in the file `common.fbs:385`
+        /// * Table `VerbPermissionDenied` in the file `common.fbs:392`
         #[derive(
             Clone,
             Debug,
@@ -18567,7 +18853,7 @@ mod root {
         /// The table `DuplicateVerb` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `DuplicateVerb` in the file `common.fbs:388`
+        /// * Table `DuplicateVerb` in the file `common.fbs:395`
         #[derive(
             Clone,
             Debug,
@@ -18849,7 +19135,7 @@ mod root {
         /// The table `FailedMatch` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `FailedMatch` in the file `common.fbs:393`
+        /// * Table `FailedMatch` in the file `common.fbs:400`
         #[derive(
             Clone,
             Debug,
@@ -19102,7 +19388,7 @@ mod root {
         /// The table `AmbiguousMatch` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `AmbiguousMatch` in the file `common.fbs:397`
+        /// * Table `AmbiguousMatch` in the file `common.fbs:404`
         #[derive(
             Clone,
             Debug,
@@ -19356,7 +19642,7 @@ mod root {
         /// The table `InvalidRenumber` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `InvalidRenumber` in the file `common.fbs:401`
+        /// * Table `InvalidRenumber` in the file `common.fbs:408`
         #[derive(
             Clone,
             Debug,
@@ -19625,7 +19911,7 @@ mod root {
         /// The table `WorldStateDatabaseError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `WorldStateDatabaseError` in the file `common.fbs:405`
+        /// * Table `WorldStateDatabaseError` in the file `common.fbs:412`
         #[derive(
             Clone,
             Debug,
@@ -19907,7 +20193,7 @@ mod root {
         /// The table `RollbackRetry` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `RollbackRetry` in the file `common.fbs:409`
+        /// * Table `RollbackRetry` in the file `common.fbs:416`
         #[derive(
             Clone,
             Debug,
@@ -20118,7 +20404,7 @@ mod root {
         /// The table `WorldStateError` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `WorldStateError` in the file `common.fbs:412`
+        /// * Table `WorldStateError` in the file `common.fbs:419`
         #[derive(
             Clone,
             Debug,
@@ -20380,7 +20666,7 @@ mod root {
         /// The table `PropInfo` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropInfo` in the file `common.fbs:420`
+        /// * Table `PropInfo` in the file `common.fbs:427`
         #[derive(
             Clone,
             Debug,
@@ -20859,7 +21145,7 @@ mod root {
         /// The table `VerbInfo` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbInfo` in the file `common.fbs:430`
+        /// * Table `VerbInfo` in the file `common.fbs:437`
         #[derive(
             Clone,
             Debug,
@@ -21387,7 +21673,7 @@ mod root {
         /// The enum `ArgSpec` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Enum `ArgSpec` in the file `common.fbs:446`
+        /// * Enum `ArgSpec` in the file `common.fbs:453`
         #[derive(
             Copy,
             Clone,
@@ -21557,7 +21843,7 @@ mod root {
         /// The table `PrepSpec` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PrepSpec` in the file `common.fbs:454`
+        /// * Table `PrepSpec` in the file `common.fbs:461`
         #[derive(
             Clone,
             Debug,
@@ -21815,7 +22101,7 @@ mod root {
         /// The table `VerbArgsSpec` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbArgsSpec` in the file `common.fbs:460`
+        /// * Table `VerbArgsSpec` in the file `common.fbs:467`
         #[derive(
             Clone,
             Debug,
@@ -22175,7 +22461,7 @@ mod root {
         /// The table `VerbDef` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbDef` in the file `common.fbs:467`
+        /// * Table `VerbDef` in the file `common.fbs:474`
         #[derive(
             Clone,
             Debug,
@@ -22602,7 +22888,7 @@ mod root {
         /// The table `PropDef` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropDef` in the file `common.fbs:477`
+        /// * Table `PropDef` in the file `common.fbs:484`
         #[derive(
             Clone,
             Debug,
@@ -22950,7 +23236,7 @@ mod root {
         /// The table `VerbDefs` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `VerbDefs` in the file `common.fbs:485`
+        /// * Table `VerbDefs` in the file `common.fbs:492`
         #[derive(
             Clone,
             Debug,
@@ -23202,7 +23488,7 @@ mod root {
         /// The table `PropDefs` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `PropDefs` in the file `common.fbs:490`
+        /// * Table `PropDefs` in the file `common.fbs:497`
         #[derive(
             Clone,
             Debug,
@@ -23454,7 +23740,7 @@ mod root {
         /// The table `ObjAttrs` in the namespace `MoorCommon`
         ///
         /// Generated from these locations:
-        /// * Table `ObjAttrs` in the file `common.fbs:495`
+        /// * Table `ObjAttrs` in the file `common.fbs:502`
         #[derive(
             Clone,
             Debug,

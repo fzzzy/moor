@@ -16,7 +16,7 @@
 use crate::{
     config::TelnetProtocolConfig,
     session::{
-        BoxedAsyncIo, ClientDataLimiter, TelnetConnection,
+        BoxedAsyncIo, TelnetConnection,
         codec::ConnectionCodec,
         telnet::{ProtocolPolicy, TelnetNegotiator},
     },
@@ -24,6 +24,7 @@ use crate::{
 use eyre::bail;
 use futures_util::StreamExt;
 use hickory_resolver::{TokioResolver, proto::rr::RData};
+use moor_common::util::TokenBucket;
 use moor_runtime_api::{
     ClientToken,
     api::{ClientReply, ClientRequest, ConnectionAttribute, HostServices, RuntimeClient},
@@ -402,7 +403,7 @@ impl Listener {
             // Later changes arrive as Action::SetPromptMark; this is the starting mark.
             codec.set_prompt_mark(negotiator.prompt_mark());
             let client_data_limiter =
-                ClientDataLimiter::new(settings.protocols.client_data_rate, Instant::now());
+                TokenBucket::new(settings.protocols.client_data_rate, Instant::now());
             let host_started_at = settings.started_at;
 
             // Re-ify the connection.

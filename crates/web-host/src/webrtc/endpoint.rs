@@ -22,7 +22,7 @@ use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, SocketAddr},
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
     time::Instant,
@@ -41,6 +41,8 @@ use tokio::{
 };
 use tracing::{debug, info, warn};
 
+use crate::host::client_data::WireFormat;
+
 /// Commands queued for the endpoint. Sends beyond this are dropped, and their events
 /// fall back to the WebSocket.
 const COMMAND_CAPACITY: usize = 1024;
@@ -50,6 +52,9 @@ const CHANNEL_HIGH_WATER: usize = 64 * 1024;
 
 /// The channel reports it has drained when its buffer falls below this.
 const CHANNEL_LOW_WATER: usize = 16 * 1024;
+
+/// Client messages waiting for the session. More are dropped until it catches up.
+const INBOUND_CAPACITY: usize = 256;
 
 /// What a channel message supersedes: an older undelivered one with the same namespace and kind.
 pub(crate) type MessageKey = (Symbol, Symbol);
@@ -63,6 +68,8 @@ pub(super) type PeerId = u64;
 #[derive(Default)]
 pub(super) struct PeerLink {
     open: AtomicBool,
+    /// The open channel's format, from its sub-protocol.
+    format: Mutex<WireFormat>,
 }
 
 impl PeerLink {
@@ -70,8 +77,17 @@ impl PeerLink {
         self.open.load(Ordering::Acquire)
     }
 
+    pub(super) fn format(&self) -> WireFormat {
+        *self.format.lock().unwrap()
+    }
+
     fn set_open(&self, open: bool) {
         self.open.store(open, Ordering::Release);
+    }
+
+    fn opened(&self, format: WireFormat) {
+        *self.format.lock().unwrap() = format;
+        self.set_open(true);
     }
 }
 
@@ -80,6 +96,8 @@ pub(super) struct Answered {
     pub(super) id: PeerId,
     pub(super) sdp: String,
     pub(super) link: Arc<PeerLink>,
+    /// Messages the client sends on its channel.
+    pub(super) inbound: mpsc::Receiver<Vec<u8>>,
 }
 
 pub(super) enum Command {
@@ -227,11 +245,13 @@ impl Endpoint {
 
     async fn answer(&mut self, offer: SdpOffer) -> Result<Answered, String> {
         let link = Arc::new(PeerLink::default());
+        let (inbound_sender, inbound) = mpsc::channel(INBOUND_CAPACITY);
         let mut peer = Peer {
             rtc: Rtc::builder().set_ice_lite(true).build(Instant::now()),
             link: link.clone(),
             channel: None,
             pending: LatestQueue::default(),
+            inbound: inbound_sender,
             timeout: Instant::now(),
         };
         for address in self.advertised.iter() {
@@ -254,6 +274,7 @@ impl Endpoint {
             id,
             sdp: answer.to_sdp_string(),
             link,
+            inbound,
         })
     }
 
@@ -316,6 +337,8 @@ struct Peer {
     channel: Option<ChannelId>,
     /// Messages waiting for the channel to drain, at most one per key.
     pending: LatestQueue,
+    /// Where the client's channel messages go.
+    inbound: mpsc::Sender<Vec<u8>>,
     /// When the engine next needs `Input::Timeout`.
     timeout: Instant,
 }
@@ -372,13 +395,29 @@ impl Peer {
     fn event(&mut self, event: Event) {
         match event {
             Event::ChannelOpen(id, label) => {
-                info!("WebRTC data channel {label:?} open");
+                let Some(mut channel) = self.rtc.channel(id) else {
+                    return;
+                };
+                let protocol = channel
+                    .config()
+                    .map(|config| config.protocol.clone())
+                    .unwrap_or_default();
+                let Some(format) = WireFormat::for_channel_protocol(&protocol) else {
+                    warn!(
+                        "WebRTC data channel {label:?} has unknown protocol {protocol:?}; not using it"
+                    );
+                    return;
+                };
+                channel.set_buffered_amount_low_threshold(CHANNEL_LOW_WATER);
+                info!("WebRTC data channel {label:?} open ({format:?})");
                 self.channel = Some(id);
-                if let Some(mut channel) = self.rtc.channel(id) {
-                    channel.set_buffered_amount_low_threshold(CHANNEL_LOW_WATER);
-                }
-                self.link.set_open(true);
+                self.link.opened(format);
                 self.flush();
+            }
+            Event::ChannelData(data) if self.channel == Some(data.id) => {
+                if self.inbound.try_send(data.data).is_err() {
+                    debug!("WebRTC client message dropped; the session is behind");
+                }
             }
             Event::ChannelBufferedAmountLow(id) if self.channel == Some(id) => self.flush(),
             Event::ChannelClose(id) if self.channel == Some(id) => {
@@ -391,7 +430,6 @@ impl Peer {
                 self.rtc.disconnect();
                 self.link.set_open(false);
             }
-            // The client does not send on the channel; anything it does send is dropped.
             _ => {}
         }
     }

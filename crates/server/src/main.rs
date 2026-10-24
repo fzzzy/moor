@@ -331,6 +331,7 @@ struct WebServiceConfig {
     rate_limit: RateLimitConfig,
     trusted_proxy_cidrs: Vec<String>,
     webrtc: WebRtcConfig,
+    client_data_rate: u32,
 }
 
 impl Default for WebServiceConfig {
@@ -344,6 +345,7 @@ impl Default for WebServiceConfig {
             rate_limit: RateLimitConfig::default(),
             trusted_proxy_cidrs: vec![],
             webrtc: WebRtcConfig::default(),
+            client_data_rate: moor_web_host::DEFAULT_CLIENT_DATA_RATE,
         }
     }
 }
@@ -553,6 +555,7 @@ async fn run() -> Result<(), Report> {
             rate_limit: services_config.web.rate_limit,
             trusted_proxy_cidrs: services_config.web.trusted_proxy_cidrs,
             webrtc: services_config.web.webrtc,
+            client_data_rate: services_config.web.client_data_rate,
         };
         let web_runtime = moor_web_host::HostRuntime {
             kill_switch: kill_switch.clone(),

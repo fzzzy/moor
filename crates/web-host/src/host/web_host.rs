@@ -348,6 +348,8 @@ pub struct HostShared {
     pub trusted_proxy_cidrs: Arc<Vec<IpNet>>,
     /// The WebRTC service, when enabled.
     pub webrtc: Option<Arc<WebRtc>>,
+    /// Client data messages each connection may send per second; 0 is unlimited.
+    pub client_data_rate: u32,
 }
 
 #[derive(Clone)]
@@ -361,6 +363,7 @@ pub struct WebHost {
     /// Cached server features response (features don't change at runtime).
     features_cache: Arc<tokio::sync::OnceCell<Vec<u8>>>,
     pub(crate) webrtc: Option<Arc<WebRtc>>,
+    client_data_rate: u32,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -381,6 +384,7 @@ impl WebHost {
             host_services,
             trusted_proxy_cidrs,
             webrtc,
+            client_data_rate,
         } = shared;
         Self {
             handler_object,
@@ -391,6 +395,7 @@ impl WebHost {
             trusted_proxy_cidrs,
             features_cache: Arc::new(tokio::sync::OnceCell::new()),
             webrtc,
+            client_data_rate,
         }
     }
 }
@@ -599,6 +604,10 @@ impl WebHost {
             is_logout: false,
             webrtc: self.webrtc.clone(),
             webrtc_peer: None,
+            client_data_limiter: moor_common::util::TokenBucket::new(
+                self.client_data_rate,
+                std::time::Instant::now(),
+            ),
         })
     }
 

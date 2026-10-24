@@ -18,13 +18,14 @@ use std::time::{Duration, Instant};
 use str0m::{
     Candidate, Event, Input, Output, Rtc,
     change::SdpAnswer,
-    channel::{ChannelConfig, Reliability},
+    channel::{ChannelConfig, ChannelId, Reliability},
     net::{Protocol, Receive},
 };
 use tokio::{net::UdpSocket, sync::mpsc, sync::oneshot};
 
 use super::endpoint::{Command, EndpointHandle};
 use super::*;
+use crate::host::client_data::WireFormat;
 
 const PATIENCE: Duration = Duration::from_secs(10);
 
@@ -59,7 +60,9 @@ fn channel(ordered: bool, reliability: Reliability) -> ChannelConfig {
 struct Client {
     rtc: Rtc,
     socket: UdpSocket,
+    channel: ChannelId,
     received: mpsc::UnboundedSender<Vec<u8>>,
+    outgoing: mpsc::UnboundedReceiver<Vec<u8>>,
 }
 
 impl Client {
@@ -95,6 +98,12 @@ impl Client {
                     let receive = Receive::new(Protocol::Udp, source, local, &buffer[..length]).unwrap();
                     Input::Receive(Instant::now(), receive)
                 }
+                Some(message) = self.outgoing.recv() => {
+                    if let Some(mut channel) = self.rtc.channel(self.channel) {
+                        channel.write(true, &message).unwrap();
+                    }
+                    continue;
+                }
                 _ = tokio::time::sleep(wait) => Input::Timeout(Instant::now()),
             };
             if self.rtc.handle_input(input).is_err() {
@@ -104,31 +113,41 @@ impl Client {
     }
 }
 
+/// A running client and the server's side of its connection.
+struct Connection {
+    peer: WebRtcPeer,
+    /// What the client received on its channel.
+    received: mpsc::UnboundedReceiver<Vec<u8>>,
+    /// What the server received from the client's channel.
+    messages: ChannelMessages,
+    /// Messages for the client to send on its channel.
+    send: mpsc::UnboundedSender<Vec<u8>>,
+}
+
 /// Offer `config` from a new client, answer it, and keep the client running. With
 /// `trickle`, the client's candidate is signaled after the answer instead of offered.
-async fn connect(
-    webrtc: &WebRtc,
-    config: ChannelConfig,
-    trickle: bool,
-) -> (WebRtcPeer, mpsc::UnboundedReceiver<Vec<u8>>) {
+async fn connect(webrtc: &WebRtc, config: ChannelConfig, trickle: bool) -> Connection {
     let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
     let candidate = Candidate::host(socket.local_addr().unwrap(), "udp").unwrap();
     let (sender, received) = mpsc::unbounded_channel();
-    let mut client = Client {
-        rtc: Rtc::new(Instant::now()),
-        socket,
-        received: sender,
-    };
+    let (send, outgoing) = mpsc::unbounded_channel();
+    let mut rtc = Rtc::new(Instant::now());
     if !trickle {
-        client.rtc.add_local_candidate(candidate.clone());
-        client.drain().await;
+        rtc.add_local_candidate(candidate.clone());
     }
-    let mut change = client.rtc.sdp_api();
-    change.add_channel_with_config(config);
+    let mut change = rtc.sdp_api();
+    let channel = change.add_channel_with_config(config);
     let (offer, pending) = change.apply().unwrap();
+    let mut client = Client {
+        rtc,
+        socket,
+        channel,
+        received: sender,
+        outgoing,
+    };
     client.drain().await;
 
-    let (peer, answer) = webrtc.answer(&offer.to_sdp_string()).await.unwrap();
+    let (peer, answer, messages) = webrtc.answer(&offer.to_sdp_string()).await.unwrap();
     client
         .rtc
         .sdp_api()
@@ -143,7 +162,12 @@ async fn connect(
             .unwrap();
     }
     tokio::spawn(client.run());
-    (peer, received)
+    Connection {
+        peer,
+        received,
+        messages,
+        send,
+    }
 }
 
 async fn opened(peer: &WebRtcPeer) {
@@ -175,7 +199,9 @@ async fn receive(received: &mut mpsc::UnboundedReceiver<Vec<u8>>) -> Vec<u8> {
 #[tokio::test]
 async fn reliable_ordered_channel_delivers_in_order() {
     let webrtc = webrtc().await;
-    let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let Connection {
+        peer, mut received, ..
+    } = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
     opened(&peer).await;
     for sequence in 0..32u8 {
         peer.send(key(), &[sequence]).unwrap();
@@ -188,7 +214,9 @@ async fn reliable_ordered_channel_delivers_in_order() {
 #[tokio::test]
 async fn unordered_channel_without_retransmits_delivers() {
     let webrtc = webrtc().await;
-    let (peer, mut received) = connect(
+    let Connection {
+        peer, mut received, ..
+    } = connect(
         &webrtc,
         channel(false, Reliability::MaxRetransmits { retransmits: 0 }),
         false,
@@ -202,7 +230,9 @@ async fn unordered_channel_without_retransmits_delivers() {
 #[tokio::test]
 async fn channel_with_packet_lifetime_delivers() {
     let webrtc = webrtc().await;
-    let (peer, mut received) = connect(
+    let Connection {
+        peer, mut received, ..
+    } = connect(
         &webrtc,
         channel(false, Reliability::MaxPacketLifetime { lifetime: 100 }),
         false,
@@ -214,9 +244,46 @@ async fn channel_with_packet_lifetime_delivers() {
 }
 
 #[tokio::test]
+async fn client_channel_messages_reach_the_session() {
+    let webrtc = webrtc().await;
+    let mut connection = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    opened(&connection.peer).await;
+    assert_eq!(connection.peer.format(), WireFormat::FlatBuffers);
+    connection.send.send(b"input".to_vec()).unwrap();
+    let message = tokio::time::timeout(PATIENCE, connection.messages.recv())
+        .await
+        .expect("no client message arrived")
+        .unwrap();
+    assert_eq!(message, b"input");
+}
+
+#[tokio::test]
+async fn the_channel_protocol_selects_json() {
+    let webrtc = webrtc().await;
+    let mut config = channel(false, Reliability::MaxRetransmits { retransmits: 0 });
+    config.protocol = "moor.json".to_string();
+    let connection = connect(&webrtc, config, false).await;
+    opened(&connection.peer).await;
+    assert_eq!(connection.peer.format(), WireFormat::Json);
+}
+
+#[tokio::test]
+async fn a_channel_with_another_protocol_is_not_used() {
+    let webrtc = webrtc().await;
+    let mut config = channel(true, Reliability::Reliable);
+    config.protocol = "chat".to_string();
+    let connection = connect(&webrtc, config, false).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(!connection.peer.is_open());
+    assert!(connection.peer.send(key(), b"nowhere").is_err());
+}
+
+#[tokio::test]
 async fn trickled_client_candidate_connects() {
     let webrtc = webrtc().await;
-    let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), true).await;
+    let Connection {
+        peer, mut received, ..
+    } = connect(&webrtc, channel(true, Reliability::Reliable), true).await;
     opened(&peer).await;
     peer.send(key(), b"trickled").unwrap();
     assert_eq!(receive(&mut received).await, b"trickled");
@@ -225,10 +292,16 @@ async fn trickled_client_candidate_connects() {
 #[tokio::test]
 async fn peers_share_one_endpoint_and_leave_on_drop() {
     let webrtc = webrtc().await;
-    let (first, mut first_received) =
-        connect(&webrtc, channel(true, Reliability::Reliable), false).await;
-    let (second, mut second_received) =
-        connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let Connection {
+        peer: first,
+        received: mut first_received,
+        ..
+    } = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let Connection {
+        peer: second,
+        received: mut second_received,
+        ..
+    } = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
     opened(&first).await;
     opened(&second).await;
     assert_eq!(peer_count(&webrtc.endpoint).await, 2);
@@ -253,7 +326,7 @@ async fn sending_before_the_channel_opens_fails() {
         change.add_channel_with_config(channel(true, Reliability::Reliable));
         change.apply().unwrap().0
     };
-    let (peer, _answer) = webrtc.answer(&offer.to_sdp_string()).await.unwrap();
+    let (peer, _answer, _messages) = webrtc.answer(&offer.to_sdp_string()).await.unwrap();
     assert!(!peer.is_open());
     assert!(peer.send(key(), b"too early").is_err());
 }
@@ -262,7 +335,8 @@ async fn sending_before_the_channel_opens_fails() {
 async fn invalid_offers_and_candidates_are_rejected() {
     let webrtc = webrtc().await;
     assert!(webrtc.answer("not sdp").await.is_err());
-    let (peer, _received) = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let Connection { peer, .. } =
+        connect(&webrtc, channel(true, Reliability::Reliable), false).await;
     assert!(peer.add_ice_candidate("not a candidate").await.is_err());
     peer.add_ice_candidate("").await.unwrap();
 }
@@ -307,7 +381,9 @@ fn latest_queue_replaces_in_place_and_puts_back_first() {
 #[tokio::test]
 async fn a_burst_on_one_key_always_delivers_the_newest_message() {
     let webrtc = webrtc().await;
-    let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let Connection {
+        peer, mut received, ..
+    } = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
     opened(&peer).await;
     // Well past the high-water mark, so later messages queue and supersede each other.
     let sent = 200u8;

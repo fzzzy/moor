@@ -16,6 +16,7 @@
 
 use std::{collections::HashMap, time::Instant};
 
+use moor_common::util::TokenBucket;
 use moor_runtime_api::{AuthToken, ClientToken, api::ClientRequest};
 use moor_var::{NOTHING, Obj, Symbol, Var, v_map, v_obj, v_sym};
 use tracing::{trace, warn};
@@ -24,43 +25,6 @@ use super::{
     codec::ConnectionFrame,
     telnet::{Action, OutFrame, TelnetNegotiator, negotiator::DataDrop},
 };
-
-/// Token bucket for inbound `ClientData`: `rate` per second, bursts of twice that.
-#[derive(Debug)]
-pub(crate) struct ClientDataLimiter {
-    rate: f64,
-    burst: f64,
-    tokens: f64,
-    last: Instant,
-}
-
-impl ClientDataLimiter {
-    /// `rate` messages per second; 0 disables the limit.
-    pub(crate) fn new(rate: u32, now: Instant) -> Self {
-        let rate = f64::from(rate);
-        Self {
-            rate,
-            burst: rate * 2.0,
-            tokens: rate * 2.0,
-            last: now,
-        }
-    }
-
-    /// Take one token if available.
-    pub(crate) fn allow(&mut self, now: Instant) -> bool {
-        if self.rate == 0.0 {
-            return true;
-        }
-        let elapsed = now.saturating_duration_since(self.last).as_secs_f64();
-        self.last = now;
-        self.tokens = (self.tokens + elapsed * self.rate).min(self.burst);
-        if self.tokens < 1.0 {
-            return false;
-        }
-        self.tokens -= 1.0;
-        true
-    }
-}
 
 /// What the session knows when applying actions.
 pub(crate) struct PlanContext<'a> {
@@ -98,7 +62,7 @@ pub(crate) fn plan_actions(
     negotiator: &TelnetNegotiator,
     ctx: &PlanContext<'_>,
     attributes: &mut HashMap<Symbol, Var>,
-    limiter: &mut ClientDataLimiter,
+    limiter: &mut TokenBucket,
 ) -> Plan {
     let mut plan = Plan::default();
     for action in actions {
@@ -161,7 +125,7 @@ pub(crate) fn plan_actions(
 fn push_client_data(
     plan: &mut Plan,
     ctx: &PlanContext<'_>,
-    limiter: &mut ClientDataLimiter,
+    limiter: &mut TokenBucket,
     namespace: Symbol,
     kind: String,
     payload: Var,
@@ -225,7 +189,6 @@ mod tests {
     };
     use bytes::Bytes;
     use moor_var::{v_int, v_str};
-    use std::time::Duration;
 
     fn token() -> ClientToken {
         ClientToken("client".to_string())
@@ -260,8 +223,8 @@ mod tests {
         }
     }
 
-    fn unlimited() -> ClientDataLimiter {
-        ClientDataLimiter::new(0, Instant::now())
+    fn unlimited() -> TokenBucket {
+        TokenBucket::new(0, Instant::now())
     }
 
     fn client_data(r: &ClientRequest) -> Option<(&Option<AuthToken>, Obj, String, String, &Var)> {
@@ -474,23 +437,6 @@ mod tests {
     }
 
     #[test]
-    fn rate_limiter_bursts_then_refills() {
-        let start = Instant::now();
-        let mut l = ClientDataLimiter::new(50, start);
-        let allowed = (0..150).filter(|_| l.allow(start)).count();
-        assert_eq!(allowed, 100);
-        assert!(!l.allow(start));
-        // 100 ms refills five tokens.
-        let later = start + Duration::from_millis(100);
-        let allowed = (0..10).filter(|_| l.allow(later)).count();
-        assert_eq!(allowed, 5);
-        // The bucket never holds more than the burst.
-        let much_later = start + Duration::from_secs(60);
-        let allowed = (0..150).filter(|_| l.allow(much_later)).count();
-        assert_eq!(allowed, 100);
-    }
-
-    #[test]
     fn rate_limit_applies_to_deliveries() {
         for option in [OPT_GMCP, OPT_MSDP] {
             let mut n = TelnetNegotiator::new(ProtocolPolicy {
@@ -500,7 +446,7 @@ mod tests {
             let ct = token();
             let c = ctx(&ct, None, false);
             let mut attrs = HashMap::new();
-            let mut limiter = ClientDataLimiter::new(1, c.now);
+            let mut limiter = TokenBucket::new(1, c.now);
             let enable = n.on_event(TelnetEvent::Negotiate {
                 verb: Verb::Do,
                 option,

@@ -16,10 +16,11 @@
 use std::sync::Arc;
 
 use str0m::{Candidate, change::SdpOffer};
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
 use super::endpoint::{Answered, Command, EndpointHandle, MessageKey, PeerId, PeerLink};
+use crate::host::client_data::WireFormat;
 
 /// One client's WebRTC connection. Dropping it removes the peer from the endpoint.
 pub(crate) struct WebRtcPeer {
@@ -28,21 +29,30 @@ pub(crate) struct WebRtcPeer {
     endpoint: EndpointHandle,
 }
 
+/// Messages a client sends on its data channel, in the channel's format.
+pub(crate) type ChannelMessages = mpsc::Receiver<Vec<u8>>;
+
 impl WebRtcPeer {
-    /// Answer a client's offer; returns the peer and the SDP answer.
+    /// Answer a client's offer; returns the peer, the SDP answer, and the client's
+    /// channel messages.
     pub(super) async fn answer(
         endpoint: EndpointHandle,
         offer_sdp: &str,
-    ) -> eyre::Result<(Self, String)> {
+    ) -> eyre::Result<(Self, String, ChannelMessages)> {
         let offer = SdpOffer::from_sdp_string(offer_sdp)
             .map_err(|e| eyre::eyre!("Invalid WebRTC offer: {e}"))?;
         let (reply, answered) = oneshot::channel();
         endpoint.request(Command::Answer { offer, reply }).await?;
-        let Answered { id, sdp, link } = answered
+        let Answered {
+            id,
+            sdp,
+            link,
+            inbound,
+        } = answered
             .await
             .map_err(|_| eyre::eyre!("WebRTC endpoint has stopped"))?
             .map_err(|e| eyre::eyre!(e))?;
-        Ok((Self { id, link, endpoint }, sdp))
+        Ok((Self { id, link, endpoint }, sdp, inbound))
     }
 
     /// Add a candidate the client trickled. An empty candidate ends the client's list.
@@ -63,6 +73,11 @@ impl WebRtcPeer {
     /// Whether the client's data channel is open.
     pub(crate) fn is_open(&self) -> bool {
         self.link.is_open()
+    }
+
+    /// The open channel's format, which applies to messages in both directions.
+    pub(crate) fn format(&self) -> WireFormat {
+        self.link.format()
     }
 
     /// Queue a binary message for the data channel, superseding any undelivered message

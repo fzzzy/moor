@@ -1021,6 +1021,7 @@ mod tests {
                     host_services: Arc::new(Services(runtime)),
                     trusted_proxy_cidrs: Arc::new(vec![]),
                     webrtc: None,
+                    client_data_rate: 0,
                 },
             ),
             pending: Arc::new(PendingOAuth2Store::new()),

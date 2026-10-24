@@ -41,6 +41,9 @@ use tracing::{error, info};
 use uuid::Uuid;
 use webrtc::{WebRtc, WebRtcConfig};
 
+/// Client data messages a connection may send per second by default.
+pub const DEFAULT_CLIENT_DATA_RATE: u32 = 50;
+
 #[derive(Clone, Debug)]
 pub struct WebHostConfig {
     pub listen_address: String,
@@ -50,6 +53,8 @@ pub struct WebHostConfig {
     pub rate_limit: RateLimitConfig,
     pub trusted_proxy_cidrs: Vec<String>,
     pub webrtc: WebRtcConfig,
+    /// Client data messages each connection may send per second; 0 is unlimited.
+    pub client_data_rate: u32,
 }
 
 #[derive(Clone, Debug)]
@@ -115,6 +120,7 @@ async fn run_with_host_services(
         host_services: host_services.clone(),
         trusted_proxy_cidrs,
         webrtc,
+        client_data_rate: config.client_data_rate,
     };
     let route_options = RouteOptions {
         enable_webhooks: config.enable_webhooks,
