@@ -96,9 +96,10 @@ outcome. The bridge closes that command connection and does not repeat the opera
 state before retrying a write. Commands that request interactive input need a MOO client.
 
 `moo_eval` returns a single expression's value. Code with statements runs as written, with a missing
-final semicolon added, and returns what it returns. Values come back as MOO literal text, with the
-same value as JSON in `structuredContent`. Compile errors, from `moo_eval` and `moo_program_verb`,
-give their line and column.
+final semicolon added, and returns what it returns. Values come back as MOO literal text;
+`structuredContent` holds the same value as JSON in `value` and the exact literal in `literal`,
+since JSON cannot express objects, symbols or errors exactly. Compile errors, from `moo_eval` and
+`moo_program_verb`, give their line and column.
 
 When a login is refused, the bridge rereads the configuration file and retries once if the account's
 credentials changed, so an edited password applies without a restart.

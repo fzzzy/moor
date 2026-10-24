@@ -170,5 +170,5 @@ test("values come back once as text, with their JSON as structured content", asy
     const { client } = await bridge(t);
     const result = await client.callTool({ name: "moo_function_help", arguments: { function_name: "notify" } });
     assert.deepEqual(result.content, [{ type: "text", text: "[\"name\" -> \"notify\"]" }]);
-    assert.deepEqual(result.structuredContent, { value: { name: "notify" } });
+    assert.deepEqual(result.structuredContent, { value: { name: "notify" }, literal: "[\"name\" -> \"notify\"]" });
 });

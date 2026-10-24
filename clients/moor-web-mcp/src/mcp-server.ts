@@ -42,9 +42,16 @@ function makeErrorResult(text: string): CallToolResult {
     return { content: [{ type: "text", text }], isError: true };
 }
 
-/** A MOO value: its literal as text, and the same value as JSON for structured use. */
+/**
+ * A MOO value: its literal as text, and as structured content both the JSON form and the
+ * literal, since some clients show only the structured content and JSON cannot express
+ * objects, symbols or errors exactly.
+ */
 function makeValueResult(result: { js: unknown; literal: string }): CallToolResult {
-    return { content: [{ type: "text", text: result.literal }], structuredContent: { value: result.js } };
+    return {
+        content: [{ type: "text", text: result.literal }],
+        structuredContent: { value: result.js, literal: result.literal },
+    };
 }
 
 function parseObjectRef(raw: unknown): string {
