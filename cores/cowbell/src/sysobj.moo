@@ -38,6 +38,8 @@ object SYSOBJ [
   property change_tools (owner: ARCH_WIZARD, flags: "r") = CHANGE_TOOLS;
   property consumable (owner: ARCH_WIZARD, flags: "r") = CONSUMABLE;
   property container (owner: HACKER, flags: "r") = CONTAINER;
+  property discord_bridge (owner: ARCH_WIZARD, flags: "r") = DISCORD_BRIDGE;
+  property discord_speaker (owner: ARCH_WIZARD, flags: "r") = DISCORD_SPEAKER;
   property core_version (owner: ARCH_WIZARD, flags: "rc") = "0.3.0";
   property data_visor (owner: HACKER, flags: "r") = DATA_VISOR;
   property dm (owner: HACKER, flags: "r") = DM;
@@ -203,6 +205,7 @@ object SYSOBJ [
     quiet_period = `$login.connection_quiet_period ! E_PROPNF => 7200';
     time_since_last = last_conn > 0 ? time() - last_conn | quiet_period + 1;
     should_announce = is_new_player || time_since_last > quiet_period;
+    this:_presence(user, is_new_player ? 'created | 'connected);
     "Set up new players before dropping perms (mailbox, welcome letter).";
     if (is_new_player)
       `$login:setup_new_player(user) ! E_VERBNF';
@@ -230,6 +233,7 @@ object SYSOBJ [
     length(connections(user)) > 0 && return;
     "Set last_disconnected before calling disfunc so it reads consistently.";
     `user.last_disconnected = time() ! E_PROPNF, E_PERM';
+    this:_presence(user, 'disconnected);
     set_task_perms(user);
     "Room disfunc and player disfunc run inline, no fork.";
     `user.location:disfunc(user) ! E_INVIND, E_VERBNF';
@@ -562,4 +566,17 @@ object SYSOBJ [
     server_log(@args);
   endmethod
   property llm_room_view (owner: ARCH_WIZARD, flags: "r") = LLM_ROOM_VIEW;
+  property presence_listeners (owner: ARCH_WIZARD, flags: "") = {};
+
+  method _presence owner: ARCH_WIZARD
+    "Tell presence listeners about a new player, a first connection or a last disconnection.";
+    caller == this || raise(E_PERM);
+    const {user, kind} = args;
+    "Each listener runs in its own task, so a slow or failing one cannot hold up a login.";
+    for listener in (this.presence_listeners)
+      fork (0)
+        `listener:presence_event(user, kind) ! ANY';
+      endfork
+    endfor
+  endmethod
 endobject

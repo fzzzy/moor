@@ -199,3 +199,7 @@ define LLM_PROMPTS = #2035;
 define LLM_VERB_SOURCE = #2036;
 define LLM_CODE_SEARCH = #2037;
 define LLM_TOOL_PROGRESS = #2038;
+
+// Integrations with outside services; a separate range, clear of the core ids.
+define DISCORD_BRIDGE = #5000;
+define DISCORD_SPEAKER = #5001;
