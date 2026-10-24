@@ -32,6 +32,8 @@ object CHANGE_MANAGER [
         "CONSUMABLE" -> CONSUMABLE,
         "CONTAINER" -> CONTAINER,
         "DATA_VISOR" -> DATA_VISOR,
+        "DISCORD_BRIDGE" -> DISCORD_BRIDGE,
+        "DISCORD_SPEAKER" -> DISCORD_SPEAKER,
         "DM" -> DM,
         "DOCUMENT" -> DOCUMENT,
         "DOCUMENT_NODE" -> DOCUMENT_NODE,
@@ -336,7 +338,9 @@ object CHANGE_MANAGER [
         URL_UTILS,
         AREA,
         PASSAGE,
-        ROOM
+        ROOM,
+        DISCORD_BRIDGE,
+        DISCORD_SPEAKER
       },
       "schema" -> 1,
       "trusted_owners" -> {HACKER, LOGIN},
