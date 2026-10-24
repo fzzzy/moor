@@ -27,6 +27,10 @@ HASH := \#
 HEADLESS_FILTER_IDS = $(patsubst $(HASH)%,%,$(HEADLESS_FILTERS))
 HEADLESS_WIZARD_FILTER_IDS = $(patsubst $(HASH)%,%,$(HEADLESS_WIZARD_FILTERS))
 HEADLESS_PLAYER_FILTER_IDS = $(patsubst $(HASH)%,%,$(HEADLESS_PLAYER_FILTERS))
+COMMA := ,
+SPACE := $(subst ,, )
+# Each filter group shares one import: moorc runs comma-separated filters in order.
+headless_filter_list = $(subst $(SPACE),$(COMMA),$(addprefix $(HASH),$(strip $(1))))
 
 OPTIONS = --use-boolean-returns true \
           --use-symbols-in-builtins true \
@@ -123,22 +127,15 @@ runtime-headless-src: $(HEADLESS_SRC_STAMP)
 
 runtime-headless: runtime-headless-src
 	@test -n "$(strip $(HEADLESS_FILTER_IDS) $(HEADLESS_PLAYER_FILTER_IDS) $(HEADLESS_WIZARD_FILTER_IDS))" || { echo "FAIL: no headless filters selected" >&2; exit 1; }
-	set -e; for filter in $(HEADLESS_FILTER_IDS); do \
-		$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
+	$(if $(strip $(HEADLESS_FILTER_IDS)),$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
 		--test-wizard=$(TEST_WIZARD) --test-programmer=$(TEST_PROGRAMMER) --test-player=$(TEST_PLAYER) --run-tests true \
-		--test-filter "#$$filter" --test-timeout $(HEADLESS_TIMEOUT); \
-	done
-	set -e; for filter in $(HEADLESS_PLAYER_FILTER_IDS); do \
-		$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
+		--test-filter "$(call headless_filter_list,$(HEADLESS_FILTER_IDS))" --test-timeout $(HEADLESS_TIMEOUT))
+	$(if $(strip $(HEADLESS_PLAYER_FILTER_IDS)),$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
 		--test-wizard=$(TEST_WIZARD) --test-programmer=$(TEST_PROGRAMMER) --test-player=$(TEST_PLAYER) --test-task-player=$(HEADLESS_TASK_PLAYER) --run-tests true \
-		--test-filter "#$$filter" --test-timeout $(HEADLESS_TIMEOUT); \
-	done
-
-	set -e; for filter in $(HEADLESS_WIZARD_FILTER_IDS); do \
-		$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
+		--test-filter "$(call headless_filter_list,$(HEADLESS_PLAYER_FILTER_IDS))" --test-timeout $(HEADLESS_TIMEOUT))
+	$(if $(strip $(HEADLESS_WIZARD_FILTER_IDS)),$(CHECKED_METHODS) $(CORE_COMPILER) --src-objdef-dir $(HEADLESS_SRC_DIRECTORY) \
 		--test-wizard=$(TEST_WIZARD) --test-programmer=$(TEST_PROGRAMMER) --test-player=$(TEST_PLAYER) --test-task-player=$(TEST_WIZARD) --run-tests true \
-		--test-filter "#$$filter" --test-timeout $(HEADLESS_TIMEOUT); \
-	done
+		--test-filter "$(call headless_filter_list,$(HEADLESS_WIZARD_FILTER_IDS))" --test-timeout $(HEADLESS_TIMEOUT))
 
 runtime-session: runtime-headless-src
 	$(SESSION_RUNNER) --cowbell \

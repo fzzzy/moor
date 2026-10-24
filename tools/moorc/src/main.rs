@@ -117,7 +117,8 @@ pub struct Args {
         long,
         help = "Filter which unit tests to run. Format: 'objectid:verb_name' (e.g., '#123:test_foo'). \
                 The objectid is parsed with Obj::try_from (supports #N or UUID format). \
-                If only objectid is given, runs all test_ verbs on that object."
+                If only objectid is given, runs all test_ verbs on that object. \
+                Separate several filters with commas; their tests run in that order."
     )]
     test_filter: Option<String>,
 
@@ -604,35 +605,43 @@ fn main() -> Result<(), eyre::Report> {
         info!("Found {} tests", unit_tests.len());
 
         // Apply test filter if specified
-        if let Some(ref filter) = args.test_filter {
-            let (filter_obj, filter_verb): (Option<Obj>, Option<&str>) =
-                if let Some((obj_part, verb_part)) = filter.split_once(':') {
-                    let obj = Obj::try_from(obj_part).unwrap_or_else(|e| {
-                        error!("Failed to parse object id '{}': {}", obj_part, e);
-                        std::process::exit(1);
-                    });
-                    (Some(obj), Some(verb_part))
-                } else {
-                    // Only object id specified, run all test_ verbs on that object
-                    let obj = Obj::try_from(filter.as_str()).unwrap_or_else(|e| {
-                        error!("Failed to parse object id '{}': {}", filter, e);
-                        std::process::exit(1);
-                    });
-                    (Some(obj), None)
-                };
-
-            let before_count = unit_tests.len();
-            unit_tests.retain(|(o, verb)| {
-                let obj_matches = filter_obj.as_ref().is_none_or(|fo| fo == o);
-                let verb_matches = filter_verb.is_none_or(|fv| verb.as_arc_str().as_str() == fv);
-                obj_matches && verb_matches
-            });
-            info!(
-                "Filtered tests from {} to {} (filter: {:?})",
-                before_count,
-                unit_tests.len(),
-                filter
-            );
+        if let Some(ref filters) = args.test_filter {
+            // Several comma-separated filters share one import; tests run in filter order.
+            let available = std::mem::take(&mut unit_tests);
+            for filter in filters.split(',').map(str::trim).filter(|f| !f.is_empty()) {
+                let (filter_obj, filter_verb): (Obj, Option<&str>) =
+                    if let Some((obj_part, verb_part)) = filter.split_once(':') {
+                        let obj = Obj::try_from(obj_part).unwrap_or_else(|e| {
+                            error!("Failed to parse object id '{}': {}", obj_part, e);
+                            std::process::exit(1);
+                        });
+                        (obj, Some(verb_part))
+                    } else {
+                        // Only object id specified, run all test_ verbs on that object
+                        let obj = Obj::try_from(filter).unwrap_or_else(|e| {
+                            error!("Failed to parse object id '{}': {}", filter, e);
+                            std::process::exit(1);
+                        });
+                        (obj, None)
+                    };
+                let selected: Vec<_> = available
+                    .iter()
+                    .filter(|(o, verb)| {
+                        *o == filter_obj
+                            && filter_verb.is_none_or(|fv| verb.as_arc_str().as_str() == fv)
+                            && !unit_tests.contains(&(*o, *verb))
+                    })
+                    .cloned()
+                    .collect();
+                // checked_methods.py rejects any filter reported as selecting no tests.
+                info!(
+                    "Filtered tests from {} to {} (filter: {:?})",
+                    available.len(),
+                    selected.len(),
+                    filter
+                );
+                unit_tests.extend(selected);
+            }
         }
     }
 
