@@ -129,7 +129,8 @@ object LOOK_SCENARIOS
       $test_utils:assert_true(index(body, " and 5 others are here."), "remaining actors are counted");
       const panel = $look:panel(view, 'text_plain)["content"];
       $test_utils:assert_true(index(panel, " and 5 others are here."), "the panel counts them too: " + panel);
-      $test_utils:assert_false(index(panel, "Guest10"), "the panel does not list every actor");
+      $test_utils:assert_eq(length({guest for guest in (actors) if (index(panel, guest.name + " ") || index(panel, guest.name + ","))}), 5,
+        "the panel names only the first five too: " + panel);
       $test_utils:assert_eq(length({actor for actor in (actors) if (index(body, actor.name + " ") || index(body, actor.name + ","))}), 5,
         "only the first five names are shown");
       for actor in (actors[1..2])
