@@ -308,7 +308,8 @@ object EVENT_RECEIVER [
       :with_metadata('look_room, room);
     this.location == room || return;
     this:emit_room_snapshot_state(this, room, view);
-    this:inform_current(event);
+    "A move made by a background task, such as a schedule, has no initiating connection to answer.";
+    typeof(`connection() ! E_INVARG => 0') == TYPE_OBJ ? this:inform_current(event) | this:tell(event);
   endmethod
 
   method emit_room_snapshot_state owner: ARCH_WIZARD

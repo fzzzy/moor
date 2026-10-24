@@ -429,11 +429,17 @@ object HEADLESS_PASSAGE_SCENARIOS
     const receiver = create($event_receiver, #90100, 2);
     try
       add_property(receiver, "received", {}, {#90100, "r"});
+      add_property(receiver, "paths", {}, {#90100, "r"});
       add_verb(receiver, {#90100, "rxd", "inform_current"}, {"this", "none", "this"});
-      set_verb_code(receiver, "inform_current", {"this.received = {@this.received, args[1]};"});
+      set_verb_code(receiver, "inform_current", {"this.received = {@this.received, args[1]}; this.paths = {@this.paths, 'current};"});
+      add_verb(receiver, {#90100, "rxd", "tell"}, {"this", "none", "this"});
+      set_verb_code(receiver, "tell", {"this.received = {@this.received, args[1]}; this.paths = {@this.paths, 'all};"});
       move(receiver, source);
       receiver:emit_room_look(source);
       $test_utils:assert_eq(length(receiver.received), 1, "A current room look reaches its viewer");
+      const connected = typeof(`connection() ! E_INVARG => 0') == TYPE_OBJ;
+      $test_utils:assert_eq(receiver.paths, {connected ? 'current | 'all},
+        "A look answers the initiating connection, or every connection when a background task made the move");
       receiver.received = {};
       move(receiver, elsewhere);
       receiver:emit_room_look(source);

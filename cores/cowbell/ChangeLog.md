@@ -251,6 +251,11 @@ Cowbell entries.
 
 ### Fixed
 
+- A player moved by a background task, such as a scheduled verb, now sees the room they arrive in.
+  The arrival description used to go only to the connection that started the task, and a
+  background task has none. It now goes to all of the player's connections; ordinary moves still
+  answer only the connection that typed the command.
+
 - `changes_resolve` and `changes_initialize_property` accept a review row's `member` as well as its
   `id` when only one row has that member. They took a parameter named `member` but refused member
   values. The change tools' descriptions now say which value each accepts.
