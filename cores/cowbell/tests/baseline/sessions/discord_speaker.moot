@@ -1,0 +1,23 @@
+// Copyright (C) 2026 The mooR Authors
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// A Discord speaker answers both forms of listen with its latest lines.
+@wizard
+; const radio = create($discord_speaker); radio.name = "Bakelite radio"; radio.aliases = {"radio"}; move(radio, #90102.location); #90102.runtime_probe = radio; return true;
+true
+@nonprogrammer
+% listen radio
+~~The latest from Bakelite radio:
+=
+~~Only static so far.
+@wizard
+; #90102.runtime_probe.recent = {"Henri waves."}; return true;
+true
+@nonprogrammer
+% listen to radio
+~~The latest from Bakelite radio:
+=
+~~Henri waves.
+@wizard
+; recycle(#90102.runtime_probe); return true;
+true

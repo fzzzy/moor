@@ -61,13 +61,8 @@ object DISCORD_SPEAKER [
     this.recent = recent;
   endmethod
 
-  verb listen (this none none) owner: ARCH_WIZARD flags: "rxd"
-    "Hear the latest lines that crossed this speaker.";
-    this:_play_recent();
-  endverb
-
-  verb listen (none to this) owner: ARCH_WIZARD flags: "rxd"
-    "Hear the latest lines that crossed this speaker, as in 'listen to radio'.";
+  verb listen (any any any) owner: ARCH_WIZARD flags: "rxd"
+    "Hear the latest lines that crossed this speaker, as 'listen radio' or 'listen to radio'.";
     this:_play_recent();
   endverb
 
