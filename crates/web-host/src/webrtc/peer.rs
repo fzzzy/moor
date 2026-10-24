@@ -75,6 +75,11 @@ impl WebRtcPeer {
         self.link.is_open()
     }
 
+    /// Watch whether the client's data channel is open.
+    pub(crate) fn watch_open(&self) -> tokio::sync::watch::Receiver<bool> {
+        self.link.watch_open()
+    }
+
     /// The open channel's format, which applies to messages in both directions.
     pub(crate) fn format(&self) -> WireFormat {
         self.link.format()

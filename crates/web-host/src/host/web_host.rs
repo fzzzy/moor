@@ -608,6 +608,7 @@ impl WebHost {
                 self.client_data_rate,
                 std::time::Instant::now(),
             ),
+            realtime_reported: false,
         })
     }
 

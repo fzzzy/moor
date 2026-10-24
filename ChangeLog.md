@@ -19,7 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   FlatBuffers `ClientDataMessage` arrives as `do_client_data(connection, 'web, kind, payload)`, and
   so do messages on the client's WebRTC data channel. The channel's sub-protocol chooses its format
   in both directions: `moor.json`, or `moor.fb` (the default). The web host's `--client-data-rate`
-  setting limits each connection, at 50 messages per second by default.
+  setting limits each connection, at 50 messages per second by default. When a data channel opens,
+  the connection gains the `'realtime` attribute, and `do_client_data` receives
+  `('client, "attributes", ['realtime -> true])`; when it closes, the attribute is removed and
+  reported as `#-1`, as telnet reports its protocols.
 
 - `emit_data()` takes a list of recipients and an optional options map. With `['ephemeral -> true]`,
   the event is never written to the event log and is delivered best-effort over the fastest

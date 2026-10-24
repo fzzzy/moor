@@ -258,6 +258,18 @@ async fn client_channel_messages_reach_the_session() {
 }
 
 #[tokio::test]
+async fn watchers_see_the_channel_open() {
+    let webrtc = webrtc().await;
+    let connection = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    let mut open = connection.peer.watch_open();
+    tokio::time::timeout(PATIENCE, open.wait_for(|open| *open))
+        .await
+        .expect("the channel never reported open")
+        .unwrap();
+    assert!(connection.peer.is_open());
+}
+
+#[tokio::test]
 async fn the_channel_protocol_selects_json() {
     let webrtc = webrtc().await;
     let mut config = channel(false, Reliability::MaxRetransmits { retransmits: 0 });

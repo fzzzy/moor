@@ -28,8 +28,9 @@ use moor_common::tasks::{Event, NarrativeEvent};
 use moor_runtime_api::{AuthToken, ClientToken, api::ClientRequest};
 use moor_schema::{common as moor_common_schema, convert::var_from_flatbuffer_ref};
 use moor_var::{
-    Obj, Symbol, Var,
+    NOTHING, Obj, Symbol, Var,
     json::{json_to_var, var_to_json},
+    v_bool, v_map, v_obj, v_sym,
 };
 use planus::ReadAsRoot;
 use serde_json::json;
@@ -117,6 +118,35 @@ pub(crate) fn request(
         kind,
         payload,
     }
+}
+
+/// The requests reporting whether a connection's data channel is open, as telnet reports
+/// its protocols: the `'realtime` connection attribute (true, or removed), then
+/// `do_client_data(connection, 'client, "attributes", ['realtime -> true or #-1])`.
+pub(crate) fn realtime_report(
+    open: bool,
+    handler_object: Obj,
+    auth_token: &AuthToken,
+    client_token: &ClientToken,
+) -> [ClientRequest; 2] {
+    let key = Symbol::mk("realtime");
+    let value = open.then(|| v_bool(true));
+    [
+        ClientRequest::SetClientAttribute {
+            client_token: client_token.clone(),
+            auth_token: Some(auth_token.clone()),
+            key,
+            value: value.clone(),
+        },
+        ClientRequest::ClientData {
+            client_token: client_token.clone(),
+            auth_token: Some(auth_token.clone()),
+            handler_object,
+            namespace: Symbol::mk("client"),
+            kind: "attributes".to_string(),
+            payload: v_map(&[(v_sym(key), value.unwrap_or_else(|| v_obj(NOTHING)))]),
+        },
+    ]
 }
 
 /// An ephemeral data event as a JSON channel message, or `None` for other events or a
@@ -223,6 +253,40 @@ mod tests {
             panic!("expected client data");
         };
         assert_eq!((namespace, kind.as_str()), (Symbol::mk("web"), "move"));
+    }
+
+    #[test]
+    fn realtime_reports_set_or_remove_the_attribute_and_notify() {
+        for (open, value) in [(true, Some(v_bool(true))), (false, None)] {
+            let [attribute, notification] = realtime_report(
+                open,
+                Obj::mk_id(0),
+                &AuthToken("a".into()),
+                &ClientToken("c".into()),
+            );
+            let ClientRequest::SetClientAttribute {
+                key, value: set, ..
+            } = attribute
+            else {
+                panic!("expected an attribute");
+            };
+            assert_eq!((key, set), (Symbol::mk("realtime"), value.clone()));
+            let ClientRequest::ClientData {
+                namespace,
+                kind,
+                payload,
+                ..
+            } = notification
+            else {
+                panic!("expected client data");
+            };
+            assert_eq!(
+                (namespace, kind.as_str()),
+                (Symbol::mk("client"), "attributes")
+            );
+            let reported = value.unwrap_or_else(|| v_obj(NOTHING));
+            assert_eq!(payload, v_map(&[(v_sym(Symbol::mk("realtime")), reported)]));
+        }
     }
 
     #[test]

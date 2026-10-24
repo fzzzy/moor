@@ -21,10 +21,7 @@
 use std::{
     collections::{HashMap, VecDeque},
     net::{IpAddr, SocketAddr},
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Arc, Mutex},
     time::Instant,
 };
 
@@ -37,7 +34,7 @@ use str0m::{
 };
 use tokio::{
     net::UdpSocket,
-    sync::{mpsc, oneshot},
+    sync::{mpsc, oneshot, watch},
 };
 use tracing::{debug, info, warn};
 
@@ -65,16 +62,29 @@ const RECEIVE_BUFFER: usize = 2048;
 pub(super) type PeerId = u64;
 
 /// What a session's peer handle can see of its peer.
-#[derive(Default)]
 pub(super) struct PeerLink {
-    open: AtomicBool,
+    /// Whether the client's channel is open; watchers see each change.
+    open: watch::Sender<bool>,
     /// The open channel's format, from its sub-protocol.
     format: Mutex<WireFormat>,
 }
 
+impl Default for PeerLink {
+    fn default() -> Self {
+        Self {
+            open: watch::Sender::new(false),
+            format: Mutex::default(),
+        }
+    }
+}
+
 impl PeerLink {
     pub(super) fn is_open(&self) -> bool {
-        self.open.load(Ordering::Acquire)
+        *self.open.borrow()
+    }
+
+    pub(super) fn watch_open(&self) -> watch::Receiver<bool> {
+        self.open.subscribe()
     }
 
     pub(super) fn format(&self) -> WireFormat {
@@ -82,7 +92,8 @@ impl PeerLink {
     }
 
     fn set_open(&self, open: bool) {
-        self.open.store(open, Ordering::Release);
+        self.open
+            .send_if_modified(|current| std::mem::replace(current, open) != open);
     }
 
     fn opened(&self, format: WireFormat) {

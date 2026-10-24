@@ -34,7 +34,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant, SystemTime},
 };
-use tokio::select;
+use tokio::{select, sync::watch};
 use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 
@@ -75,6 +75,8 @@ pub struct ClientSession {
     pub(crate) webrtc_peer: Option<WebRtcPeer>,
     /// Limits client data from the WebSocket and the data channel together.
     pub(crate) client_data_limiter: TokenBucket,
+    /// Whether the core was last told this connection has an open data channel.
+    pub(crate) realtime_reported: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -143,8 +145,9 @@ impl ClientSession {
         let mut ping_interval = tokio::time::interval(WEBSOCKET_PING_INTERVAL);
         let mut heartbeat_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
         let mut pending_heartbeat: Option<Instant> = None;
-        // Held outside `self` so the select below can wait on it beside the other branches.
+        // Held outside `self` so the select below can wait on them beside the other branches.
         let mut channel_messages: Option<ChannelMessages> = None;
+        let mut channel_open: Option<watch::Receiver<bool>> = None;
         loop {
             if expecting_input.is_empty()
                 && self.pending_task.is_none()
@@ -207,7 +210,7 @@ impl ClientSession {
                             pending_heartbeat = None;
                         }
                         ReadEvent::WebRtcSignaling(data) => {
-                            if !self.handle_webrtc_signaling(&data, &mut ws_sender, &mut channel_messages).await {
+                            if !self.handle_webrtc_signaling(&data, &mut ws_sender, &mut channel_messages, &mut channel_open).await {
                                 break;
                             }
                         }
@@ -241,6 +244,21 @@ impl ClientSession {
                 } => {
                     let format = self.webrtc_peer.as_ref().map(WebRtcPeer::format).unwrap_or_default();
                     self.submit_client_data(format, &message).await;
+                }
+                changed = async {
+                    match channel_open.as_mut() {
+                        Some(open) => open.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    match changed {
+                        Ok(()) => {
+                            let open = channel_open.as_ref().is_some_and(|open| *open.borrow());
+                            self.report_realtime(open).await;
+                        }
+                        // The peer has gone; a new offer will bring a new watcher.
+                        Err(_) => channel_open = None,
+                    }
                 }
                 Ok(event_msg) = self.broadcast_sub.recv_client_broadcast() => {
                     trace!("broadcast_event");
@@ -446,6 +464,7 @@ impl ClientSession {
         data: &[u8],
         ws_sender: &mut SplitSink<WebSocket, Message>,
         channel_messages: &mut Option<ChannelMessages>,
+        channel_open: &mut Option<watch::Receiver<bool>>,
     ) -> bool {
         let Some(webrtc) = self.webrtc.clone() else {
             debug!("WebRTC signaling received but WebRTC is disabled");
@@ -460,6 +479,8 @@ impl ClientSession {
                 // A new offer replaces any earlier connection.
                 self.webrtc_peer = None;
                 *channel_messages = None;
+                *channel_open = None;
+                self.report_realtime(false).await;
                 let (peer, answer_sdp, messages) = match webrtc.answer(&sdp).await {
                     Ok(answered) => answered,
                     Err(e) => {
@@ -467,6 +488,7 @@ impl ClientSession {
                         return true;
                     }
                 };
+                *channel_open = Some(peer.watch_open());
                 self.webrtc_peer = Some(peer);
                 *channel_messages = Some(messages);
                 let answer =
@@ -488,6 +510,29 @@ impl ClientSession {
             SignalingMessage::Answer { .. } => {
                 warn!("Received unexpected SDP answer from client");
                 true
+            }
+        }
+    }
+
+    /// Tell the core whether this connection has an open data channel.
+    async fn report_realtime(&mut self, open: bool) {
+        if open == self.realtime_reported {
+            return;
+        }
+        self.realtime_reported = open;
+        let requests = client_data::realtime_report(
+            open,
+            self.handler_object,
+            &self.auth_token,
+            &self.client_token,
+        );
+        for request in requests {
+            if let Err(e) = self
+                .daemon_client
+                .client_call(self.client_id, request)
+                .await
+            {
+                warn!("Unable to report the data channel to the RPC server: {e}");
             }
         }
     }
