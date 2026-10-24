@@ -19,6 +19,13 @@ If neither is acceptable, the server returns `406 Not Acceptable`.
 PASETO v4.public token obtained from `/auth/connect` or `/auth/create`. Some endpoints also require
 `X-Moor-Client-Token` and `X-Moor-Client-Id` headers for session continuity.
 
+**Errors** — When the daemon refuses a request, the response has the status that fits why and a JSON
+body `{"code": "...", "error": "..."}`, even when FlatBuffers were requested. Codes include
+`unauthorized` (401), `invalid_request` and `invalid_value` (400), `permission_denied` (403),
+`object_not_found`, `verb_not_found` and `property_not_found` (404), and `daemon_unavailable` (503).
+A server error (500) has code `internal_error` and a generic message. Errors raised by MOO code that
+runs are not HTTP errors: they are returned inside `InvocationError` with status 200.
+
 **FlatBuffers note** — FlatBuffer request/response bodies are opaque binary blobs whose schemas are
 defined in the `moor-schema` crate. This spec documents their logical content in prose; the wire
 format is governed by the `.fbs` files, not JSON Schema.
@@ -722,8 +729,13 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid object CURIE
 - **401**: Missing or invalid auth token
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -747,8 +759,13 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid object CURIE
 - **401**: Missing or invalid auth token
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -875,8 +892,13 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid object CURIE
 - **401**: Missing or invalid auth token
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -900,8 +922,13 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid object CURIE
 - **401**: Missing or invalid auth token
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -939,6 +966,7 @@ Requires: `X-Moor-Auth-Token`
 - **401**: Missing or invalid auth token
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -960,6 +988,7 @@ Requires: `X-Moor-Auth-Token`
 - **401**: Missing or invalid auth token
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -990,6 +1019,7 @@ Requires: `X-Moor-Auth-Token`
 - **401**: Missing or invalid auth token
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1014,8 +1044,11 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid object CURIE
 - **401**: Missing or invalid auth token
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1046,8 +1079,13 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **400**: Invalid request body
 - **401**: Missing or invalid auth token
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1082,6 +1120,7 @@ Requires: `X-Moor-Auth-Token`
 - **401**: Missing or invalid auth token
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1099,6 +1138,7 @@ Requires: `X-Moor-Auth-Token`
 - **401**: Missing or invalid auth token
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1120,6 +1160,7 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **401**: Missing or invalid auth token
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1135,6 +1176,7 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **401**: Missing or invalid auth token
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1159,6 +1201,7 @@ Requires: `X-Moor-Auth-Token`
 - **400**: Missing public_key field
 - **401**: Missing or invalid auth token
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1174,6 +1217,7 @@ Requires: `X-Moor-Auth-Token`
   - Content-Type: `application/json`
 - **401**: Missing or invalid auth token
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1200,8 +1244,13 @@ unauthenticated requests are allowed.
   - Content-Type: `application/x-flatbuffers`
   - Content-Type: `application/json`
 - **400**: Invalid property path
+- **403**: The player may not read or change it. The body is a JSON error with code
+  `permission_denied`.
+- **404**: The object, verb, or property does not exist. The body is a JSON error with code
+  `object_not_found`, `verb_not_found`, or `property_not_found`.
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 
@@ -1236,6 +1285,7 @@ is captured and returned.
   - Content-Type: `application/json`
 - **406**: Accept header does not include `application/x-flatbuffers` or `application/json`
 - **500**: Internal server error
+- **503**: Daemon is unreachable
 
 ---
 

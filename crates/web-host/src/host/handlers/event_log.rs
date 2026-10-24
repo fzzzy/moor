@@ -13,6 +13,7 @@
 
 //! Event log encryption and history endpoints
 
+use crate::host::daemon_errors::daemon_error_response;
 use crate::host::{
     auth::StatelessAuth,
     flatbuffer_response,
@@ -113,10 +114,7 @@ pub async fn get_pubkey_handler(
         .await
     {
         Ok(reply) => reply,
-        Err(e) => {
-            error!("RPC failure: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(error) => return daemon_error_response(&error),
     };
 
     let ClientReply::EventLogPublicKey { public_key } = reply else {
@@ -147,10 +145,7 @@ pub async fn delete_history_handler(
         .await
     {
         Ok(reply) => reply,
-        Err(e) => {
-            error!("RPC failure: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(error) => return daemon_error_response(&error),
     };
 
     let ClientReply::EventLogHistoryDeleted { success } = reply else {
@@ -194,10 +189,7 @@ pub async fn set_pubkey_handler(
         .await
     {
         Ok(reply) => reply,
-        Err(e) => {
-            error!("RPC failure: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(error) => return daemon_error_response(&error),
     };
 
     let ClientReply::EventLogPublicKey { public_key } = reply else {
@@ -233,10 +225,7 @@ pub async fn dismiss_presentation_handler(
         .await
     {
         Ok(reply) => reply,
-        Err(e) => {
-            error!("RPC failure: {:?}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
+        Err(error) => return daemon_error_response(&error),
     };
 
     let ClientReply::PresentationDismissed = reply else {

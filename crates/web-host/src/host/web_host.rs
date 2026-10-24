@@ -15,6 +15,7 @@
 
 #![allow(clippy::too_many_arguments)]
 
+use crate::host::daemon_errors::{ErrorReply, daemon_error_response};
 use crate::host::{
     auth, flatbuffer_response,
     handlers::{CapturedInvocationQuery, run_captured_invocation},
@@ -698,20 +699,19 @@ impl WebHost {
     }
 }
 
+/// Send a request to the daemon and encode its reply, or answer with the response that fits
+/// why it failed.
 pub(crate) async fn rpc_call(
     client_id: Uuid,
     rpc_client: &Arc<dyn RuntimeClient>,
     request: ClientRequest,
-) -> Result<Vec<u8>, StatusCode> {
+) -> Result<Vec<u8>, ErrorReply> {
     match rpc_client.client_call(client_id, request).await {
         Ok(reply) => encode_client_success_bytes(reply).map_err(|e| {
             error!("RPC reply encode failure: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            StatusCode::INTERNAL_SERVER_ERROR.into()
         }),
-        Err(e) => {
-            error!("RPC failure: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
+        Err(e) => Err(daemon_error_response(&e).into()),
     }
 }
 

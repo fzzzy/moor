@@ -661,10 +661,8 @@ impl RuntimeApi for RpcMessageHandler {
                         let (propdef, propperms, value) = scheduler_client
                             .request_property(&player, &player, &object, name)
                             .map_err(|e| {
-                                error!(error = ?e, "Error requesting property");
-                                RpcMessageError::EntityRetrievalError(
-                                    "error requesting property".to_string(),
-                                )
+                                debug!(error = ?e, "Error requesting property");
+                                RpcMessageError::TaskError(e)
                             })?;
                         Ok(ClientReply::PropertyValue {
                             prop_info: (propdef, propperms),
@@ -675,10 +673,8 @@ impl RuntimeApi for RpcMessageHandler {
                         let (verbdef, code) = scheduler_client
                             .request_verb(&player, &player, &object, name)
                             .map_err(|e| {
-                                error!(error = ?e, "Error requesting verb");
-                                RpcMessageError::EntityRetrievalError(
-                                    "error requesting verb".to_string(),
-                                )
+                                debug!(error = ?e, "Error requesting verb");
+                                RpcMessageError::TaskError(e)
                             })?;
                         Ok(ClientReply::VerbValue {
                             verb_info: verbdef,
@@ -697,10 +693,8 @@ impl RuntimeApi for RpcMessageHandler {
                 let prop_list = scheduler_client
                     .request_properties(&player, &player, &object, inherited)
                     .map_err(|e| {
-                        error!(error = ?e, "Error requesting properties");
-                        RpcMessageError::EntityRetrievalError(
-                            "error requesting properties".to_string(),
-                        )
+                        debug!(error = ?e, "Error requesting properties");
+                        RpcMessageError::TaskError(e)
                     })?;
                 Ok(ClientReply::PropertiesReply {
                     properties: prop_list.into_iter().collect(),
@@ -716,8 +710,8 @@ impl RuntimeApi for RpcMessageHandler {
                 let verb_list = scheduler_client
                     .request_verbs(&player, &player, &object, inherited)
                     .map_err(|e| {
-                        error!(error = ?e, "Error requesting verbs");
-                        RpcMessageError::EntityRetrievalError("error requesting verbs".to_string())
+                        debug!(error = ?e, "Error requesting verbs");
+                        RpcMessageError::TaskError(e)
                     })?;
                 Ok(ClientReply::VerbsReply {
                     verbs: verb_list.into_iter().collect(),
@@ -729,8 +723,8 @@ impl RuntimeApi for RpcMessageHandler {
                 let resolved = scheduler_client
                     .resolve_object(player, objref)
                     .map_err(|e| {
-                        error!(error = ?e, "Error resolving object");
-                        RpcMessageError::EntityRetrievalError("error resolving object".to_string())
+                        debug!(error = ?e, "Error resolving object");
+                        RpcMessageError::TaskError(e)
                     })?;
                 Ok(ClientReply::ResolveResult { result: resolved })
             }
@@ -824,8 +818,8 @@ impl RuntimeApi for RpcMessageHandler {
             ClientRequest::ListObjects { auth_token } => {
                 let player = self.validate_auth_token(auth_token, None)?;
                 let objects = scheduler_client.list_objects(&player).map_err(|e| {
-                    error!(error = ?e, "Error listing objects");
-                    RpcMessageError::EntityRetrievalError("error listing objects".to_string())
+                    debug!(error = ?e, "Error listing objects");
+                    RpcMessageError::TaskError(e)
                 })?;
                 let object_infos = objects
                     .into_iter()
@@ -1010,10 +1004,8 @@ impl RpcMessageHandler {
                 return Ok(ClientReply::SysPropValue { value: None });
             }
             Err(e) => {
-                error!(error = ?e, "Error requesting system property");
-                return Err(RpcMessageError::ErrorCouldNotRetrieveSysProp(
-                    "error requesting system property".to_string(),
-                ));
+                debug!(error = ?e, "Error requesting system property");
+                return Err(RpcMessageError::TaskError(e));
             }
         };
         Ok(ClientReply::SysPropValue { value: Some(pv) })

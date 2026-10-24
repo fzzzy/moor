@@ -40,14 +40,15 @@ pub use webhooks::web_hook_handler;
 use axum::http::StatusCode;
 use moor_common::config::MAX_CAPTURE_DEADLINE_MS;
 use moor_runtime_api::{
-    RpcError, RpcMessageError,
     api::{ClientReply, ClientRequest, RuntimeClient},
     api_codec::encode_invocation_response,
 };
 use moor_schema::rpc as moor_rpc;
 use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
-use tracing::error;
+use tracing::{debug, error};
+
+use crate::host::daemon_errors::{ErrorReply, daemon_error_response};
 use uuid::Uuid;
 
 /// Query parameters shared by HTTP endpoints that wait for a captured task.
@@ -91,25 +92,15 @@ pub(super) async fn run_captured_invocation(
     rpc_client: &Arc<dyn RuntimeClient>,
     request: ClientRequest,
     operation: &'static str,
-) -> Result<moor_rpc::InvocationResponse, StatusCode> {
+) -> Result<moor_rpc::InvocationResponse, ErrorReply> {
     let reply = rpc_client
         .client_call(client_id, request)
         .await
         .map_err(|error| {
-            error!(?error, operation, "Captured invocation RPC failed");
-            captured_rpc_error_status(&error)
+            debug!(?error, operation, "Captured invocation RPC failed");
+            ErrorReply::from(daemon_error_response(&error))
         })?;
-    invocation_response(reply)
-}
-
-fn captured_rpc_error_status(error: &RpcError) -> StatusCode {
-    match error {
-        RpcError::Daemon(RpcMessageError::InvalidRequest(_)) => StatusCode::BAD_REQUEST,
-        RpcError::Daemon(RpcMessageError::PermissionDenied) | RpcError::AuthenticationError(_) => {
-            StatusCode::UNAUTHORIZED
-        }
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
-    }
+    invocation_response(reply).map_err(ErrorReply::from)
 }
 
 #[cfg(test)]
@@ -150,20 +141,6 @@ mod tests {
             }
             .timeout(),
             Err(StatusCode::BAD_REQUEST)
-        );
-    }
-
-    #[test]
-    fn daemon_request_errors_keep_their_http_meaning() {
-        assert_eq!(
-            captured_rpc_error_status(&RpcError::Daemon(RpcMessageError::InvalidRequest(
-                "deadline exceeds daemon maximum".to_string(),
-            ))),
-            StatusCode::BAD_REQUEST
-        );
-        assert_eq!(
-            captured_rpc_error_status(&RpcError::Daemon(RpcMessageError::PermissionDenied)),
-            StatusCode::UNAUTHORIZED
         );
     }
 }

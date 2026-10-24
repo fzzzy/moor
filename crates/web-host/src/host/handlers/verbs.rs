@@ -310,7 +310,7 @@ pub async fn verb_program_handler(
 
     let reply = match rpc_client.client_call(client_id, program_msg).await {
         Ok(reply) => reply,
-        Err(error) => return super::captured_rpc_error_status(&error).into_response(),
+        Err(error) => return crate::host::daemon_errors::daemon_error_response(&error),
     };
     verb_program_response(reply, format)
 }

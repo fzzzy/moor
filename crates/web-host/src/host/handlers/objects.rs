@@ -28,16 +28,15 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use moor_common::{
-    model::{CompileError, ObjectRef, WorldStateError},
-    tasks::{CommandError, SchedulerError},
-};
+use moor_common::model::{CompileError, ObjectRef};
 use moor_compiler::ObjDefParseError;
 use moor_runtime_api::api::{BatchAction, BatchActionEntry, ClientRequest};
-use moor_runtime_api::{RpcError, RpcMessageError, api_codec::encode_client_success_bytes};
+use moor_runtime_api::api_codec::encode_client_success_bytes;
 use moor_var::Symbol;
 use serde::Deserialize;
 use tracing::error;
+
+use crate::host::daemon_errors::{daemon_error_response, error_response};
 
 #[derive(Deserialize)]
 pub struct QueryObjectsQuery {
@@ -178,7 +177,7 @@ pub async fn update_property_handler(
     };
 
     let Some(object_ref) = ObjectRef::parse_curie(&object) else {
-        return property_error(
+        return error_response(
             StatusCode::BAD_REQUEST,
             "invalid_object",
             "Invalid object reference",
@@ -190,7 +189,7 @@ pub async fn update_property_handler(
     let literal_str = match std::str::from_utf8(&body) {
         Ok(s) => s,
         Err(_) => {
-            return property_error(
+            return error_response(
                 StatusCode::BAD_REQUEST,
                 "invalid_literal",
                 "Property value must be UTF-8 text",
@@ -218,7 +217,7 @@ pub async fn update_property_handler(
                 .into_response();
         }
         Err(e) => {
-            return property_error(StatusCode::BAD_REQUEST, "invalid_literal", &e.to_string());
+            return error_response(StatusCode::BAD_REQUEST, "invalid_literal", &e.to_string());
         }
     };
 
@@ -231,13 +230,13 @@ pub async fn update_property_handler(
 
     let reply = match rpc_client.client_call(client_id, update_msg).await {
         Ok(reply) => reply,
-        Err(error) => return property_rpc_error(error),
+        Err(error) => return daemon_error_response(&error),
     };
     let reply_bytes = match encode_client_success_bytes(reply) {
         Ok(bytes) => bytes,
         Err(error) => {
             error!(?error, "Failed to encode property update reply");
-            return property_error(
+            return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
                 "Unable to update property",
@@ -251,63 +250,6 @@ pub async fn update_property_handler(
             reply_result_to_json(&reply_bytes).unwrap_or_else(|status| status.into_response())
         }
     }
-}
-
-// Errors use JSON even when the requested success format is FlatBuffers.
-fn property_error(status: StatusCode, code: &str, message: &str) -> Response {
-    (
-        status,
-        axum::Json(serde_json::json!({"code": code, "error": message})),
-    )
-        .into_response()
-}
-
-fn property_rpc_error(error: RpcError) -> Response {
-    use RpcMessageError::{InvalidRequest, PermissionDenied, TaskError};
-    use SchedulerError::{CommandExecutionError, PropertyRetrievalFailed};
-    use WorldStateError::*;
-    let (status, code, message) = match &error {
-        RpcError::Daemon(
-            PermissionDenied
-            | TaskError(PropertyRetrievalFailed(PropertyPermissionDenied | ObjectPermissionDenied)),
-        ) => (
-            StatusCode::FORBIDDEN,
-            "permission_denied",
-            "Property permission denied",
-        ),
-        RpcError::Daemon(TaskError(PropertyRetrievalFailed(
-            PropertyNotFound(..) | PropertyDefinitionNotFound(..),
-        ))) => (
-            StatusCode::NOT_FOUND,
-            "property_not_found",
-            "Property not found",
-        ),
-        RpcError::Daemon(TaskError(
-            CommandExecutionError(CommandError::NoObjectMatch)
-            | PropertyRetrievalFailed(ObjectNotFound(..)),
-        )) => (
-            StatusCode::NOT_FOUND,
-            "object_not_found",
-            "Object not found",
-        ),
-        RpcError::Daemon(TaskError(PropertyRetrievalFailed(PropertyTypeMismatch))) => (
-            StatusCode::BAD_REQUEST,
-            "invalid_value",
-            "Property value has the wrong type",
-        ),
-        RpcError::Daemon(InvalidRequest(message)) => {
-            (StatusCode::BAD_REQUEST, "invalid_request", message.as_str())
-        }
-        _ => {
-            error!(?error, "Property update failed");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "internal_error",
-                "Unable to update property",
-            )
-        }
-    };
-    property_error(status, code, message)
 }
 
 #[cfg(test)]
@@ -463,9 +405,10 @@ mod tests {
             "application/json",
         )
         .await;
-        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        // An unreachable daemon is unavailable, not an internal fault, and its detail is withheld.
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         let body = error_body(response).await;
-        assert_eq!(body["code"], "internal_error");
+        assert_eq!(body["code"], "daemon_unavailable");
         assert!(!body.to_string().contains("private transport detail"));
     }
 }

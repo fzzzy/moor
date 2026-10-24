@@ -33,6 +33,15 @@ info:
     `X-Moor-Client-Token` and `X-Moor-Client-Id` headers for session
     continuity.
 
+    **Errors** — When the daemon refuses a request, the response has the status
+    that fits why and a JSON body `{"code": "...", "error": "..."}`, even when
+    FlatBuffers were requested. Codes include `unauthorized` (401),
+    `invalid_request` and `invalid_value` (400), `permission_denied` (403),
+    `object_not_found`, `verb_not_found` and `property_not_found` (404), and
+    `daemon_unavailable` (503). A server error (500) has code `internal_error`
+    and a generic message. Errors raised by MOO code that runs are not HTTP
+    errors: they are returned inside `InvocationError` with status 200.
+
     **FlatBuffers note** — FlatBuffer request/response bodies are opaque
     binary blobs whose schemas are defined in the `moor-schema` crate.
     This spec documents their logical content in prose; the wire format is
@@ -606,7 +615,8 @@ paths:
       description: |
         The daemon evaluates a MOO expression as the authenticated player. The request creates no
         daemon connection. The response contains the result or error and committed root-task
-        output.
+        output. Code that does not compile returns `InvocationError(CompilationError)` with HTTP status
+        200; the compile error gives the position and the problem.
       security:
         - MoorAuthToken: []
       parameters:
@@ -666,10 +676,16 @@ paths:
           description: Invalid object CURIE
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/verbs/{object}/{name}:
     get:
@@ -694,10 +710,16 @@ paths:
           description: Invalid object CURIE
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
     post:
       operationId: programVerb
       tags: [Verbs]
@@ -827,10 +849,16 @@ paths:
           description: Invalid object CURIE
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/properties/{object}/{name}:
     get:
@@ -855,10 +883,16 @@ paths:
           description: Invalid object CURIE
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
     post:
       operationId: updateProperty
       tags: [Properties]
@@ -894,6 +928,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   # ── Objects ───────────────────────────────────────────────────────────
 
@@ -919,6 +955,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/objects/query:
     get:
@@ -966,6 +1004,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/objects/{object}:
     get:
@@ -992,10 +1032,14 @@ paths:
           description: Invalid object CURIE
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   # ── Event Log ─────────────────────────────────────────────────────────
 
@@ -1044,6 +1088,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/batch:
     post:
@@ -1091,10 +1137,16 @@ paths:
           description: Invalid request body
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/presentations:
     get:
@@ -1118,6 +1170,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/presentations/{presentation_id}:
     delete:
@@ -1146,6 +1200,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/event-log/pubkey:
     get:
@@ -1168,6 +1224,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
     put:
       operationId: setEventLogPubkey
       tags: [EventLog]
@@ -1202,6 +1260,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/event-log/history:
     delete:
@@ -1224,6 +1284,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   # ── System ────────────────────────────────────────────────────────────
 
@@ -1253,10 +1315,16 @@ paths:
                 type: object
         "400":
           description: Invalid property path
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "406":
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /v1/features:
     get:
@@ -1303,6 +1371,8 @@ paths:
           $ref: "#/components/responses/NotAcceptable"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /health:
     get:
@@ -1907,5 +1977,13 @@ components:
       description: Unsupported Content-Type
     InternalError:
       description: Internal server error
+    Forbidden:
+      description: >-
+        The player may not read or change it. The body is a JSON error with code
+        `permission_denied`.
+    NotFound:
+      description: >-
+        The object, verb, or property does not exist. The body is a JSON error with code
+        `object_not_found`, `verb_not_found`, or `property_not_found`.
     ServiceUnavailable:
       description: Daemon is unreachable

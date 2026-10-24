@@ -1388,6 +1388,51 @@ mod tests {
     }
 
     #[test]
+    fn retrieval_failures_keep_their_kind() {
+        use moor_common::{model::WorldStateError, tasks::SchedulerError};
+        use moor_runtime_api::api::{ClientRequest, EntityType};
+        let env = setup_test_environment();
+        let client_id = Uuid::new_v4();
+        let (_client_token, auth_token, _player) = logged_in_wizard(&env, client_id);
+        let call = |request| {
+            env.message_handler
+                .handle_client_request(env.scheduler_client.clone(), client_id, request)
+                .expect_err("the request should fail")
+        };
+
+        let missing_verb = call(ClientRequest::Retrieve {
+            auth_token: auth_token.clone(),
+            object: ObjectRef::Id(SYSTEM_OBJECT),
+            entity_type: EntityType::Verb,
+            name: Symbol::mk("no_such_verb"),
+        });
+        assert!(
+            matches!(
+                &missing_verb,
+                RpcMessageError::TaskError(SchedulerError::VerbRetrievalFailed(
+                    WorldStateError::VerbNotFound(_, name)
+                )) if name == "no_such_verb"
+            ),
+            "{missing_verb:?}"
+        );
+
+        let missing_object = call(ClientRequest::Verbs {
+            auth_token,
+            object: ObjectRef::Id(Obj::mk_id(999_999)),
+            inherited: false,
+        });
+        assert!(
+            matches!(
+                &missing_object,
+                RpcMessageError::TaskError(SchedulerError::CommandExecutionError(
+                    moor_common::tasks::CommandError::NoObjectMatch
+                ))
+            ),
+            "{missing_object:?}"
+        );
+    }
+
+    #[test]
     fn test_captured_eval_cancels_on_deadline() {
         let env = setup_test_environment();
         let login_client_id = Uuid::new_v4();

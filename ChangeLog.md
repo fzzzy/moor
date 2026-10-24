@@ -409,10 +409,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `POST /v1/eval` with code that does not compile returns the compile error, with its position, as
-  `InvocationError(CompilationError)` and HTTP status 200, as the API reference describes. It
-  returned a bare HTTP 500. Captured commands and verb calls that the daemon refuses to start, for
-  example because the verb does not exist, likewise return the error instead of HTTP 500.
+- The web host's HTTP API answers request errors with the status that fits and a JSON body
+  `{"code", "error"}` instead of a bare HTTP 500. A missing object, verb or property is 404, a
+  permission failure 403, invalid credentials 401, and an unreachable daemon 503; the message names
+  what was missing. This covers verb and property listing and retrieval, objects, system properties,
+  batch requests, history, presentations and the event log. `POST /v1/eval` with code that does not
+  compile returns the compile error, with its position, as `InvocationError(CompilationError)` with
+  status 200, and captured commands and verb calls the daemon refuses to start return their error
+  the same way. Server errors still use 500, with a generic message.
 
 - Databases created since format 3.0.0 load again when their verbs call `complex_matches`,
   `parse_command`, `load_object`, `reload_object` or `emit_data`. Changing those builtins' declared
