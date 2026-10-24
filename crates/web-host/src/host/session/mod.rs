@@ -15,8 +15,11 @@
 
 mod websocket;
 
+#[cfg(test)]
+mod tests;
+
 use axum::extract::ws::{Message, WebSocket};
-use futures_util::{SinkExt, StreamExt, stream::SplitSink};
+use futures_util::{Sink, SinkExt, Stream, StreamExt};
 use moor_runtime_api::{
     AuthToken, ClientToken, HostType,
     api::{
@@ -56,6 +59,23 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(15);
 const HEARTBEAT_REQUEST: u8 = 0x02;
 
+/// How long a command waits for the previous task's completion before running anyway.
+const TASK_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Commands held while a task runs or a prompt is open. When either bound is reached,
+/// the session stops reading the WebSocket until commands drain.
+const MAX_DEFERRED_COMMANDS: usize = 64;
+const MAX_DEFERRED_BYTES: usize = 1024 * 1024;
+
+/// The payload size of a WebSocket message.
+fn message_len(message: &Message) -> usize {
+    match message {
+        Message::Text(text) => text.len(),
+        Message::Binary(data) => data.len(),
+        _ => 0,
+    }
+}
+
 pub struct ClientSession {
     pub(crate) player: Obj,
     pub(crate) peer_addr: SocketAddr,
@@ -82,7 +102,7 @@ pub struct ClientSession {
 #[derive(Debug, PartialEq, Eq)]
 pub struct PendingTask {
     pub(crate) task_id: usize,
-    pub(crate) start_time: Instant,
+    pub(crate) start_time: tokio::time::Instant,
 }
 
 impl ClientSession {
@@ -100,8 +120,20 @@ impl ClientSession {
 
     pub async fn handle(&mut self, connect_type: moor_rpc::ConnectType, stream: WebSocket) {
         info!("New connection from {}, {}", self.peer_addr, self.player);
-        let (mut ws_sender, mut ws_receiver) = stream.split();
+        let (ws_sender, ws_receiver) = stream.split();
+        self.run(connect_type, ws_sender, ws_receiver).await;
+    }
 
+    /// Serve the client over a WebSocket's two halves until it closes, then detach.
+    async fn run<W, R>(
+        &mut self,
+        connect_type: moor_rpc::ConnectType,
+        mut ws_sender: W,
+        mut ws_receiver: R,
+    ) where
+        W: Sink<Message, Error = axum::Error> + Unpin,
+        R: Stream<Item = Result<Message, axum::Error>> + Unpin,
+    {
         // Send credentials at the start of every connection.
         // This ensures the client always has the correct credentials, even after
         // reattach fails and a new connection is created.
@@ -141,7 +173,10 @@ impl ClientSession {
         debug!(client_id = ?self.client_id, "Entering command dispatch loop");
 
         let mut expecting_input = VecDeque::new();
-        let mut deferred_actions = VecDeque::new();
+        // Commands wait here while a task runs or a prompt is open; the socket is still
+        // read, so client data, signaling, heartbeats and close frames are not held up.
+        let mut deferred_actions: VecDeque<Message> = VecDeque::new();
+        let mut deferred_bytes = 0;
         let mut ping_interval = tokio::time::interval(WEBSOCKET_PING_INTERVAL);
         let mut heartbeat_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
         let mut pending_heartbeat: Option<Instant> = None;
@@ -153,6 +188,7 @@ impl ClientSession {
                 && self.pending_task.is_none()
                 && let Some(action) = deferred_actions.pop_front()
             {
+                deferred_bytes -= message_len(&action);
                 self.process_command_line(action).await;
             }
             // Check for heartbeat timeout - if we sent a heartbeat and haven't received
@@ -167,22 +203,27 @@ impl ClientSession {
                 break;
             }
 
+            let task_deadline = self
+                .pending_task
+                .as_ref()
+                .filter(|_| expecting_input.is_empty())
+                .map(|task| task.start_time + TASK_TIMEOUT);
+            let can_defer = deferred_actions.len() < MAX_DEFERRED_COMMANDS
+                && deferred_bytes < MAX_DEFERRED_BYTES;
+
             select! {
                 line = read_websocket_event(
                     &mut ws_receiver,
                     !expecting_input.is_empty(),
-                    &mut self.pending_task,
-                ) => {
+                ), if can_defer => {
                     match line {
                         ReadEvent::Command(line) => {
-                            if expecting_input.is_empty() {
+                            // Keep commands behind the running task, and separate from read()
+                            // replies, including prompt races.
+                            if expecting_input.is_empty() && self.pending_task.is_none() {
                                 self.process_command_line(line).await;
                             } else {
-                                // Keep actions separate from read() replies, including prompt races.
-                                if deferred_actions.len() >= 64 {
-                                    warn!("Too many actions queued during a prompt");
-                                    break;
-                                }
+                                deferred_bytes += message_len(&line);
                                 deferred_actions.push_back(line);
                             }
                         }
@@ -194,9 +235,6 @@ impl ClientSession {
                             self.is_logout = is_logout;
                             info!("Connection closed with code: {:?}, is_logout: {}", close_code, is_logout);
                             break;
-                        }
-                        ReadEvent::PendingEvent => {
-                            continue
                         }
                         ReadEvent::Ping(payload) => {
                             trace!("Responding to client ping with pong");
@@ -217,6 +255,19 @@ impl ClientSession {
                         ReadEvent::ClientData(body) => {
                             self.submit_client_data(WireFormat::of_frame_body(&body), &body).await;
                         }
+                    }
+                }
+                _ = async {
+                    match task_deadline {
+                        Some(deadline) => tokio::time::sleep_until(deadline).await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    if let Some(task) = self.pending_task.take() {
+                        error!(
+                            "Task {} stuck without response for more than {TASK_TIMEOUT:?}",
+                            task.task_id
+                        );
                     }
                 }
                 _ = heartbeat_interval.tick() => {
@@ -462,7 +513,7 @@ impl ClientSession {
     async fn handle_webrtc_signaling(
         &mut self,
         data: &[u8],
-        ws_sender: &mut SplitSink<WebSocket, Message>,
+        ws_sender: &mut (impl Sink<Message, Error = axum::Error> + Unpin),
         channel_messages: &mut Option<ChannelMessages>,
         channel_open: &mut Option<watch::Receiver<bool>>,
     ) -> bool {
@@ -591,7 +642,7 @@ impl ClientSession {
         &mut self,
         bytes: Vec<u8>,
         channel_message: Option<(webrtc::MessageKey, Vec<u8>)>,
-        ws_sender: &mut SplitSink<WebSocket, Message>,
+        ws_sender: &mut (impl Sink<Message, Error = axum::Error> + Unpin),
     ) -> bool {
         if let Some((key, message)) = channel_message
             && let Some(peer) = &self.webrtc_peer
@@ -615,7 +666,7 @@ impl ClientSession {
     fn set_pending_task(&mut self, task_id: usize) -> bool {
         self.pending_task = Some(PendingTask {
             task_id,
-            start_time: Instant::now(),
+            start_time: tokio::time::Instant::now(),
         });
         true
     }
