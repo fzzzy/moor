@@ -168,6 +168,11 @@ test-harness: runtime-headless-src
 			--wizard $(TEST_WIZARD) --programmer $(TEST_PROGRAMMER) --nonprogrammer $(TEST_PLAYER); \
 	done
 
+	@$(EXPECT_FAILURE) --name quiet-fork --match 'unexpected output for' -- \
+		$(SESSION_RUNNER) --cowbell \
+		--core-dir $(HEADLESS_SRC_DIRECTORY) --moot tests/baseline/negative/quiet_fork.moot \
+		--wizard $(TEST_WIZARD) --programmer $(TEST_PROGRAMMER) --nonprogrammer $(TEST_PLAYER)
+
 	@$(EXPECT_FAILURE) --name empty-scenario --match 'scenario contains no command, eval, or client action steps' -- \
 		$(SESSION_RUNNER) --cowbell \
 		--core-dir $(HEADLESS_SRC_DIRECTORY) --moot tests/baseline/negative/empty.moot \

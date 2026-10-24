@@ -1,0 +1,9 @@
+// Copyright (C) 2026 Ryan Daum <ryan.daum@gmail.com>
+// This program is free software under the GNU General Public License, version 3.
+// It is distributed without any warranty. See <https://www.gnu.org/licenses/>.
+
+// @quiet must wait for forked tasks, not only the command that started them.
+@wizard
+; fork (0) notify(player, "late"); endfork return 1;
+1
+@quiet

@@ -25,6 +25,11 @@ use markdown::parse_markdown;
 pub trait SessionRunner: MootRunner {
     fn read_line_with_timeout(&mut self, player: &Obj, timeout: Duration)
     -> Result<Option<String>>;
+    /// Read output that would break `@quiet`. Runners that can tell when no task can still
+    /// produce output may return early instead of waiting for the full timeout.
+    fn read_quiet(&mut self, player: &Obj) -> Result<Option<String>> {
+        self.read_line(player)
+    }
     fn select_connection(&mut self, _name: &str) -> Result<Obj> {
         Err(eyre!("named connections unavailable"))
     }
@@ -300,7 +305,7 @@ fn execute_actions<R: SessionRunner>(
                     runner.expect_event(&player, content_type, audience)?;
                 }
                 Action::Quiet => {
-                    if let Some(output) = runner.read_line(&player)? {
+                    if let Some(output) = runner.read_quiet(&player)? {
                         return Err(eyre!("unexpected output for {player}: {output}"));
                     }
                 }

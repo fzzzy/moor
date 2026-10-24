@@ -44,7 +44,8 @@ use scenario::{Actors, SessionRunner};
 use session::{InputRequest, SessionHub, TestSession};
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 struct MockMootRunner {
     scheduler: SchedulerClient,
@@ -176,6 +177,30 @@ impl MockMootRunner {
                 Err(err) => return Err(eyre!("task channel closed: {err}")),
             }
         }
+    }
+
+    /// True while a task other than this probe is running or is due to start within a second.
+    /// Longer-delayed tasks cannot write output during the quiet window, so they are ignored.
+    fn tasks_pending(&mut self) -> Result<bool> {
+        const PROBE: &str = "const me = task_id(); const soon = time() + 1; \
+            return length({q for q in (queued_tasks()) if (typeof(q[2]) == TYPE_INT && q[2] <= soon)}) \
+            + length({a for a in (active_tasks()) if (a[1] != me)});";
+        let Some((wizard, session)) = self.named_sessions.get("wizard").cloned() else {
+            return Ok(true);
+        };
+        let handle = self
+            .scheduler
+            .submit_eval_task(
+                &wizard,
+                &wizard,
+                PROBE.into(),
+                None,
+                session,
+                self.features.clone(),
+            )
+            .map_err(|err| eyre!("task probe submit failed: {err}"))?;
+        let pending = self.run_task(&handle, true)?;
+        Ok(pending.as_integer().is_none_or(|count| count > 0))
     }
 
     /// Route all committed output, including output from background tasks, by recipient.
@@ -350,6 +375,35 @@ impl SessionRunner for MockMootRunner {
             }
             if std::time::Instant::now() >= deadline {
                 return Ok(None);
+            }
+            self.pump_input()?;
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+
+    fn read_quiet(&mut self, player: &Obj) -> Result<Option<String>> {
+        // Stop waiting once no task can still write output, rather than always waiting 2s.
+        let recipient = self.session(player).connection_id().unwrap_or(*player);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        loop {
+            self.harvest_all();
+            if let Some(line) = self
+                .lines
+                .get_mut(&recipient)
+                .and_then(|lines| lines.pop_front())
+            {
+                return Ok(Some(line));
+            }
+            if std::time::Instant::now() >= deadline {
+                return Ok(None);
+            }
+            if !self.tasks_pending()? {
+                // Output from a task that finished during the probe is committed by now.
+                self.harvest_all();
+                return Ok(self
+                    .lines
+                    .get_mut(&recipient)
+                    .and_then(|lines| lines.pop_front()));
             }
             self.pump_input()?;
             std::thread::sleep(std::time::Duration::from_millis(10));
@@ -616,6 +670,8 @@ struct Args {
     programmer: i32,
     nonprogrammer: i32,
     cowbell: bool,
+    /// Scenarios to run at once; each has its own database and scheduler.
+    jobs: usize,
 }
 
 fn parse_args() -> Result<Args> {
@@ -625,6 +681,7 @@ fn parse_args() -> Result<Args> {
     let mut wizard = 2;
     let mut programmer = 102;
     let mut nonprogrammer = 101;
+    let mut jobs = std::thread::available_parallelism().map_or(1, |n| n.get());
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -651,6 +708,15 @@ fn parse_args() -> Result<Args> {
                     .ok_or_else(|| eyre!("--nonprogrammer needs a value"))?
                     .parse()?
             }
+            "--jobs" => {
+                jobs = args
+                    .next()
+                    .ok_or_else(|| eyre!("--jobs needs a value"))?
+                    .parse()?;
+                if jobs == 0 {
+                    return Err(eyre!("--jobs must be at least 1"));
+                }
+            }
             other => return Err(eyre!("unexpected argument: {other}")),
         }
     }
@@ -664,6 +730,7 @@ fn parse_args() -> Result<Args> {
         programmer,
         nonprogrammer,
         cowbell,
+        jobs,
     })
 }
 
@@ -703,15 +770,33 @@ fn run() -> Result<()> {
     let core = ObjDefSet::read_directory(&features.compile_options(), &args.core_dir)
         .map_err(|err| eyre!("objdef compile failed: {err}"))?;
 
-    let mut failures = Vec::new();
-    for path in &moot_files {
-        match run_scenario(&args, path, &core, features.clone()) {
-            Ok(()) => println!("PASS {}", path.display()),
-            Err(err) => {
-                eprintln!("FAIL {}: {err:?}", path.display());
-                failures.push(path.clone());
-            }
+    // Scenarios are independent, so workers take them in turn from a shared index.
+    let next = AtomicUsize::new(0);
+    let failed: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+    std::thread::scope(|scope| {
+        for _ in 0..args.jobs.min(moot_files.len()) {
+            scope.spawn(|| {
+                loop {
+                    let index = next.fetch_add(1, Ordering::Relaxed);
+                    let Some(path) = moot_files.get(index) else {
+                        break;
+                    };
+                    match run_scenario(&args, path, &core, features.clone()) {
+                        Ok(()) => println!("PASS {}", path.display()),
+                        Err(err) => {
+                            eprintln!("FAIL {}: {err:?}", path.display());
+                            failed.lock().unwrap().push(index);
+                        }
+                    }
+                }
+            });
         }
+    });
+    let mut failed = failed.into_inner().unwrap();
+    failed.sort_unstable();
+    let failures: Vec<&PathBuf> = failed.iter().map(|&index| &moot_files[index]).collect();
+    for path in &failures {
+        eprintln!("failed: {}", path.display());
     }
 
     if failures.is_empty() {
