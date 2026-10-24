@@ -251,6 +251,12 @@ Cowbell entries.
 
 ### Fixed
 
+- `@changes` no longer treats live data in objects and properties it installed as local edits.
+  An installed object whose properties change at runtime, such as a bridge's queue, stays
+  unchanged in later reviews, and writes to it no longer make an open review stale. A change group
+  whose members were already applied can take new changes again: members with nothing to apply no
+  longer have to be selected with them.
+
 - A player moved by a background task, such as a scheduled verb, now sees the room they arrive in.
   The arrival description used to go only to the connection that started the task, and a
   background task has none. It now goes to all of the player's connections; ordinary moves still

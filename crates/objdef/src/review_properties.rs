@@ -146,9 +146,15 @@ impl Context<'_> {
             .map(digest)
             .transpose()?
             .unwrap_or_default();
+        // An installed property's value is world data that reviews never write, so it is
+        // neither guarded nor compared; only an upstream change to its default is reported.
         guards.push(v_list(&[
             v_str(&id),
-            v_str(&live_hash),
+            if retain {
+                v_list(&[])
+            } else {
+                v_str(&live_hash)
+            },
             base.as_ref()
                 .map(|hash| v_str(hash))
                 .unwrap_or_else(|| v_list(&[])),
@@ -167,6 +173,12 @@ impl Context<'_> {
         let eligible = blockers.is_empty();
         let classification = if existing.is_none() {
             "incoming_only"
+        } else if retain {
+            classify(
+                base.as_deref(),
+                base.as_deref().unwrap_or_default(),
+                &incoming_hash,
+            )
         } else {
             classify(base.as_deref(), &live_hash, &incoming_hash)
         };
@@ -258,6 +270,7 @@ impl Context<'_> {
                 incoming_source: None,
                 live_hash,
                 default: "defer",
+                pending: true,
             },
             record(&output),
         ))

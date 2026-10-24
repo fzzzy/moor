@@ -164,6 +164,7 @@ impl VerbContext<'_> {
             incoming_source,
             live_hash: String::new(),
             default: "defer",
+            pending: true,
         };
         let mut output = vec![
             ("id", v_str(&id)),

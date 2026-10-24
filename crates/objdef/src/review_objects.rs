@@ -136,10 +136,14 @@ impl Context<'_> {
             } else if installed != accepted.as_ref() {
                 blockers.push(v_str("object_binding_changed"));
             }
-            guards.push(v_list(&[
-                v_str(&live_hash),
-                baseline.unwrap_or_else(|| v_list(&[])),
-            ]));
+            // Once installed, the object's verbs and properties have their own rows. Guarding
+            // the whole dump would let any runtime property write invalidate the review.
+            let contents = if installed.is_some() {
+                v_list(&[])
+            } else {
+                v_str(&live_hash)
+            };
+            guards.push(v_list(&[contents, baseline.unwrap_or_else(|| v_list(&[]))]));
         } else if installed.is_some() {
             blockers.push(v_str("object_binding_changed"));
         }
@@ -284,6 +288,9 @@ impl Context<'_> {
                 "classification",
                 v_str(if !valid {
                     "incoming_only"
+                } else if retain && eligible {
+                    // A matching creation receipt leaves nothing for this row to decide.
+                    "unchanged"
                 } else {
                     super::classify(installed.map(String::as_str), &live_hash, &incoming_hash)
                 }),
@@ -350,6 +357,7 @@ impl Context<'_> {
                 incoming_source,
                 live_hash,
                 default: "defer",
+                pending: true,
             },
             record(&report),
         ))

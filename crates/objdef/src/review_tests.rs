@@ -1778,7 +1778,8 @@ fn additions_do_not_require_groups_for_local_or_already_installed_programs() {
         );
         let choices = v_map(&[(get(&existing, "id"), record(&[("choice", v_str("local"))]))]);
 
-        // An explicitly declared group still requires all its members.
+        // An explicitly declared group still requires every member with something to
+        // record. Keeping an unchanged program records nothing, so it selects no group.
         let grouped = grouped_request(&report);
         let draft = preview(
             world.as_ref(),
@@ -1789,23 +1790,24 @@ fn additions_do_not_require_groups_for_local_or_already_installed_programs() {
             Some(&choices),
         )
         .unwrap();
+        let issues = get(&draft, "group_validation");
+        if classification == "unchanged" {
+            assert!(issues.as_list().unwrap().is_empty());
+        } else {
+            assert!(!issues.as_list().unwrap().is_empty());
+        }
         assert!(
-            !get(&draft, "group_validation")
-                .as_list()
-                .unwrap()
-                .is_empty()
-        );
-        assert!(
-            apply(
-                world.as_mut(),
-                &permissions(),
-                &CompileOptions::default(),
-                &incoming,
-                &grouped,
-                &get(&draft, "evidence"),
-                &choices
-            )
-            .is_err()
+            classification == "unchanged"
+                || apply(
+                    world.as_mut(),
+                    &permissions(),
+                    &CompileOptions::default(),
+                    &incoming,
+                    &grouped,
+                    &get(&draft, "evidence"),
+                    &choices
+                )
+                .is_err()
         );
 
         // Keeping the installed program needs no group and creates no helper.
@@ -2393,11 +2395,21 @@ fn property_initialization_is_absent_only_and_keeps_later_live_data() {
         .iter()
         .find(|row| get(row, "field") == v_str("property"))
         .unwrap();
-    assert_eq!(get(&property, "classification"), v_str("local"));
+    // Live data in an installed property is not a local edit of its definition.
+    assert_eq!(get(&property, "classification"), v_str("unchanged"));
     assert_eq!(
         get(&property, "choices"),
         v_list(&[v_str("local"), v_str("defer")])
     );
+    // Nor does writing it again invalidate the prepared review.
+    world
+        .update_property(
+            &permissions(),
+            &ROOT,
+            Symbol::mk("item_schema"),
+            &v_int(100),
+        )
+        .unwrap();
     apply(
         world.as_mut(),
         &permissions(),
@@ -2412,7 +2424,7 @@ fn property_initialization_is_absent_only_and_keeps_later_live_data() {
         world
             .retrieve_property(&permissions(), &ROOT, Symbol::mk("item_schema"))
             .unwrap(),
-        v_int(99)
+        v_int(100)
     );
     assert_eq!(
         world
@@ -2794,6 +2806,117 @@ fn group_object_request(req: &Var, report: &Var) -> Var {
     )
 }
 #[test]
+fn installed_objects_do_not_hold_their_group_back() {
+    let db = database();
+    let mut world = db.new_world_state().unwrap();
+    stamp(world.as_mut());
+    let incoming = sources(&object_source());
+    let req = object_request();
+    let first = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        None,
+    )
+    .unwrap();
+    let req = group_object_request(&req, &first);
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        None,
+    )
+    .unwrap();
+    let receipt = apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        &get(&report, "evidence"),
+        &all_incoming(&report),
+    )
+    .unwrap();
+    let created = get(&receipt, "created")
+        .as_list()
+        .unwrap()
+        .iter()
+        .find(|entry| get(entry, "field") == v_str("object"))
+        .unwrap();
+    let installed = with_field(
+        &get(&get(&req, "policy"), "creations")
+            .as_list()
+            .unwrap()
+            .iter()
+            .next()
+            .unwrap(),
+        "installed",
+        &get(&created, "creation"),
+    );
+    let req = with_field(
+        &req,
+        "policy",
+        &with_field(&get(&req, "policy"), "creations", &v_list(&[installed])),
+    );
+    // Upstream changes the group's program again; the installed object has nothing to apply.
+    let incoming =
+        sources(&object_source().replace("return HELPER:run();", "return HELPER:run() + 1;"));
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        None,
+    )
+    .unwrap();
+    let rows = get(&report, "rows");
+    let program = rows
+        .as_list()
+        .unwrap()
+        .iter()
+        .find(|row| get(row, "classification") == v_str("upstream"))
+        .unwrap();
+    let choices = v_map(&[(
+        get(&program, "id"),
+        record(&[("choice", v_str("incoming"))]),
+    )]);
+    let draft = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        Some(&choices),
+    )
+    .unwrap();
+    assert!(
+        get(&draft, "group_validation")
+            .as_list()
+            .unwrap()
+            .is_empty()
+    );
+    apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        &get(&draft, "evidence"),
+        &choices,
+    )
+    .unwrap();
+    assert_eq!(
+        program_text(&live_program(world.as_ref())).unwrap(),
+        v_str("return HELPER:run() + 1;")
+    );
+}
+
+#[test]
 fn object_bindings_create_initial_contents_without_running_initialize() {
     let db = database();
     let mut world = db.new_world_state().unwrap();
@@ -2887,6 +3010,18 @@ fn object_bindings_create_initial_contents_without_running_initialize() {
         None,
     )
     .unwrap();
+    // Runtime data in an installed object neither marks it changed nor stales a review.
+    for row in get(&next, "rows").as_list().unwrap().iter() {
+        assert_eq!(get(&row, "classification"), v_str("unchanged"));
+    }
+    world
+        .update_property(
+            &permissions(),
+            &Obj::mk_id(2),
+            Symbol::mk("counter"),
+            &v_int(74),
+        )
+        .unwrap();
     apply(
         world.as_mut(),
         &permissions(),
@@ -2901,7 +3036,7 @@ fn object_bindings_create_initial_contents_without_running_initialize() {
         world
             .retrieve_property(&permissions(), &Obj::mk_id(2), Symbol::mk("counter"))
             .unwrap(),
-        v_int(73)
+        v_int(74)
     );
     world
         .clear_object_metadata(&permissions(), &Obj::mk_id(2), Symbol::mk(BASE_KEY))

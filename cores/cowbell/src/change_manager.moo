@@ -900,15 +900,17 @@ object CHANGE_MANAGER [
     for group in (record["report"]["groups"])
       let selected = 0;
       let needs_review = false;
+      "Only members with something to apply need a selection; reviews stored earlier list none.";
+      const pending = `group["pending"] ! E_RANGE => group["members"]';
       for member in (group["members"])
         const member_row = row_index[member];
         const decision = `record["choices"][member]["choice"] ! E_RANGE => member_row["default"]';
-        if (decision in {"incoming", "local", "edited"})
+        if (member in pending && decision in {"incoming", "local", "edited"})
           selected = selected + 1;
         endif
         needs_review = needs_review || this:_needs_review(record, member) || decision == "unresolved" || (decision == "edited" && !maphaskey(record["choices"][member], "validation"));
       endfor
-      const state = !group["complete"] ? "blocked" | needs_review ? "needs_review" | selected == 0 ? "deferred" | selected == length(group["members"]) ? "selected" | "partial";
+      const state = !group["complete"] ? "blocked" | needs_review ? "needs_review" | selected == 0 ? "deferred" | selected == length(pending) ? "selected" | "partial";
       groups = {@groups, ["name" -> group["name"], "requires" -> group["requires"], "complete" -> group["complete"], "count" -> length(group["members"]), "selected" -> selected, "status" -> state]};
     endfor
     const next_cursor = next_offset <= length(rows) ? {id, generation, next_offset} | {};

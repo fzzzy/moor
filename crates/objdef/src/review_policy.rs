@@ -279,6 +279,15 @@ impl Policy {
                 ChangeTarget::RetainProperty { .. } | ChangeTarget::RetainObject { .. } => false,
                 _ => true,
             };
+            // Retained rows and unchanged programs record nothing when chosen. A "local" or
+            // "converged" choice still records a decision, so a group keeps requiring it.
+            row.pending = match &row.target {
+                ChangeTarget::RetainProperty { .. } | ChangeTarget::RetainObject { .. } => false,
+                ChangeTarget::Existing(_) => {
+                    map.get(&v_str("classification")).unwrap().as_string() != Some("unchanged")
+                }
+                _ => true,
+            };
             let blocker = if group.is_none() && additions && needs_installation {
                 Some("change_group_required")
             } else if group.is_some_and(|name| !self.groups[name].members.is_subset(&present)) {
@@ -344,6 +353,18 @@ impl Policy {
                             ),
                         ),
                         (
+                            "pending",
+                            v_list(
+                                &rows
+                                    .iter()
+                                    .filter(|row| {
+                                        row.pending && group.members.contains(&row.member)
+                                    })
+                                    .map(|row| v_str(&row.id))
+                                    .collect::<Vec<_>>(),
+                            ),
+                        ),
+                        (
                             "complete",
                             v_bool(group.members.iter().all(|member| {
                                 rows.iter().any(|row| &row.member == member && row.eligible)
@@ -370,11 +391,20 @@ impl Policy {
                             .and_then(|map| map.get(&v_str("choice")).ok())
                     })
                     .and_then(|value| value.as_string().map(str::to_owned));
-                matches!(
-                    kind.as_deref().unwrap_or(row.default),
-                    "incoming" | "local" | "edited"
-                )
+                row.pending
+                    && matches!(
+                        kind.as_deref().unwrap_or(row.default),
+                        "incoming" | "local" | "edited"
+                    )
             })
+            .map(|row| row.member.clone())
+            .collect();
+        // Members with nothing to apply, such as installed objects and matching programs,
+        // need no selection; requiring them would make an applied group impossible to extend.
+        let settled: BTreeSet<_> = analysis
+            .rows
+            .iter()
+            .filter(|row| !row.pending)
             .map(|row| row.member.clone())
             .collect();
         let selected_groups: BTreeSet<_> = selected
@@ -422,7 +452,11 @@ impl Policy {
         }
         for name in &selected_groups {
             let group = &self.groups[*name];
-            if !group.members.is_subset(&selected) {
+            if !group
+                .members
+                .iter()
+                .all(|member| selected.contains(member) || settled.contains(member))
+            {
                 issues.push(record(&[
                     ("group", v_str(name)),
                     ("code", v_str("partial_group")),

@@ -226,6 +226,9 @@ pub(crate) struct ChangeRow {
     pub incoming_source: Option<Var>,
     pub live_hash: String,
     pub default: &'static str,
+    /// Whether choosing this row would record anything. Set by policy annotation; retained
+    /// rows and unchanged programs are not pending, so groups do not require them.
+    pub pending: bool,
 }
 
 pub(crate) struct Analysis {
@@ -953,6 +956,7 @@ pub(crate) fn analyze(
                 }),
                 live_hash,
                 default,
+                pending: true,
             });
         }
         // A program-only update cannot manage unmatched live definitions, but omitting them
