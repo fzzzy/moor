@@ -420,9 +420,13 @@ object CHANGE_MANAGER [
 
   method capabilities owner: ARCH_WIZARD
     "Describe the versioned review API and its limits.";
-    const auth = this:_entry(caller_perms());
+    "Clients probe this for every player, so one who may not use the service is told so instead of";
+    "raising an error. Only the service itself answers.";
+    this == $change_manager || raise(E_PERM);
+    const auth = `this:_entry(caller_perms()) ! E_PERM => {}';
+    length(auth) || return ["schema" -> 1, "authorized" -> false];
     set_task_perms(auth[2]);
-    return ["schema" -> 1, "operations" -> {"packages", "history", "configure", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
+    return ["schema" -> 1, "authorized" -> true, "operations" -> {"packages", "history", "configure", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
   endmethod
 
   method packages owner: ARCH_WIZARD

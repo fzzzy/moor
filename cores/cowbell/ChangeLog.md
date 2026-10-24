@@ -237,6 +237,10 @@ Cowbell entries.
 
 ### Fixed
 
+- `$change_manager:capabilities()` answers players who may not use the change service with
+  `["schema" -> 1, "authorized" -> false]` instead of raising `E_PERM`. The web client asks on every
+  connection, so each player without admin access left a traceback in the server log.
+
 - The room panel lists people the way the room description does: those here, then those asleep,
   with a long list cut to the first few names and a count of the rest.
 
