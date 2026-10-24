@@ -10,10 +10,10 @@ object DISCORD_BRIDGE [
   override description (owner: ARCH_WIZARD, flags: "rc") = "Relays what Discord speakers hear, and who arrives and leaves, to a Discord channel through its webhook, and speaks the channel's messages through the speakers. Uses the curl worker: posts go to the channel webhook and the bot reads the channel by polling.";
 
   property api_base (owner: ARCH_WIZARD, flags: "") = "https://discord.com/api/v10";
-  property avatars (owner: ARCH_WIZARD, flags: "") = [];
   property batch_seconds (owner: ARCH_WIZARD, flags: "") = 5;
   property bot_token (owner: ARCH_WIZARD, flags: "") = "";
   property channel_id (owner: ARCH_WIZARD, flags: "") = "";
+  property channel_members (owner: ARCH_WIZARD, flags: "") = {};
   property cursor (owner: ARCH_WIZARD, flags: "") = "";
   property enabled (owner: ARCH_WIZARD, flags: "") = false;
   property flush_schedule (owner: ARCH_WIZARD, flags: "") = 0;
@@ -78,13 +78,18 @@ object DISCORD_BRIDGE [
   endmethod
 
   method relay owner: ARCH_WIZARD
-    "Queue a line a registered speaker heard, posted under the actor's name.";
+    "Queue a line a registered speaker heard; a linked actor's name becomes a mention of their Discord account.";
     const {speaker, actor, text} = args;
     caller == speaker && speaker in this.speakers || raise(E_PERM);
     this.enabled || return false;
-    const name = typeof(actor) == TYPE_OBJ && valid(actor) ? actor:name() | "";
-    const username = length(name) ? name + " · " + this.world_name | this.world_name;
-    this:_queue(username, `this.avatars[actor] ! ANY => ""', text);
+    const mention = this:_mention(actor);
+    const name = length(mention) ? actor:name() | "";
+    if (length(mention) && text:starts_with(name))
+      const rest = text[length(name) + 1..$];
+      this:_queue(rest, rest:starts_with(" ") ? mention + " " | mention);
+    else
+      this:_queue(text);
+    endif
     return true;
   endmethod
 
@@ -101,7 +106,7 @@ object DISCORD_BRIDGE [
     const name = user:name();
     const text = kind == 'created ? "A new guest, " + name + ", has arrived for the first time."
       | kind == 'connected ? name + " has arrived at " + this.world_name + "." | name + " has left.";
-    this:_queue(this.world_name, "", text);
+    this:_queue(text);
     return true;
   endmethod
 
@@ -161,16 +166,27 @@ object DISCORD_BRIDGE [
     const text = this:_clean(`message["content"] ! E_RANGE => ""', this.max_length);
     typeof(discord_id) == TYPE_STR && length(display_name) && length(text) || return 0;
     this:_admit() || return 0;
+    "Whoever posts here is a member of the channel's server, so a mention of them will resolve.";
+    this.channel_members = setadd(this.channel_members, discord_id);
     const linked = $login:find_by_oauth2("discord", discord_id);
     const linked_player = valid(linked) && is_player(linked) ? linked | #-1;
-    const avatar = `author["avatar"] ! E_RANGE => ""';
-    if (valid(linked_player) && typeof(avatar) == TYPE_STR && pcre_match(avatar, "^[A-Za-z0-9_]{1,64}$"))
-      this.avatars[linked_player] = "https://cdn.discordapp.com/avatars/" + discord_id + "/" + avatar + ".png";
-    endif
     for speaker in (this.speakers)
       valid(speaker) && `speaker:speak(linked_player, display_name, text) ! ANY';
     endfor
     return 1;
+  endmethod
+
+  method _mention owner: ARCH_WIZARD
+    "A Discord mention for an actor whose linked account has posted in the channel, or the empty string.";
+    caller == this || raise(E_PERM);
+    const {actor} = args;
+    typeof(actor) == TYPE_OBJ && valid(actor) && is_player(actor) || return "";
+    for identity in (`actor.oauth2_identities ! ANY => {}')
+      if (typeof(identity) == TYPE_LIST && length(identity) == 2 && identity[1] == "discord" && identity[2] in this.channel_members)
+        return "<@" + identity[2] + ">";
+      endif
+    endfor
+    return "";
   endmethod
 
   method _request owner: ARCH_WIZARD
@@ -208,34 +224,32 @@ object DISCORD_BRIDGE [
   endmethod
 
   method _queue owner: ARCH_WIZARD
-    "Add a line to the outbox and make sure a flush is coming.";
+    "Add a line to the outbox, after an optional mention, and make sure a flush is coming.";
     caller == this || raise(E_PERM);
-    const {username, avatar, text} = args;
-    const line = this:_escape(this:_clean(text, this.max_length));
+    const {text, ?mention = ""} = args;
+    const line = mention + this:_escape(this:_clean(text, this.max_length));
     length(line) || return;
-    this.outbox = {@this.outbox, {username, avatar, line}};
+    this.outbox = {@this.outbox, line};
     schedule_valid(this.flush_schedule) && return;
     this.flush_schedule = schedule_at(this, "_flush", time() + this.batch_seconds, {}, ["adaptive" -> false, "pass_elapsed" -> false]);
   endmethod
 
   method _flush owner: ARCH_WIZARD
-    "Post the outbox, one post per run of lines under the same name.";
+    "Post the outbox under the world's name, packing lines into as few posts as Discord allows.";
     caller_perms().wizard || raise(E_PERM);
     const lines = this.outbox;
     this.outbox = {};
     this.flush_schedule = 0;
     let posts = {};
     for line in (lines)
-      const {username, avatar, text} = line;
-      const last = length(posts) ? posts[$] | {};
-      if (length(last) && last[1] == username && length(last[3]) + 1 + length(text) <= 1900)
-        posts[$][3] = last[3] + "\n" + text;
+      if (length(posts) && length(posts[$]) + 1 + length(line) <= 1900)
+        posts[$] = posts[$] + "\n" + line;
       else
-        posts = {@posts, {username, avatar, text}};
+        posts = {@posts, line};
       endif
     endfor
     for post in (posts)
-      this:_post(@post);
+      this:_post(post);
     endfor
     return length(posts);
   endmethod
@@ -243,10 +257,9 @@ object DISCORD_BRIDGE [
   method _post owner: ARCH_WIZARD
     "Send one post to the channel webhook, retrying once after a rate limit.";
     caller == this || raise(E_PERM);
-    const {username, avatar, content} = args;
-    let payload = ["username" -> username[1..min(80, length(username))], "content" -> content, "allowed_mentions" -> ["parse" -> {}]];
-    length(avatar) && (payload["avatar_url"] = avatar);
-    const body = generate_json(payload);
+    const {content} = args;
+    const username = this.world_name[1..min(80, length(this.world_name))];
+    const body = generate_json(["username" -> username, "content" -> content, "allowed_mentions" -> ["parse" -> {}]]);
     for attempt in [1..2]
       let response = {};
       try

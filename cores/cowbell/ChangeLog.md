@@ -11,11 +11,13 @@ Cowbell entries.
 - `$discord_bridge` links a world to one Discord channel through the curl worker. A wizard runs
   `$discord_bridge:configure(webhook_url, bot_token, channel_id, world_name)`, then places a child
   of `$discord_speaker` in a room and registers it with `$discord_bridge:add_speaker(speaker)`.
-  Everything the speaker hears is posted to the channel under the actor's name. New players,
+  Everything the speaker hears is posted to the channel under the world's name. New players,
   arrivals and departures anywhere in the world are posted too, once per quiet period. Channel
-  messages from people are read every few seconds and spoken in the speaker's room. Authors whose
-  Discord account is linked to a player appear as that player. The webhook URL and bot token are
-  stored in wizard-only properties, so database exports contain them.
+  messages from people are read every few seconds and spoken in the speaker's room, after the
+  speaker's name. Authors whose Discord account is linked to a player appear as that player, and in
+  Discord that player's name becomes a mention of the account once it has posted in the channel.
+  Players can `listen to` a speaker for its latest lines. The webhook URL and bot token are stored
+  in wizard-only properties, so database exports contain them.
 
 - `#0.presence_listeners` lists objects whose `presence_event(user, kind)` is called, each in its
   own task, when a player is created, first connects, or last disconnects.

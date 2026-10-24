@@ -30,7 +30,7 @@ object DISCORD_SCENARIOS
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
     let saved = ["listeners" -> #0.presence_listeners, "location" -> this.location];
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "avatars", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
       saved[key] = bridge.(key);
     endfor
     bridge:configure("https://discord.example/api/webhooks/1/token", "bot-token-0123456789abcdef0123456789", "5", "Test World");
@@ -39,6 +39,7 @@ object DISCORD_SCENARIOS
     bridge.outbox = {};
     bridge.presence = [];
     bridge.inbound = {};
+    bridge.channel_members = {};
     bridge.speakers = {};
     this.channel = {};
     this.posts = {};
@@ -54,7 +55,7 @@ object DISCORD_SCENARIOS
     schedule_stop(bridge.poll_schedule);
     schedule_stop(bridge.flush_schedule);
     bridge.flush_schedule = 0;
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "avatars", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
       bridge.(key) = saved[key];
     endfor
     #0.presence_listeners = saved["listeners"];
@@ -73,10 +74,11 @@ object DISCORD_SCENARIOS
   endmethod
 
   method test_room_events_are_batched_into_posts owner: ARCH_WIZARD
-    "What the room announces goes out under the actor's name, one post per run, markdown escaped and mentions off.";
+    "What the room announces goes out under the world's name, packed into one post, markdown escaped and mentions off.";
     const saved = this:_setup();
     const room = create($room);
     const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
     const actor = create($actor);
     try
       actor.name = "Henri";
@@ -85,9 +87,10 @@ object DISCORD_SCENARIOS
       room:announce($event:mk_say(actor, "Henri says, \"*hello* @everyone\"."));
       room:announce($event:mk_emote(actor, "Henri waves."));
       $test_utils:assert_true(schedule_valid($discord_bridge.flush_schedule), "a flush is scheduled");
-      $test_utils:assert_eq($discord_bridge:_flush(), 1, "two lines from one actor share a post");
+      $test_utils:assert_eq($discord_bridge:_flush(), 1, "two lines share a post");
       const post = this.posts[1];
-      $test_utils:assert_eq(post["username"], "Henri · Test World", "posted under the actor's name");
+      $test_utils:assert_eq(post["username"], "Test World", "posted under the world's name");
+      $test_utils:assert_false(maphaskey(post, "avatar_url"), "with the webhook's own avatar");
       $test_utils:assert_eq(post["content"], "Henri says, \"\\*hello\\* @everyone\".\nHenri waves.", "markdown escaped");
       $test_utils:assert_eq(post["allowed_mentions"], ["parse" -> {}], "no mentions are parsed");
       $test_utils:assert_eq(length(speaker.recent), 2, "the speaker keeps what it relayed");
@@ -108,6 +111,7 @@ object DISCORD_SCENARIOS
     const saved = this:_setup();
     const room = create($room);
     const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
     try
       move(speaker, room);
       move(this, room);
@@ -131,7 +135,7 @@ object DISCORD_SCENARIOS
         this:_message("101", "42", "alice", "hi" + escape + "[31m there")};
       $test_utils:assert_eq($discord_bridge:_poll(), 2, "two messages are spoken");
       $test_utils:assert_eq(this.reads[2][1], "https://discord.com/api/v10/channels/5/messages?limit=50&after=100", "reads after the cursor");
-      $test_utils:assert_eq(this.heard, {"Discordance speaker: alice (Discord): hi [31m there", "Discordance speaker: alice (Discord): second"},
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): hi [31m there", "Bakelite radio: alice (Discord): second"},
         "oldest first, control characters removed, marked as from Discord");
       $test_utils:assert_eq($discord_bridge.cursor, "1000", "the cursor moves to the newest");
       $test_utils:assert_eq($discord_bridge.outbox, {}, "the speaker does not relay its own words");
@@ -144,26 +148,34 @@ object DISCORD_SCENARIOS
   endmethod
 
   method test_linked_authors_are_named_as_players owner: ARCH_WIZARD
-    "A Discord user linked to a player speaks under the player's name, and the player's posts carry their avatar.";
+    "A linked Discord user speaks under their player's name, and the player appears in Discord as a mention of that user.";
     const saved = this:_setup();
     const room = create($room);
     const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
     const player_ids = #90102.oauth2_identities;
+    const old_name = #90102.name;
     try
       #90102.oauth2_identities = {{"discord", "42"}};
+      #90102.name = "Quillon";
       move(speaker, room);
       move(this, room);
       $discord_bridge:add_speaker(speaker);
+      room:announce($event:mk_say(#90102, #90102:name() + " says, \"early\"."));
+      $discord_bridge:_flush();
+      $test_utils:assert_eq(this.posts[1]["content"], #90102:name() + " says, \"early\".", "no mention before the account posts in the channel");
+      this.posts = {};
+      this.heard = {};
       $discord_bridge.cursor = "100";
       this.channel = {this:_message("101", "42", "al", "hello")};
       $discord_bridge:_poll();
-      $test_utils:assert_eq(this.heard, {"Discordance speaker: " + #90102:name() + ": hello"}, "named as the player");
-      room:announce($event:mk_say(#90102, "Hi."));
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: Quillon: hello"}, "named as the player");
+      room:announce($event:mk_say(#90102, #90102:name() + " says, \"*hi*\"."));
       $discord_bridge:_flush();
-      $test_utils:assert_eq(this.posts[1]["avatar_url"], "https://cdn.discordapp.com/avatars/42/abc123.png",
-        "the player's posts use their Discord avatar");
+      $test_utils:assert_eq(this.posts[1]["content"], "<@42> says, \"\\*hi\\*\".", "in Discord the player is a mention of their account");
     finally
       #90102.oauth2_identities = player_ids;
+      #90102.name = old_name;
       this:_teardown(saved);
       recycle(speaker);
       recycle(room);

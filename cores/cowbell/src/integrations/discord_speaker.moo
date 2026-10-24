@@ -10,7 +10,6 @@ object DISCORD_SPEAKER [
   override description (owner: ARCH_WIZARD, flags: "rc") = "A device that carries what happens in this room to a Discord channel, and speaks what is said there.";
   override portable (owner: ARCH_WIZARD, flags: "rc") = false;
 
-  property prefix (owner: ARCH_WIZARD, flags: "rc") = "Discordance speaker";
   property recent (owner: ARCH_WIZARD, flags: "r") = {};
   property recent_limit (owner: ARCH_WIZARD, flags: "rc") = 10;
 
@@ -47,8 +46,8 @@ object DISCORD_SPEAKER [
     const room = this.location;
     valid(room) || return false;
     const name = valid(author) ? $sub:reference(author, 'label) | display_name + " (Discord)";
-    const event = $event:mk_discord(this, this.prefix + ": ", name, ": " + text):with_this(room);
-    this:_remember(this.prefix + ": " + (valid(author) ? author:name() | display_name + " (Discord)") + ": " + text);
+    const event = $event:mk_discord(this, $sub:reference(this, 'label), ": ", name, ": " + text):with_this(room);
+    this:_remember((valid(author) ? author:name() | display_name + " (Discord)") + ": " + text);
     room:announce(event, {this});
     return true;
   endmethod
@@ -64,14 +63,19 @@ object DISCORD_SPEAKER [
 
   verb listen (this none none) owner: ARCH_WIZARD flags: "rxd"
     "Hear the latest lines that crossed this speaker.";
-    const lines = this.recent;
-    if (!length(lines))
-      player:inform_current($event:mk_info(player, "Only static so far."));
-      return;
-    endif
-    player:inform_current($event:mk_info(player, "The latest from ", $sub:reference(this), ":"));
-    for line in (lines)
-      player:inform_current($event:mk_info(player, "  " + line));
-    endfor
+    this:_play_recent();
   endverb
+
+  verb listen (none to this) owner: ARCH_WIZARD flags: "rxd"
+    "Hear the latest lines that crossed this speaker, as in 'listen to radio'.";
+    this:_play_recent();
+  endverb
+
+  method _play_recent owner: ARCH_WIZARD
+    "Tell the player the latest lines that crossed this speaker.";
+    caller == this || raise(E_PERM);
+    const lines = length(this.recent) ? this.recent | {"Only static so far."};
+    const content = $format.block:mk("The latest from " + this:name() + ":", $format.list:mk(lines));
+    player:inform_current($event:mk_info(player, content):with_presentation_hint('inset));
+  endmethod
 endobject
