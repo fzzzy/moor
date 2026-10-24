@@ -39,6 +39,7 @@ use serde_derive::{Deserialize, Serialize};
 use tracing::info;
 
 use self::endpoint::EndpointHandle;
+pub(crate) use self::endpoint::MessageKey;
 pub(crate) use self::peer::WebRtcPeer;
 
 /// Configuration for WebRTC data channel support.
@@ -103,9 +104,13 @@ impl WebRtc {
     }
 }
 
-/// Whether an event belongs on the data channel: only ephemeral data events do.
-pub(crate) fn is_channel_event(event: &ClientEvent) -> bool {
-    matches!(event, ClientEvent::Narrative { event, .. } if event.is_ephemeral())
+/// The data channel key for an event, if it belongs on the channel: only ephemeral data
+/// events do, keyed by namespace and kind.
+pub(crate) fn channel_key(event: &ClientEvent) -> Option<MessageKey> {
+    match event {
+        ClientEvent::Narrative { event, .. } => event.ephemeral_key(),
+        _ => None,
+    }
 }
 
 /// The IPs to advertise, before the endpoint's port is known.

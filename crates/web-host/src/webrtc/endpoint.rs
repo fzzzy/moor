@@ -19,7 +19,7 @@
 //! it yields a timeout; [`Peer::drain`] does that after each one.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     net::{IpAddr, SocketAddr},
     sync::{
         Arc,
@@ -28,6 +28,7 @@ use std::{
     time::Instant,
 };
 
+use moor_var::Symbol;
 use str0m::{
     Candidate, Event, IceConnectionState, Input, Output, Rtc,
     change::SdpOffer,
@@ -43,6 +44,15 @@ use tracing::{debug, info, warn};
 /// Commands queued for the endpoint. Sends beyond this are dropped, and their events
 /// fall back to the WebSocket.
 const COMMAND_CAPACITY: usize = 1024;
+
+/// Bytes a channel may have in flight before new messages wait, latest-wins, for it to drain.
+const CHANNEL_HIGH_WATER: usize = 64 * 1024;
+
+/// The channel reports it has drained when its buffer falls below this.
+const CHANNEL_LOW_WATER: usize = 16 * 1024;
+
+/// What a channel message supersedes: an older undelivered one with the same namespace and kind.
+pub(crate) type MessageKey = (Symbol, Symbol);
 
 /// Large enough for any datagram on a typical path MTU.
 const RECEIVE_BUFFER: usize = 2048;
@@ -83,6 +93,7 @@ pub(super) enum Command {
     },
     Send {
         peer: PeerId,
+        key: MessageKey,
         data: Vec<u8>,
     },
     Close {
@@ -193,9 +204,10 @@ impl Endpoint {
                     peer.drain(&self.socket).await;
                 }
             }
-            Command::Send { peer, data } => {
+            Command::Send { peer, key, data } => {
                 if let Some(peer) = self.peers.get_mut(&peer) {
-                    peer.write(&data);
+                    peer.pending.push(key, data);
+                    peer.flush();
                     peer.drain(&self.socket).await;
                 }
             }
@@ -219,6 +231,7 @@ impl Endpoint {
             rtc: Rtc::builder().set_ice_lite(true).build(Instant::now()),
             link: link.clone(),
             channel: None,
+            pending: LatestQueue::default(),
             timeout: Instant::now(),
         };
         for address in self.advertised.iter() {
@@ -299,23 +312,33 @@ impl Endpoint {
 struct Peer {
     rtc: Rtc,
     link: Arc<PeerLink>,
-    /// The client's channel. Realtime events go to the most recently opened one.
+    /// The client's channel. Ephemeral events go to the most recently opened one.
     channel: Option<ChannelId>,
+    /// Messages waiting for the channel to drain, at most one per key.
+    pending: LatestQueue,
     /// When the engine next needs `Input::Timeout`.
     timeout: Instant,
 }
 
 impl Peer {
-    /// Write to the channel. A full or closed channel drops the message: it carries
-    /// realtime events, where a late event is worth no more than a lost one.
-    fn write(&mut self, data: &[u8]) {
+    /// Write waiting messages, oldest first, while the channel has room. Whatever does not
+    /// fit stays queued, where a newer message with the same key replaces it.
+    fn flush(&mut self) {
         let Some(mut channel) = self.channel.and_then(|id| self.rtc.channel(id)) else {
             return;
         };
-        match channel.write(true, data) {
-            Ok(true) => {}
-            Ok(false) => debug!("WebRTC channel buffer full; event dropped"),
-            Err(e) => debug!("WebRTC channel write failed: {e}"),
+        while channel.buffered_amount() < CHANNEL_HIGH_WATER {
+            let Some((key, data)) = self.pending.pop() else {
+                return;
+            };
+            match channel.write(true, &data) {
+                Ok(true) => {}
+                Ok(false) => {
+                    self.pending.unpop(key, data);
+                    return;
+                }
+                Err(e) => debug!("WebRTC channel write failed: {e}"),
+            }
         }
     }
 
@@ -351,11 +374,17 @@ impl Peer {
             Event::ChannelOpen(id, label) => {
                 info!("WebRTC data channel {label:?} open");
                 self.channel = Some(id);
+                if let Some(mut channel) = self.rtc.channel(id) {
+                    channel.set_buffered_amount_low_threshold(CHANNEL_LOW_WATER);
+                }
                 self.link.set_open(true);
+                self.flush();
             }
+            Event::ChannelBufferedAmountLow(id) if self.channel == Some(id) => self.flush(),
             Event::ChannelClose(id) if self.channel == Some(id) => {
                 info!("WebRTC data channel closed");
                 self.channel = None;
+                self.pending.clear();
                 self.link.set_open(false);
             }
             Event::IceConnectionStateChange(IceConnectionState::Disconnected) => {
@@ -365,6 +394,44 @@ impl Peer {
             // The client does not send on the channel; anything it does send is dropped.
             _ => {}
         }
+    }
+}
+
+/// Messages waiting to be written, in arrival order, with at most one per key: pushing a
+/// message whose key is already waiting replaces that message's data in place.
+#[derive(Default)]
+pub(super) struct LatestQueue {
+    messages: VecDeque<(MessageKey, Vec<u8>)>,
+}
+
+impl LatestQueue {
+    pub(super) fn push(&mut self, key: MessageKey, data: Vec<u8>) {
+        match self
+            .messages
+            .iter_mut()
+            .find(|(waiting, _)| *waiting == key)
+        {
+            Some((_, waiting)) => *waiting = data,
+            None => self.messages.push_back((key, data)),
+        }
+    }
+
+    pub(super) fn pop(&mut self) -> Option<(MessageKey, Vec<u8>)> {
+        self.messages.pop_front()
+    }
+
+    /// Put back a message that could not be written, ahead of the rest.
+    pub(super) fn unpop(&mut self, key: MessageKey, data: Vec<u8>) {
+        self.messages.push_front((key, data));
+    }
+
+    fn clear(&mut self) {
+        self.messages.clear();
+    }
+
+    #[cfg(test)]
+    pub(super) fn len(&self) -> usize {
+        self.messages.len()
     }
 }
 

@@ -28,6 +28,13 @@ use super::*;
 
 const PATIENCE: Duration = Duration::from_secs(10);
 
+fn key() -> endpoint::MessageKey {
+    (
+        moor_var::Symbol::mk("game"),
+        moor_var::Symbol::mk("positions"),
+    )
+}
+
 async fn webrtc() -> WebRtc {
     WebRtc::start(&WebRtcConfig {
         enabled: true,
@@ -171,7 +178,7 @@ async fn reliable_ordered_channel_delivers_in_order() {
     let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
     opened(&peer).await;
     for sequence in 0..32u8 {
-        peer.send(&[sequence]).unwrap();
+        peer.send(key(), &[sequence]).unwrap();
     }
     for sequence in 0..32u8 {
         assert_eq!(receive(&mut received).await, vec![sequence]);
@@ -188,7 +195,7 @@ async fn unordered_channel_without_retransmits_delivers() {
     )
     .await;
     opened(&peer).await;
-    peer.send(b"realtime event").unwrap();
+    peer.send(key(), b"realtime event").unwrap();
     assert_eq!(receive(&mut received).await, b"realtime event");
 }
 
@@ -202,7 +209,7 @@ async fn channel_with_packet_lifetime_delivers() {
     )
     .await;
     opened(&peer).await;
-    peer.send(b"short lived event").unwrap();
+    peer.send(key(), b"short lived event").unwrap();
     assert_eq!(receive(&mut received).await, b"short lived event");
 }
 
@@ -211,7 +218,7 @@ async fn trickled_client_candidate_connects() {
     let webrtc = webrtc().await;
     let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), true).await;
     opened(&peer).await;
-    peer.send(b"trickled").unwrap();
+    peer.send(key(), b"trickled").unwrap();
     assert_eq!(receive(&mut received).await, b"trickled");
 }
 
@@ -226,14 +233,14 @@ async fn peers_share_one_endpoint_and_leave_on_drop() {
     opened(&second).await;
     assert_eq!(peer_count(&webrtc.endpoint).await, 2);
 
-    first.send(b"to first").unwrap();
-    second.send(b"to second").unwrap();
+    first.send(key(), b"to first").unwrap();
+    second.send(key(), b"to second").unwrap();
     assert_eq!(receive(&mut first_received).await, b"to first");
     assert_eq!(receive(&mut second_received).await, b"to second");
 
     drop(first);
     assert_eq!(peer_count(second.endpoint()).await, 1);
-    second.send(b"still here").unwrap();
+    second.send(key(), b"still here").unwrap();
     assert_eq!(receive(&mut second_received).await, b"still here");
 }
 
@@ -248,7 +255,7 @@ async fn sending_before_the_channel_opens_fails() {
     };
     let (peer, _answer) = webrtc.answer(&offer.to_sdp_string()).await.unwrap();
     assert!(!peer.is_open());
-    assert!(peer.send(b"too early").is_err());
+    assert!(peer.send(key(), b"too early").is_err());
 }
 
 #[tokio::test]
@@ -281,6 +288,46 @@ fn advertised_ips_prefer_configuration_then_a_concrete_listen_address() {
 }
 
 #[test]
+fn latest_queue_replaces_in_place_and_puts_back_first() {
+    use super::endpoint::LatestQueue;
+    let positions = key();
+    let score = (moor_var::Symbol::mk("game"), moor_var::Symbol::mk("score"));
+    let mut queue = LatestQueue::default();
+    queue.push(positions, b"p1".to_vec());
+    queue.push(score, b"s1".to_vec());
+    queue.push(positions, b"p2".to_vec());
+    assert_eq!(queue.len(), 2);
+    assert_eq!(queue.pop(), Some((positions, b"p2".to_vec())));
+    queue.unpop(positions, b"p2".to_vec());
+    assert_eq!(queue.pop(), Some((positions, b"p2".to_vec())));
+    assert_eq!(queue.pop(), Some((score, b"s1".to_vec())));
+    assert_eq!(queue.pop(), None);
+}
+
+#[tokio::test]
+async fn a_burst_on_one_key_always_delivers_the_newest_message() {
+    let webrtc = webrtc().await;
+    let (peer, mut received) = connect(&webrtc, channel(true, Reliability::Reliable), false).await;
+    opened(&peer).await;
+    // Well past the high-water mark, so later messages queue and supersede each other.
+    let sent = 200u8;
+    for sequence in 0..sent {
+        let mut message = vec![0; 4096];
+        message[0] = sequence;
+        peer.send(key(), &message).unwrap();
+    }
+    let mut arrived = 0;
+    loop {
+        let message = receive(&mut received).await;
+        arrived += 1;
+        if message[0] == sent - 1 {
+            break;
+        }
+    }
+    assert!(arrived <= usize::from(sent));
+}
+
+#[test]
 fn only_ephemeral_data_events_use_the_channel() {
     use moor_common::tasks::NarrativeEvent;
     use moor_runtime_api::api::ClientEvent;
@@ -296,13 +343,16 @@ fn only_ephemeral_data_events_use_the_channel() {
             ephemeral,
         ),
     };
-    assert!(is_channel_event(&data(true)));
-    assert!(!is_channel_event(&data(false)));
+    assert_eq!(
+        channel_key(&data(true)),
+        Some((Symbol::mk("game"), Symbol::mk("positions")))
+    );
+    assert_eq!(channel_key(&data(false)), None);
     let narrative = ClientEvent::Narrative {
         player,
         event: NarrativeEvent::notify(v_int(0), v_int(1), None, false, false, None),
     };
-    assert!(!is_channel_event(&narrative));
+    assert_eq!(channel_key(&narrative), None);
 }
 
 #[tokio::test]

@@ -19,7 +19,10 @@
 //! handed back to the caller so that it can broadcast it (`RpcSession`) or capture it
 //! (`OutputCaptureSession`). On rollback the buffers are discarded and nothing is logged.
 
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use moor_common::tasks::NarrativeEvent;
 use moor_var::Obj;
@@ -96,7 +99,7 @@ impl SessionEventBuffer {
     /// Commit the buffered events: write every buffered event to the event log and return the
     /// deliverable ones, in order. Both buffers are emptied.
     pub fn commit(&self) -> Vec<(Obj, Box<NarrativeEvent>)> {
-        let events: Vec<_> = self.transaction_buffer.lock().unwrap().drain(..).collect();
+        let events = latest_ephemeral(self.transaction_buffer.lock().unwrap().drain(..).collect());
         let log_only_events: Vec<_> = self.log_only_buffer.lock().unwrap().drain(..).collect();
 
         let identity = self.identity();
@@ -134,4 +137,25 @@ impl SessionEventBuffer {
         self.transaction_buffer.lock().unwrap().clear();
         self.log_only_buffer.lock().unwrap().clear();
     }
+}
+
+/// Drop each ephemeral event that a later one in the same transaction supersedes: the same
+/// recipient, namespace, and kind. Other events, and the order of the rest, are kept.
+fn latest_ephemeral(events: Vec<(Obj, Box<NarrativeEvent>)>) -> Vec<(Obj, Box<NarrativeEvent>)> {
+    let mut latest = HashMap::new();
+    for (position, (player, event)) in events.iter().enumerate() {
+        if let Some(key) = event.ephemeral_key() {
+            latest.insert((*player, key), position);
+        }
+    }
+    events
+        .into_iter()
+        .enumerate()
+        .filter(|(position, (player, event))| {
+            event
+                .ephemeral_key()
+                .is_none_or(|key| latest.get(&(*player, key)) == Some(position))
+        })
+        .map(|(_, entry)| entry)
+        .collect()
 }

@@ -277,10 +277,9 @@ impl ClientSession {
                         _ => {}
                     }
 
-                    // Check if this is a DataEvent in a realtime-eligible domain
-                    // and route over data channel if available.
-                    let use_data_channel = webrtc::is_channel_event(&event_msg.event)
-                        && self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open);
+                    // Ephemeral data events use the data channel when it is open.
+                    let channel_key = webrtc::channel_key(&event_msg.event)
+                        .filter(|_| self.webrtc_peer.as_ref().is_some_and(WebRtcPeer::is_open));
 
                     let event_bytes = match encode_client_event_bytes(&event_msg) {
                         Ok(bytes) => bytes,
@@ -289,7 +288,7 @@ impl ClientSession {
                             break;
                         }
                     };
-                    if !self.forward_event_bytes(event_bytes, use_data_channel, &mut ws_sender).await {
+                    if !self.forward_event_bytes(event_bytes, channel_key, &mut ws_sender).await {
                         break;
                     }
                 }
@@ -475,14 +474,18 @@ impl ClientSession {
         }
     }
 
+    /// Send encoded event bytes on the data channel when they have a channel key and a peer,
+    /// otherwise, or if the channel refuses them, on the WebSocket.
     async fn forward_event_bytes(
         &mut self,
         bytes: Vec<u8>,
-        use_data_channel: bool,
+        channel_key: Option<webrtc::MessageKey>,
         ws_sender: &mut SplitSink<WebSocket, Message>,
     ) -> bool {
-        if use_data_channel && let Some(peer) = &self.webrtc_peer {
-            match peer.send(&bytes) {
+        if let Some(key) = channel_key
+            && let Some(peer) = &self.webrtc_peer
+        {
+            match peer.send(key, &bytes) {
                 Ok(()) => return true,
                 Err(e) => {
                     debug!("Data channel send failed, falling back to WS: {e}");

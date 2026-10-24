@@ -315,6 +315,59 @@ mod tests {
     }
 
     #[test]
+    fn commit_keeps_only_the_latest_ephemeral_event_per_key() {
+        let h = harness();
+        let other = Obj::mk_id(3);
+        let data = |kind: &str, payload: i64, ephemeral| {
+            Box::new(NarrativeEvent::data(
+                v_obj(Obj::mk_id(1)),
+                Symbol::mk("game"),
+                Symbol::mk(kind),
+                moor_var::v_int(payload),
+                ephemeral,
+            ))
+        };
+
+        h.session
+            .send_event(h.player, data("positions", 1, true))
+            .unwrap();
+        h.session
+            .send_event(h.player, data("score", 1, true))
+            .unwrap();
+        h.session
+            .send_event(other, data("positions", 1, true))
+            .unwrap();
+        h.session
+            .send_event(h.player, data("positions", 1, false))
+            .unwrap();
+        h.session
+            .send_event(h.player, data("positions", 2, true))
+            .unwrap();
+        h.session.commit().unwrap();
+
+        // The first ephemeral position for the player is superseded; the other recipient's,
+        // the other kind, and the durable event survive, in order.
+        let delivered: Vec<_> = published(&h.actions)
+            .into_iter()
+            .map(|(player, event)| {
+                let moor_common::tasks::Event::Data { kind, payload, .. } = event.event else {
+                    panic!("expected data");
+                };
+                (player, kind.as_string(), payload.as_integer().unwrap())
+            })
+            .collect();
+        assert_eq!(
+            delivered,
+            vec![
+                (h.player, "score".to_string(), 1),
+                (other, "positions".to_string(), 1),
+                (h.player, "positions".to_string(), 1),
+                (h.player, "positions".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
     fn rollback_discards_buffered_events() {
         let h = harness();
 

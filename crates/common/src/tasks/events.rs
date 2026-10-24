@@ -228,6 +228,21 @@ impl NarrativeEvent {
         )
     }
 
+    /// For an ephemeral event, the namespace and kind it is keyed by: a newer ephemeral
+    /// event with the same key supersedes it while it is undelivered.
+    #[must_use]
+    pub fn ephemeral_key(&self) -> Option<(Symbol, Symbol)> {
+        match &self.event {
+            Event::Data {
+                namespace,
+                kind,
+                ephemeral: true,
+                ..
+            } => Some((*namespace, *kind)),
+            _ => None,
+        }
+    }
+
     #[must_use]
     pub fn event_id(&self) -> Uuid {
         self.event_id

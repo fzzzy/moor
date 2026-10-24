@@ -19,7 +19,7 @@ use str0m::{Candidate, change::SdpOffer};
 use tokio::sync::oneshot;
 use tracing::warn;
 
-use super::endpoint::{Answered, Command, EndpointHandle, PeerId, PeerLink};
+use super::endpoint::{Answered, Command, EndpointHandle, MessageKey, PeerId, PeerLink};
 
 /// One client's WebRTC connection. Dropping it removes the peer from the endpoint.
 pub(crate) struct WebRtcPeer {
@@ -65,14 +65,16 @@ impl WebRtcPeer {
         self.link.is_open()
     }
 
-    /// Queue a binary message for the data channel. Fails when the channel is closed or
-    /// the endpoint is backlogged, so the caller can use the WebSocket instead.
-    pub(crate) fn send(&self, data: &[u8]) -> eyre::Result<()> {
+    /// Queue a binary message for the data channel, superseding any undelivered message
+    /// with the same key. Fails when the channel is closed or the endpoint is backlogged,
+    /// so the caller can use the WebSocket instead.
+    pub(crate) fn send(&self, key: MessageKey, data: &[u8]) -> eyre::Result<()> {
         if !self.is_open() {
             return Err(eyre::eyre!("Data channel not open"));
         }
         let queued = self.endpoint.try_request(Command::Send {
             peer: self.id,
+            key,
             data: data.to_vec(),
         });
         queued
