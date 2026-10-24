@@ -14,6 +14,7 @@
 import Editor, { Monaco } from "@monaco-editor/react";
 import { unionToCompileErrorUnion } from "@moor/schema/generated/moor-common/compile-error-union";
 import { ParseError } from "@moor/schema/generated/moor-common/parse-error";
+import { describeCompileError } from "@moor/web-sdk";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePersistentState } from "../hooks/usePersistentState";
@@ -610,11 +611,13 @@ export const VerbEditor: React.FC<VerbEditorProps> = ({
                                 notes: notes.length ? notes : undefined,
                             });
                         } else {
-                            // Handle other error types - just use the toString for now
-                            compilationErrors.push({
-                                type: "other",
-                                message: compileError.toString() || "Compilation error",
-                            });
+                            // Other compile errors carry a position too, so they mark the line.
+                            const { message, line, column } = describeCompileError(compileError);
+                            compilationErrors.push(
+                                line === undefined
+                                    ? { type: "other", message }
+                                    : { type: "parse", message, line, column },
+                            );
                         }
                     }
 

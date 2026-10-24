@@ -11,8 +11,19 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+import { CompileContext } from "@moor/schema/generated/moor-common/compile-context";
+import { CompileError } from "@moor/schema/generated/moor-common/compile-error";
+import { CompileErrorUnion } from "@moor/schema/generated/moor-common/compile-error-union";
+import { DuplicateVariable } from "@moor/schema/generated/moor-common/duplicate-variable";
+import { Symbol as MoorSymbol } from "@moor/schema/generated/moor-common/symbol";
 import { ClientEvent } from "@moor/schema/generated/moor-rpc/client-event";
 import { ClientEventUnion } from "@moor/schema/generated/moor-rpc/client-event-union";
+import { CompilationError } from "@moor/schema/generated/moor-rpc/compilation-error";
+import { InvocationError } from "@moor/schema/generated/moor-rpc/invocation-error";
+import { InvocationOutcome } from "@moor/schema/generated/moor-rpc/invocation-outcome";
+import { InvocationResponse } from "@moor/schema/generated/moor-rpc/invocation-response";
+import { SchedulerError } from "@moor/schema/generated/moor-rpc/scheduler-error";
+import { SchedulerErrorUnion } from "@moor/schema/generated/moor-rpc/scheduler-error-union";
 import { TaskSuccessEvent } from "@moor/schema/generated/moor-rpc/task-success-event";
 import { Var } from "@moor/schema/generated/moor-var/var";
 import { VarInt } from "@moor/schema/generated/moor-var/var-int";
@@ -37,6 +48,24 @@ function completed() {
     return b.asUint8Array();
 }
 
+/** The daemon's answer to an eval of code with a duplicate variable `b` at line 2, column 47. */
+function duplicateVariable() {
+    const b = new Builder();
+    const context = CompileContext.createCompileContext(b, 2n, 47n);
+    const name = MoorSymbol.createSymbol(b, b.createString("b"));
+    DuplicateVariable.startDuplicateVariable(b);
+    DuplicateVariable.addContext(b, context);
+    DuplicateVariable.addVarName(b, name);
+    const detail = DuplicateVariable.endDuplicateVariable(b);
+    const compileError = CompileError.createCompileError(b, CompileErrorUnion.DuplicateVariable, detail);
+    const compilation = CompilationError.createCompilationError(b, compileError);
+    const scheduler = SchedulerError.createSchedulerError(b, SchedulerErrorUnion.CompilationError, compilation);
+    const failure = InvocationError.createInvocationError(b, scheduler);
+    const output = InvocationResponse.createOutputVector(b, []);
+    b.finish(InvocationResponse.createInvocationResponse(b, InvocationOutcome.InvocationError, failure, output));
+    return b.asUint8Array();
+}
+
 async function host(t: TestContext, timeoutMs = 1000) {
     let logins = 0;
     let writes = 0;
@@ -54,6 +83,9 @@ async function host(t: TestContext, timeoutMs = 1000) {
             res.writeHead(401).end("Expired token");
         } else if (req.url === "/rejected") {
             res.end(JSON.stringify({ result: { Failure: { error: "Permission denied" } } }));
+        } else if (req.url === "/v1/eval") {
+            res.setHeader("Content-Type", "application/x-flatbuffers");
+            res.end(duplicateVariable());
         } else if (req.url === "/hang") {
             // The client must abort this request.
         } else res.end(JSON.stringify({ ok: true }));
@@ -135,4 +167,12 @@ test("command timeout and disconnect report unknown outcomes and permit a fresh 
     assert.match(disconnected.lines.join(), /closed.*unknown/);
     assert.equal((await h.client.command(actor, "next")).error, false);
     assert.equal(h.commands.filter(command => command === "hang").length, 1);
+});
+
+test("eval failures say what went wrong and where", async t => {
+    const { client } = await host(t);
+    await assert.rejects(
+        client.evalExpression(actor, "return 1;"),
+        { message: "Eval: Compilation failed. Line 2, column 47: Duplicate variable in scope: b" },
+    );
 });

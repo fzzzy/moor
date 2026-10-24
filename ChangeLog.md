@@ -409,6 +409,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Meadow's verb editor shows every kind of compile error with its line, column and problem, for
+  example "Duplicate variable in scope: b", and marks the line. Only parse errors were shown; others
+  appeared as "[object Object]". The MCP server's `moo_eval` likewise reports a compile error with
+  its position instead of only "CompilationError", and command output describes compile errors.
+
 - The web host's HTTP API answers request errors with the status that fits and a JSON body
   `{"code", "error"}` instead of a bare HTTP 500. A missing object, verb or property is 404, a
   permission failure 403, invalid credentials 401, and an unreachable daemon 503; the message names

@@ -14,12 +14,15 @@
 import { AbortLimitReason } from "@moor/schema/generated/moor-rpc/abort-limit-reason";
 import { CommandErrorUnion } from "@moor/schema/generated/moor-rpc/command-error-union";
 import { CommandExecutionError } from "@moor/schema/generated/moor-rpc/command-execution-error";
+import { CompilationError } from "@moor/schema/generated/moor-rpc/compilation-error";
 import { SchedulerError } from "@moor/schema/generated/moor-rpc/scheduler-error";
 import { SchedulerErrorUnion } from "@moor/schema/generated/moor-rpc/scheduler-error-union";
 import { TaskAbortedLimit } from "@moor/schema/generated/moor-rpc/task-aborted-limit";
 import { VerbCompilationError } from "@moor/schema/generated/moor-rpc/verb-compilation-error";
 import { VerbProgramErrorUnion } from "@moor/schema/generated/moor-rpc/verb-program-error-union";
 import { VerbProgramFailed } from "@moor/schema/generated/moor-rpc/verb-program-failed";
+
+import { formatCompileError } from "./compile-errors.js";
 
 export interface SchedulerErrorNarrative {
     message: string;
@@ -75,7 +78,7 @@ export function schedulerErrorToNarrative(schedulerError: SchedulerError): Sched
                         const ce = compError.error();
                         message = "Verb not programmed.";
                         if (ce) {
-                            description = [ce.toString()];
+                            description = [formatCompileError(ce)];
                         }
                     }
                     break;
@@ -112,6 +115,16 @@ export function schedulerErrorToNarrative(schedulerError: SchedulerError): Sched
                 case AbortLimitReason.OutputEvents:
                     message = "Task produced too many captured output events";
                     break;
+            }
+            break;
+        }
+
+        case SchedulerErrorUnion.CompilationError: {
+            const compilation = schedulerError.error(new CompilationError()) as CompilationError | null;
+            const compileError = compilation?.error();
+            message = "Compilation failed.";
+            if (compileError) {
+                description = [formatCompileError(compileError)];
             }
             break;
         }

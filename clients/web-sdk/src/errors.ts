@@ -11,15 +11,15 @@
 // You should have received a copy of the GNU Lesser General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import { CompileErrorUnion, unionToCompileErrorUnion } from "@moor/schema/generated/moor-common/compile-error-union";
 import { ErrorCode } from "@moor/schema/generated/moor-common/error-code";
-import { ParseError } from "@moor/schema/generated/moor-common/parse-error";
 import { CompilationError } from "@moor/schema/generated/moor-rpc/compilation-error";
 import { Failure } from "@moor/schema/generated/moor-rpc/failure";
 import { ReplyResult } from "@moor/schema/generated/moor-rpc/reply-result";
 import { unionToReplyResultUnion } from "@moor/schema/generated/moor-rpc/reply-result-union";
 import { SchedulerErrorUnion, unionToSchedulerErrorUnion } from "@moor/schema/generated/moor-rpc/scheduler-error-union";
 import { TaskAbortedException } from "@moor/schema/generated/moor-rpc/task-aborted-exception";
+
+import { formatCompileError } from "./compile-errors.js";
 
 export function extractFailureError(replyResult: ReplyResult, context: string): never {
     const resultType = replyResult.resultType();
@@ -51,29 +51,7 @@ export function extractFailureError(replyResult: ReplyResult, context: string): 
             const compilationError = errorUnion as CompilationError;
             const compileError = compilationError.error();
             if (compileError) {
-                const compileErrorType = compileError.errorType();
-                const errorDetail = unionToCompileErrorUnion(
-                    compileErrorType,
-                    (obj) => compileError.error(obj),
-                );
-
-                if (compileErrorType === CompileErrorUnion.ParseError && errorDetail) {
-                    const parseError = errorDetail as ParseError;
-                    const message = parseError.message();
-                    const parseContext = parseError.context();
-                    const position = parseError.errorPosition();
-
-                    if (message && position) {
-                        throw new Error(
-                            `${parseContext} failed: Parse error at line ${position.line()}, col ${position.col()}: ${message}`,
-                        );
-                    }
-                    if (message) {
-                        throw new Error(`${parseContext} failed: ${message}`);
-                    }
-                }
-
-                throw new Error(`${context} failed: Compilation error (${CompileErrorUnion[compileErrorType]})`);
+                throw new Error(`${context} failed: ${formatCompileError(compileError)}`);
             }
         }
 

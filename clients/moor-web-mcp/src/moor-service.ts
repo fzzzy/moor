@@ -192,6 +192,12 @@ export class MoorWebClient {
                     const aborted = scheduler.error(new TaskAbortedException()) as TaskAbortedException;
                     const detail = aborted.exception()?.error();
                     if (detail) error.message = `Eval: ${ErrorCode[detail.errType()]} (${detail.msg() ?? ""})`;
+                } else if (scheduler) {
+                    // Compile errors, limits and the rest: say what went wrong and where.
+                    const narrative = schedulerErrorToNarrative(scheduler);
+                    if (narrative) {
+                        error.message = ["Eval:", narrative.message, ...(narrative.description ?? [])].join(" ");
+                    }
                 }
             }
             throw error;
