@@ -13,7 +13,10 @@
 
 //! End-to-end tests: `str0m` clients connect to a real endpoint over loopback.
 
-use std::time::{Duration, Instant};
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 
 use str0m::{
     Candidate, Event, Input, Output, Rtc,
@@ -63,9 +66,22 @@ struct Client {
     channel: ChannelId,
     received: mpsc::UnboundedSender<Vec<u8>>,
     outgoing: mpsc::UnboundedReceiver<Vec<u8>>,
+    /// Messages to send once the channel is open. The server can see the channel open
+    /// before the client has its acknowledgement.
+    unsent: VecDeque<Vec<u8>>,
 }
 
 impl Client {
+    /// Write waiting messages, if the channel is open.
+    fn flush(&mut self) {
+        let Some(mut channel) = self.rtc.channel(self.channel) else {
+            return;
+        };
+        while let Some(message) = self.unsent.pop_front() {
+            channel.write(true, &message).unwrap();
+        }
+    }
+
     /// Transmit and dispatch output until the engine next needs a timeout, or `None`
     /// once it has disconnected.
     async fn drain(&mut self) -> Option<Instant> {
@@ -81,6 +97,7 @@ impl Client {
                 Ok(Output::Event(Event::ChannelData(data))) => {
                     let _ = self.received.send(data.data);
                 }
+                Ok(Output::Event(Event::ChannelOpen(..))) => self.flush(),
                 Ok(Output::Event(_)) => {}
                 Err(_) => return None,
             }
@@ -99,9 +116,8 @@ impl Client {
                     Input::Receive(Instant::now(), receive)
                 }
                 Some(message) = self.outgoing.recv() => {
-                    if let Some(mut channel) = self.rtc.channel(self.channel) {
-                        channel.write(true, &message).unwrap();
-                    }
+                    self.unsent.push_back(message);
+                    self.flush();
                     continue;
                 }
                 _ = tokio::time::sleep(wait) => Input::Timeout(Instant::now()),
@@ -144,6 +160,7 @@ async fn connect(webrtc: &WebRtc, config: ChannelConfig, trickle: bool) -> Conne
         channel,
         received: sender,
         outgoing,
+        unsent: VecDeque::new(),
     };
     client.drain().await;
 
