@@ -237,6 +237,10 @@ Cowbell entries.
 
 ### Fixed
 
+- `changes_resolve` and `changes_initialize_property` accept a review row's `member` as well as its
+  `id` when only one row has that member. They took a parameter named `member` but refused member
+  values. The change tools' descriptions now say which value each accepts.
+
 - `$change_manager:capabilities()` answers players who may not use the change service with
   `["schema" -> 1, "authorized" -> false]` instead of raising `E_PERM`. The web client asks on every
   connection, so each player without admin access left a traceback in the server log.

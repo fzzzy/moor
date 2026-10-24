@@ -1087,8 +1087,9 @@ object CHANGE_MANAGER [
     "Permit the reviewed initial value only when absent; descendants require an explicit choice.";
     const auth = this:_entry(caller_perms());
     set_task_perms(auth[2]);
-    const {id, generation, row_id, ?descendants = false} = args;
+    const {id, generation, given_row, ?descendants = false} = args;
     let record = this:_get(auth, id, generation);
+    const row_id = this:_row_id(record, given_row);
     record["status"] in {"ready", "partial", "rejected"} || this:_error("not_ready", "Review is not ready.");
     descendants in {false, true, 0, 1} || raise(E_TYPE);
     const current = preview_objdef_changes(record["sources"], record["request"]);
@@ -1278,8 +1279,9 @@ object CHANGE_MANAGER [
     "Save a conditional choice or edited draft, with native result validation.";
     const auth = this:_entry(caller_perms());
     set_task_perms(auth[2]);
-    const {id, generation, row_id, kind, ?program = ""} = args;
+    const {id, generation, given_row, kind, ?program = ""} = args;
     let record = this:_get(auth, id, generation);
+    const row_id = this:_row_id(record, given_row);
     record["status"] in {"ready", "partial", "rejected"} || this:_error("not_ready", "Review is not ready.");
     let choice = ["choice" -> kind];
     if (kind == "edited")
@@ -1994,6 +1996,19 @@ object CHANGE_MANAGER [
     const number = toint(selector);
     number >= 1 && number <= length(record["report"]["rows"]) || this:_error("missing_row", "No such review row number. Check @changes diff.");
     return record["report"]["rows"][number]["id"];
+  endmethod
+
+  method _row_id owner: ARCH_WIZARD
+    "A review row's id. A member id names its row too, when exactly one row has that member.";
+    caller == this || raise(E_PERM);
+    const {record, given} = args;
+    typeof(given) == TYPE_STR || raise(E_TYPE);
+    const rows = `record["report"]["rows"] ! E_RANGE => {}';
+    for row in (rows)
+      row["id"] == given && return given;
+    endfor
+    const matches = {candidate["id"] for candidate in (rows) if (`candidate["member"] ! E_RANGE => ""' == given)};
+    return length(matches) == 1 ? matches[1] | given;
   endmethod
 
   method _member_label owner: ARCH_WIZARD

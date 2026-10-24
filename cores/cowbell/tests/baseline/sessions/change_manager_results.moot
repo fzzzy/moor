@@ -9,6 +9,10 @@
 ; const id = #0.result_probe["review_id"]; const state = $change_manager:status(id); const tail = $change_manager:result(id, state["generation"], state["next_decision"]); return {tail["decision_count"], length(tail["decisions"]), tail["next_decision"], tail["decisions"][$]["effect"], $change_manager:apply(id, 1)["decision_count"]};
 {60, 10, 0, "baseline", 60}
 
+// A row's member id names its row when only one row has that member.
+; const staged = $change_manager:stage("results", {["label" -> "many.moo", "text" -> dump_object(#9500)]}); const id = staged["review_id"]; const row = $change_manager:review(id, 1)["rows"][1]; const generation = $change_manager:resolve(id, 1, row["member"], "edited", "return 7;")["generation"]; const saved = {r for r in ($change_manager:review(id, generation)["rows"]) if (r["id"] == row["id"])}; $change_manager:discard(id, generation); return {row["member"] != row["id"], generation, saved[1]["choice"]["choice"]};
+{true, 2, "edited"}
+
 // Removing and recreating a verb must never transfer its saved edited program.
 ; const staged = $change_manager:stage("results", {["label" -> "many.moo", "text" -> dump_object(#9500)]}); const row = $change_manager:review(staged["review_id"], 1)["rows"][1]; #0.result_probe = staged; #0.result_probe["row"] = row; return $change_manager:resolve(staged["review_id"], 1, row["id"], "edited", "return 42;")["generation"];
 2
