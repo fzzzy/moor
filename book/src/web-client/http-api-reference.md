@@ -664,7 +664,9 @@ Server-side MOO expression evaluation
 **Evaluate a MOO expression**
 
 The daemon evaluates a MOO expression as the authenticated player. The request creates no daemon
-connection. The response contains the result or error and committed root-task output.
+connection. The response contains the result or error and committed root-task output. Code that does
+not compile returns `InvocationError(CompilationError)` with HTTP status 200; the compile error
+gives the position and the problem.
 
 Requires: `X-Moor-Auth-Token`
 

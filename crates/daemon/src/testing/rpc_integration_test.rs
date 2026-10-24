@@ -1350,6 +1350,44 @@ mod tests {
     }
 
     #[test]
+    fn test_captured_eval_reports_compile_errors_as_outcomes() {
+        let env = setup_test_environment();
+        let (_client_token, auth_token, _player) = logged_in_wizard(&env, Uuid::new_v4());
+
+        let eval = mk_eval_capture_msg(
+            &auth_token,
+            "for b in ({1}) endfor\nreturn {b for b in ({1})};".to_string(),
+            Some(Duration::from_secs(30)),
+        )
+        .expect("Failed to build captured eval message");
+        let reply = env
+            .transport
+            .process_client_message(
+                env.message_handler.as_ref(),
+                env.scheduler_client.clone(),
+                Uuid::new_v4(),
+                eval,
+            )
+            .expect("A compile error is a result, not an RPC failure");
+
+        let (error, output) = captured_error(&reply);
+        let moor_rpc::SchedulerErrorUnion::CompilationError(compilation) = error.error else {
+            panic!("Expected CompilationError, got {:?}", error.error);
+        };
+        let moor_schema::common::CompileErrorUnion::DuplicateVariable(duplicate) =
+            compilation.error.error
+        else {
+            panic!(
+                "Expected DuplicateVariable, got {:?}",
+                compilation.error.error
+            );
+        };
+        assert_eq!(duplicate.var_name.value, "b");
+        assert_eq!(duplicate.context.line, 2);
+        assert!(output.is_empty());
+    }
+
+    #[test]
     fn test_captured_eval_cancels_on_deadline() {
         let env = setup_test_environment();
         let login_client_id = Uuid::new_v4();

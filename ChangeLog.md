@@ -409,6 +409,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `POST /v1/eval` with code that does not compile returns the compile error, with its position, as
+  `InvocationError(CompilationError)` and HTTP status 200, as the API reference describes. It
+  returned a bare HTTP 500. Captured commands and verb calls that the daemon refuses to start, for
+  example because the verb does not exist, likewise return the error instead of HTTP 500.
+
 - Databases created since format 3.0.0 load again when their verbs call `complex_matches`,
   `parse_command`, `load_object`, `reload_object` or `emit_data`. Changing those builtins' declared
   arguments made such verbs fail to load with "Stored program builtin signature mismatch". Verbs

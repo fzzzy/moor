@@ -1385,12 +1385,23 @@ impl RpcMessageHandler {
         }
         let task_handle = match submit(&scheduler_client, expires_at, session.clone()) {
             Ok(t) => t,
-            Err(e) => {
+            Err(
+                e @ (SchedulerError::SchedulerNotResponding | SchedulerError::CouldNotStartTask),
+            ) => {
                 error!(?operation, error = ?e, "Error submitting captured task");
                 if Instant::now() >= expires_at {
                     return Ok(capture_timeout_response(deadline, take_output()));
                 }
                 return Err(RpcMessageError::InternalError(e.to_string()));
+            }
+            Err(e) => {
+                // A request the scheduler refuses, such as code that does not compile, fails
+                // like a task that ran: the caller gets the error itself, not a server fault.
+                debug!(?operation, error = ?e, "Captured task was not started");
+                return Ok(InvocationResponse {
+                    outcome: InvocationOutcome::Error { error: e },
+                    output: take_output(),
+                });
             }
         };
 
