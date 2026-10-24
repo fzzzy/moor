@@ -34,12 +34,12 @@ true
 @programmer
 % walk Far Workshop
 @wizard
-; suspend(5); return #90101.location == #90109;
+; const deadline = time() + 10; while (#90101.location != #90109 && time() < deadline) suspend(0.05); endwhile return #90101.location == #90109;
 true
 ; #90101.home = #90103; return true;
 true
 @programmer
 % home
 @wizard
-; suspend(5); return #90101.location == #90103;
+; const deadline = time() + 10; while (#90101.location != #90103 && time() < deadline) suspend(0.05); endwhile return #90101.location == #90103;
 true

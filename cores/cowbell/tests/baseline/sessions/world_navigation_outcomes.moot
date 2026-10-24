@@ -20,5 +20,5 @@ true
 % join RUNTIME_PROGRAMMER
 =Walking to RUNTIME_PROGRAMMER (1 step)...
 @wizard
-; suspend(3); return #90102.location == #90110;
+; const deadline = time() + 10; while (#90102.location != #90110 && time() < deadline) suspend(0.05); endwhile return #90102.location == #90110;
 true
