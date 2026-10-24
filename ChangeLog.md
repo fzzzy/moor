@@ -409,6 +409,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The web MCP server's `moo_eval` no longer rewrites multi-statement code: code without a final
+  semicolon was wrapped in `return ...;`, so `x = 1; return x + 1` returned 1. Evaluations and world
+  tools give the daemon a deadline just under the client's, so a slow task is cancelled and reported
+  instead of continuing after the client gave up. `moo_program_verb` reports a compile error with
+  its line and column instead of raw JSON, values are no longer printed twice, a world tool whose
+  name clashes with a built-in one no longer hides every tool, refreshing world tools notifies the
+  client, and a refused login rereads the configuration so an edited password works without a
+  restart. Every built-in tool parameter is described.
+
 - Meadow's verb editor shows every kind of compile error with its line, column and problem, for
   example "Duplicate variable in scope: b", and marks the line. Only parse errors were shown; others
   appeared as "[object Object]". The MCP server's `moo_eval` likewise reports a compile error with

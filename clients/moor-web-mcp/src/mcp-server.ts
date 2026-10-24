@@ -42,6 +42,11 @@ function makeErrorResult(text: string): CallToolResult {
     return { content: [{ type: "text", text }], isError: true };
 }
 
+/** A MOO value: its literal as text, and the same value as JSON for structured use. */
+function makeValueResult(result: { js: unknown; literal: string }): CallToolResult {
+    return { content: [{ type: "text", text: result.literal }], structuredContent: { value: result.js } };
+}
+
 function parseObjectRef(raw: unknown): string {
     if (typeof raw !== "string") {
         throw new Error("object must be a string like '#123' or 'uuid:ABCDEF-1234567890'");
@@ -103,7 +108,9 @@ export class McpServer extends Server {
         private readonly defaultCharacter: CharacterRef,
     ) {
         const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-        super({ name: "moor-web-mcp", version }, { capabilities: { tools: {}, resources: {} } });
+        super({ name: "moor-web-mcp", version }, {
+            capabilities: { tools: { listChanged: true }, resources: { listChanged: true } },
+        });
         this.catalog = new ToolCatalog(moor);
         this.setRequestHandler("tools/list", async () => ({ tools: await this.listTools() }));
         this.setRequestHandler("tools/call", async (request, ctx) => this.callTool(request.params, ctx.mcpReq.signal));
@@ -124,7 +131,9 @@ export class McpServer extends Server {
         for (const character of this.characters()) {
             for (const tool of await this.catalog.tools(character)) {
                 if (staticTools.some(entry => entry.name === tool.name)) {
-                    throw new Error(`Reserved tool name: ${tool.name}`);
+                    // One clashing world tool must not hide every other tool.
+                    console.error(`Skipping world tool ${tool.name} from ${character.mooId}: the name is reserved`);
+                    continue;
                 }
                 const schema = withCharacter(tool.inputSchema);
                 schema.properties = { ...schema.properties, moo: { type: "string", const: character.mooId } };
@@ -181,7 +190,7 @@ export class McpServer extends Server {
                 return makeErrorResult("expression is required");
             }
             const result = await this.moor.evalExpression(character, expression, signal);
-            return makeTextResult(`${result.literal}\n\n${JSON.stringify(result.js, null, 2)}`);
+            return makeValueResult(result);
         }
 
         if (name === "moo_command") {
@@ -207,7 +216,7 @@ export class McpServer extends Server {
                 return makeErrorResult("verb is required");
             }
             const result = await this.moor.invokeVerbViaEval(character, object, verb, args, signal);
-            return makeTextResult(`${result.literal}\n\n${JSON.stringify(result.js, null, 2)}`);
+            return makeValueResult(result);
         }
 
         if (name === "moo_function_help") {
@@ -216,7 +225,7 @@ export class McpServer extends Server {
                 return makeErrorResult("function_name is required");
             }
             const result = await this.moor.functionHelp(character, functionName, signal);
-            return makeTextResult(`${result.literal}\n\n${JSON.stringify(result.js, null, 2)}`);
+            return makeValueResult(result);
         }
 
         if (name === "moo_list_objects") {
@@ -259,25 +268,14 @@ export class McpServer extends Server {
         }
 
         if (name === "moo_program_verb") {
-            const object = encodeURIComponent(
-                await this.normalizeObjectRef(character, parseObjectRef(argumentsObj.object), signal),
-            );
+            const object = await this.normalizeObjectRef(character, parseObjectRef(argumentsObj.object), signal);
             const verbName = argumentsObj.name;
             const code = argumentsObj.code;
             if (typeof verbName !== "string" || typeof code !== "string") {
                 return makeErrorResult("name and code are required");
             }
-            const result = await this.moor.requestJson(
-                character,
-                `/v1/verbs/${object}/${encodeURIComponent(verbName)}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain" },
-                    body: code,
-                },
-                signal,
-            );
-            return makeTextResult(JSON.stringify(result, null, 2));
+            const result = await this.moor.programVerb(character, object, verbName, code, signal);
+            return result.ok ? makeTextResult(`Programmed ${verbName}.`) : makeErrorResult(result.message);
         }
 
         if (name === "moo_list_properties") {
@@ -297,7 +295,7 @@ export class McpServer extends Server {
         if (name === "moo_get_property") {
             const object = await this.normalizeObjectRef(character, parseObjectRef(argumentsObj.object), signal);
             const result = await this.moor.propertyValue(character, object, argumentsObj.name as string, signal);
-            return makeTextResult(`${result.literal}\n\n${JSON.stringify(result.js, null, 2)}`);
+            return makeValueResult(result);
         }
 
         if (name === "moo_set_property") {
@@ -324,6 +322,9 @@ export class McpServer extends Server {
 
         if (name === "moo_refresh_dynamic_tools") {
             const count = await this.catalog.refresh(character);
+            // Clients cache the lists; tell them to fetch the new ones.
+            await this.sendToolListChanged();
+            await this.sendResourceListChanged();
             return makeTextResult(`Loaded ${count} dynamic tools`);
         }
 

@@ -22,7 +22,8 @@ async function main(): Promise<void> {
         throw new Error("Usage: moor-web-mcp --config <config.json>");
     }
     const config = loadConfig(args[1]);
-    const moor = new MoorWebClient(config);
+    // Reread on a failed login, so an edited password applies without a restart.
+    const moor = new MoorWebClient(config, () => loadConfig(args[1]));
     const handle = serveStdio(() => {
         const server = new McpServer(moor, config.moos, resolveDefaultCharacter(config));
         server.onclose = () => {

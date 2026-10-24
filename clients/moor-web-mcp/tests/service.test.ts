@@ -18,13 +18,25 @@ import { DuplicateVariable } from "@moor/schema/generated/moor-common/duplicate-
 import { Symbol as MoorSymbol } from "@moor/schema/generated/moor-common/symbol";
 import { ClientEvent } from "@moor/schema/generated/moor-rpc/client-event";
 import { ClientEventUnion } from "@moor/schema/generated/moor-rpc/client-event-union";
+import { ClientSuccess } from "@moor/schema/generated/moor-rpc/client-success";
 import { CompilationError } from "@moor/schema/generated/moor-rpc/compilation-error";
+import { DaemonToClientReply } from "@moor/schema/generated/moor-rpc/daemon-to-client-reply";
+import { DaemonToClientReplyUnion } from "@moor/schema/generated/moor-rpc/daemon-to-client-reply-union";
 import { InvocationError } from "@moor/schema/generated/moor-rpc/invocation-error";
 import { InvocationOutcome } from "@moor/schema/generated/moor-rpc/invocation-outcome";
 import { InvocationResponse } from "@moor/schema/generated/moor-rpc/invocation-response";
+import { ReplyResult } from "@moor/schema/generated/moor-rpc/reply-result";
+import { ReplyResultUnion } from "@moor/schema/generated/moor-rpc/reply-result-union";
 import { SchedulerError } from "@moor/schema/generated/moor-rpc/scheduler-error";
 import { SchedulerErrorUnion } from "@moor/schema/generated/moor-rpc/scheduler-error-union";
 import { TaskSuccessEvent } from "@moor/schema/generated/moor-rpc/task-success-event";
+import { VerbCompilationError } from "@moor/schema/generated/moor-rpc/verb-compilation-error";
+import { VerbProgramError } from "@moor/schema/generated/moor-rpc/verb-program-error";
+import { VerbProgramErrorUnion } from "@moor/schema/generated/moor-rpc/verb-program-error-union";
+import { VerbProgramFailure } from "@moor/schema/generated/moor-rpc/verb-program-failure";
+import { VerbProgramResponse } from "@moor/schema/generated/moor-rpc/verb-program-response";
+import { VerbProgramResponseReply } from "@moor/schema/generated/moor-rpc/verb-program-response-reply";
+import { VerbProgramResponseUnion } from "@moor/schema/generated/moor-rpc/verb-program-response-union";
 import { Var } from "@moor/schema/generated/moor-var/var";
 import { VarInt } from "@moor/schema/generated/moor-var/var-int";
 import { VarUnion } from "@moor/schema/generated/moor-var/var-union";
@@ -34,7 +46,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { test, type TestContext } from "node:test";
 import { WebSocketServer } from "ws";
-import { MoorWebClient } from "../src/moor-service.ts";
+import { evalBody, MoorWebClient } from "../src/moor-service.ts";
 
 const actor = { mooId: "test", playerId: "builder" };
 function completed() {
@@ -48,17 +60,21 @@ function completed() {
     return b.asUint8Array();
 }
 
-/** The daemon's answer to an eval of code with a duplicate variable `b` at line 2, column 47. */
-function duplicateVariable() {
-    const b = new Builder();
+/** A DuplicateVariable compile error for `b` at line 2, column 47. */
+function duplicateVariableError(b: Builder): number {
     const context = CompileContext.createCompileContext(b, 2n, 47n);
     const name = MoorSymbol.createSymbol(b, b.createString("b"));
     DuplicateVariable.startDuplicateVariable(b);
     DuplicateVariable.addContext(b, context);
     DuplicateVariable.addVarName(b, name);
     const detail = DuplicateVariable.endDuplicateVariable(b);
-    const compileError = CompileError.createCompileError(b, CompileErrorUnion.DuplicateVariable, detail);
-    const compilation = CompilationError.createCompilationError(b, compileError);
+    return CompileError.createCompileError(b, CompileErrorUnion.DuplicateVariable, detail);
+}
+
+/** The daemon's answer to an eval of code with that duplicate variable. */
+function duplicateVariable() {
+    const b = new Builder();
+    const compilation = CompilationError.createCompilationError(b, duplicateVariableError(b));
     const scheduler = SchedulerError.createSchedulerError(b, SchedulerErrorUnion.CompilationError, compilation);
     const failure = InvocationError.createInvocationError(b, scheduler);
     const output = InvocationResponse.createOutputVector(b, []);
@@ -66,27 +82,62 @@ function duplicateVariable() {
     return b.asUint8Array();
 }
 
-async function host(t: TestContext, timeoutMs = 1000) {
+/** The web host's answer to programming a verb with that duplicate variable. */
+function programFailure() {
+    const b = new Builder();
+    const compilation = VerbCompilationError.createVerbCompilationError(b, duplicateVariableError(b));
+    const error = VerbProgramError.createVerbProgramError(b, VerbProgramErrorUnion.VerbCompilationError, compilation);
+    const failure = VerbProgramFailure.createVerbProgramFailure(b, error);
+    const response = VerbProgramResponse.createVerbProgramResponse(
+        b,
+        VerbProgramResponseUnion.VerbProgramFailure,
+        failure,
+    );
+    const reply = VerbProgramResponseReply.createVerbProgramResponseReply(b, response);
+    const daemonReply = DaemonToClientReply.createDaemonToClientReply(
+        b,
+        DaemonToClientReplyUnion.VerbProgramResponseReply,
+        reply,
+    );
+    const success = ClientSuccess.createClientSuccess(b, daemonReply);
+    b.finish(ReplyResult.createReplyResult(b, ReplyResultUnion.ClientSuccess, success));
+    return b.asUint8Array();
+}
+
+async function host(t: TestContext, timeoutMs = 1000, password = "test") {
     let logins = 0;
     let writes = 0;
     const commands: string[] = [];
+    const evals: string[] = [];
+    const passwords: string[] = [];
     const http = createServer((req, res) => {
-        req.resume();
-        if (req.url === "/auth/connect") {
-            logins++;
-            setTimeout(() => {
-                res.setHeader("X-Moor-Auth-Token", `token-${logins}`);
-                res.end();
-            }, 10);
-        } else if (req.url === "/expired") {
+        const body: Buffer[] = [];
+        req.on("data", chunk => body.push(chunk));
+        const url = new URL(req.url!, "http://host");
+        if (url.pathname === "/auth/connect") {
+            req.on("end", () => {
+                const password = new URLSearchParams(Buffer.concat(body).toString()).get("password")!;
+                passwords.push(password);
+                if (password === "stale") return void res.writeHead(401).end("Invalid credentials");
+                logins++;
+                setTimeout(() => {
+                    res.setHeader("X-Moor-Auth-Token", `token-${logins}`);
+                    res.end();
+                }, 10);
+            });
+        } else if (url.pathname === "/expired") {
             writes++;
             res.writeHead(401).end("Expired token");
-        } else if (req.url === "/rejected") {
+        } else if (url.pathname === "/rejected") {
             res.end(JSON.stringify({ result: { Failure: { error: "Permission denied" } } }));
-        } else if (req.url === "/v1/eval") {
+        } else if (url.pathname === "/v1/eval") {
+            evals.push(url.searchParams.get("timeout_ms") ?? "none");
             res.setHeader("Content-Type", "application/x-flatbuffers");
             res.end(duplicateVariable());
-        } else if (req.url === "/hang") {
+        } else if (url.pathname.startsWith("/v1/verbs/")) {
+            res.writeHead(422, { "Content-Type": "application/x-flatbuffers" });
+            res.end(programFailure());
+        } else if (url.pathname === "/hang") {
             // The client must abort this request.
         } else res.end(JSON.stringify({ ok: true }));
     });
@@ -112,9 +163,16 @@ async function host(t: TestContext, timeoutMs = 1000) {
             id: "test",
             description: "Test",
             connectAddress: `http://127.0.0.1:${address.port}`,
+            players: [{ id: "builder", username: "Builder", password }],
+        }],
+    }, () => ({
+        moos: [{
+            id: "test",
+            description: "Test",
+            connectAddress: `http://127.0.0.1:${address.port}`,
             players: [{ id: "builder", username: "Builder", password: "test" }],
         }],
-    });
+    }));
     t.after(async () => {
         await client.close();
         for (const socket of ws.clients) socket.terminate();
@@ -122,7 +180,7 @@ async function host(t: TestContext, timeoutMs = 1000) {
         http.closeAllConnections();
         await new Promise<void>(resolve => http.close(() => resolve()));
     });
-    return { client, commands, logins: () => logins, writes: () => writes };
+    return { client, commands, evals, passwords, logins: () => logins, writes: () => writes };
 }
 
 test("concurrent requests share authentication and expired mutations are never replayed", async t => {
@@ -169,10 +227,37 @@ test("command timeout and disconnect report unknown outcomes and permit a fresh 
     assert.equal(h.commands.filter(command => command === "hang").length, 1);
 });
 
-test("eval failures say what went wrong and where", async t => {
-    const { client } = await host(t);
+test("eval failures say what went wrong and where, under a deadline the daemon enforces", async t => {
+    const { client, evals } = await host(t);
     await assert.rejects(
         client.evalExpression(actor, "return 1;"),
         { message: "Eval: Compilation failed. Line 2, column 47: Duplicate variable in scope: b" },
     );
+    // The daemon cancels before this client's own 1000 ms deadline.
+    assert.deepEqual(evals, ["900"]);
+});
+
+test("eval code with statements runs as written; a single expression is returned", () => {
+    assert.equal(evalBody("player.name"), "return player.name;");
+    assert.equal(evalBody("  1 + 2  "), "return 1 + 2;");
+    assert.equal(evalBody("return 5"), "return 5;");
+    assert.equal(evalBody("x = 1; return x + 1"), "x = 1; return x + 1;");
+    assert.equal(evalBody("\nx = 1;\nreturn x;\n"), "\nx = 1;\nreturn x;");
+    assert.equal(evalBody("if (1) return 2; endif"), "if (1) return 2; endif");
+    assert.equal(evalBody("\"a;b\""), "return \"a;b\";");
+    assert.equal(evalBody("\"a\\\";b\""), "return \"a\\\";b\";");
+});
+
+test("programming errors are reported with their position", async t => {
+    const { client } = await host(t);
+    assert.deepEqual(await client.programVerb(actor, "oid:1", "test", "return;"), {
+        ok: false,
+        message: "Verb not programmed. Compilation error: Line 2, column 47: Duplicate variable in scope: b",
+    });
+});
+
+test("a refused login rereads the configuration for changed credentials", async t => {
+    const { client, passwords } = await host(t, 1000, "stale");
+    await client.requestJson(actor, "/read");
+    assert.deepEqual(passwords, ["stale", "test"]);
 });

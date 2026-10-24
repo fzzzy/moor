@@ -96,10 +96,13 @@ async function run(transport: "http" | "git") {
             assert.equal(failure.ok, false);
             assert.equal(failure.code, "compile_error");
             assert.equal((await assertions.evalExpression(actor, `return ${object}:probe();`)).js, "#123");
-            async function builtin(name: string, args: Json = {}, error = false) {
+            async function call(name: string, args: Json, error: boolean) {
                 const response = await client!.rpc("tools/call", { name: `moo_${name}`, arguments: args });
                 assert.equal(response.isError ?? false, error, JSON.stringify(response));
-                return response.content[0].text as string;
+                return response;
+            }
+            async function builtin(name: string, args: Json = {}, error = false) {
+                return (await call(name, args, error)).content[0].text as string;
             }
             assert.match(await builtin("eval", { expression: "return player;" }), /9502/);
             assert.match(await builtin("resolve", { object: "me" }), /9502/);
@@ -108,9 +111,13 @@ async function run(transport: "http" | "git") {
             assert.match(await builtin("invoke_verb", { object, verb: "probe", args: [] }), /#123/);
             await builtin("program_verb", { object, name: "probe", code: "return args;" });
             const values = [true, null, "#123", "line one\nline two"];
-            const invoked = await builtin("invoke_verb", { object, verb: "probe", args: values });
-            assert.deepEqual(JSON.parse(invoked.split("\n\n")[1]), [true, { oid: -1 }, "#123", "line one\nline two"]);
-            await builtin("program_verb", { object, name: "probe", code: "return (;" }, true);
+            const invoked = await call("invoke_verb", { object, verb: "probe", args: values }, false);
+            // The literal is the text; the same value as JSON is the structured content.
+            assert.deepEqual(invoked.structuredContent.value, [true, { oid: -1 }, "#123", "line one\nline two"]);
+            assert.match(
+                await builtin("program_verb", { object, name: "probe", code: "return (;" }, true),
+                /Verb not programmed\..*Line 1, column \d+/,
+            );
             await builtin("set_property", { object, name: "name", valueLiteral: "\"MCP renamed\"" });
             assert.match(await builtin("get_property", { object, name: "name" }), /MCP renamed/);
             assert.match(await builtin("list_properties", { object, inherited: true }), /description/);

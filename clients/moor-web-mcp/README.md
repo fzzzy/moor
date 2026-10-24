@@ -58,8 +58,9 @@ prepared handles. After a lost reply, read status before repeating a write.
 Tool and resource catalogs are cached per world and account. Calls select their catalog through
 `moo` and `character`; omitted values use the configured defaults. `wizard: true` requires a
 configured wizard account. Refresh the selected catalog with `moo_refresh_dynamic_tools` after
-changing the core. Resource lists include world and account URIs. Short guide URIs refer to the
-default account. See the
+changing the core; the bridge then notifies the client that its tool and resource lists changed. A
+world tool whose name matches a built-in tool is skipped with a warning. Resource lists include
+world and account URIs. Short guide URIs refer to the default account. See the
 [administrator workflow](../../book/src/the-system/object-loading.md#review-updates-with-an-agent)
 for decisions, permissions, and recovery.
 
@@ -87,10 +88,20 @@ access.
 The bridge uses the MCP SDK for stdio transport, initialization, and cancellation. Tool execution
 and argument errors return `isError: true`. Unknown tools return a protocol error.
 
-HTTP requests and commands use `timeoutMs`, which defaults to 30 seconds. Commands on one account
-run in order and wait for task completion. A timeout, cancellation, or disconnection can leave an
-unknown outcome. The bridge closes that command connection and does not repeat the operation. Check
-world state before retrying a write. Commands that request interactive input need a MOO client.
+HTTP requests and commands use `timeoutMs`, which defaults to 30 seconds. Evaluations and world
+tools ask the daemon for a slightly shorter deadline, so a slow task is cancelled and reported as a
+time limit rather than left running behind a client timeout. Commands on one account run in order
+and wait for task completion. A timeout, cancellation, or disconnection can leave an unknown
+outcome. The bridge closes that command connection and does not repeat the operation. Check world
+state before retrying a write. Commands that request interactive input need a MOO client.
+
+`moo_eval` returns a single expression's value. Code with statements runs as written, with a missing
+final semicolon added, and returns what it returns. Values come back as MOO literal text, with the
+same value as JSON in `structuredContent`. Compile errors, from `moo_eval` and `moo_program_verb`,
+give their line and column.
+
+When a login is refused, the bridge rereads the configuration file and retries once if the account's
+credentials changed, so an edited password applies without a restart.
 
 The `moor://moos` resource exposes account metadata without passwords. Protect the configuration
 file: it contains the credentials used for every operation.

@@ -40,25 +40,34 @@ export function withCharacter(schema: Record<string, unknown>): Tool["inputSchem
     };
 }
 
+const object = {
+    type: "string",
+    description: "Object: #123, a uuid object like #000123-ABCDEF0123, $name for a system object, or me / here.",
+} as const;
+
 export const staticTools: Tool[] = [
     {
         name: "moo_eval",
-        description: "Evaluate MOO code and return result.",
+        description: "Run MOO code as the character and return its value. A single expression is returned; "
+            + "code with statements runs as written and returns what it returns, so end it with a return.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                expression: { type: "string" },
+                expression: {
+                    type: "string",
+                    description: "An expression such as `player.name`, or statements such as `x = 1; return x + 1;`.",
+                },
             },
             required: ["expression"],
         }),
     },
     {
         name: "moo_command",
-        description: "Execute a command through the websocket session and return captured narrative output.",
+        description: "Type a command as the character, as a player would, and return the narrative output.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                command: { type: "string" },
+                command: { type: "string", description: "The command line, such as `look` or `go north`." },
                 include_metadata: {
                     type: "boolean",
                     description: "Include parsed websocket event metadata JSON in the response.",
@@ -74,20 +83,20 @@ export const staticTools: Tool[] = [
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                function_name: { type: "string" },
+                function_name: { type: "string", description: "The builtin's name, such as `notify`." },
             },
             required: ["function_name"],
         }),
     },
     {
         name: "moo_invoke_verb",
-        description: "Invoke an object verb using eval-based call semantics.",
+        description: "Call a verb on an object with the given arguments and return its value.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                verb: { type: "string" },
-                args: { type: "array", items: {} },
+                object,
+                verb: { type: "string", description: "The verb to call." },
+                args: { type: "array", items: {}, description: "Arguments, as JSON values. Defaults to none." },
             },
             required: ["object", "verb"],
         }),
@@ -102,92 +111,93 @@ export const staticTools: Tool[] = [
     },
     {
         name: "moo_resolve",
-        description: "Resolve an object reference.",
+        description: "Resolve an object reference to the object it names.",
         inputSchema: withCharacter({
             type: "object",
-            properties: {
-                object: { type: "string" },
-            },
+            properties: { object },
             required: ["object"],
         }),
     },
     {
         name: "moo_list_verbs",
-        description: "List verbs on an object.",
+        description: "List the verbs defined on an object.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                inherited: { type: "boolean" },
+                object,
+                inherited: { type: "boolean", description: "Include verbs inherited from ancestors." },
             },
             required: ["object"],
         }),
     },
     {
         name: "moo_get_verb",
-        description: "Get a specific verb.",
+        description: "Get a verb's code and metadata.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                name: { type: "string" },
+                object,
+                name: { type: "string", description: "The verb's name." },
             },
             required: ["object", "name"],
         }),
     },
     {
         name: "moo_program_verb",
-        description: "Program verb source code.",
+        description: "Replace an existing verb's code. Compile errors are reported with their line and column.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                name: { type: "string" },
-                code: { type: "string" },
+                object,
+                name: { type: "string", description: "The verb's name." },
+                code: { type: "string", description: "The verb's complete new code." },
             },
             required: ["object", "name", "code"],
         }),
     },
     {
         name: "moo_list_properties",
-        description: "List properties on an object.",
+        description: "List the properties defined on an object.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                inherited: { type: "boolean" },
+                object,
+                inherited: { type: "boolean", description: "Include properties inherited from ancestors." },
             },
             required: ["object"],
         }),
     },
     {
         name: "moo_get_property",
-        description: "Get one property value.",
+        description: "Get one property's value, including built-in properties such as name and owner.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                name: { type: "string" },
+                object,
+                name: { type: "string", description: "The property's name." },
             },
             required: ["object", "name"],
         }),
     },
     {
         name: "moo_set_property",
-        description: "Set property value using MOO literal syntax.",
+        description: "Set a property's value, written as a MOO literal.",
         inputSchema: withCharacter({
             type: "object",
             properties: {
-                object: { type: "string" },
-                name: { type: "string" },
-                valueLiteral: { type: "string" },
+                object,
+                name: { type: "string", description: "The property's name." },
+                valueLiteral: {
+                    type: "string",
+                    description: "The new value as a MOO literal, such as `{1, \"two\"}`.",
+                },
             },
             required: ["object", "name", "valueLiteral"],
         }),
     },
     {
         name: "moo_refresh_dynamic_tools",
-        description: "Refresh dynamic tools from #0:external_agent_tools().",
+        description: "Reload the world's tools from #0:external_agent_tools(), for example after an update.",
         inputSchema: withCharacter({
             type: "object",
             properties: {},

@@ -19,9 +19,12 @@ import {
     bytesFromWebSocketMessage,
     decodeCredentialsUpdatedEvent,
     dispatchClientEvent,
+    formatCompileError,
     handleWebSocketControlFrame,
     MoorVar,
+    parseClientReplyUnion,
     parseEvalResultVar,
+    parseVerbProgramCompileOutcome,
     parseWsNarrativeEventMessage,
     schedulerErrorToNarrative,
 } from "@moor/web-sdk";
@@ -104,6 +107,35 @@ function escapeMooString(value: string): string {
     return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 }
 
+/** Whether MOO code holds a statement terminator outside its string literals. */
+function hasStatementTerminator(code: string): boolean {
+    let inString = false;
+    for (let i = 0; i < code.length; i++) {
+        const c = code[i];
+        if (inString) {
+            if (c === "\\") i++;
+            else if (c === "\"") inString = false;
+        } else if (c === "\"") inString = true;
+        else if (c === ";") return true;
+    }
+    return false;
+}
+
+/**
+ * The program for an eval. Code with statements runs as written, so it returns only what it
+ * returns, with its final semicolon added if missing. A single expression is returned.
+ */
+export function evalBody(code: string): string {
+    const trimmed = code.trim();
+    const terminated = /;$/.test(trimmed) || /\bend\w*$/.test(trimmed);
+    if (hasStatementTerminator(trimmed) || /^return\b/.test(trimmed)) {
+        // Keep leading lines, so compile errors give the caller's line numbers.
+        const body = code.trimEnd();
+        return terminated ? body : `${body};`;
+    }
+    return `return ${trimmed};`;
+}
+
 function ensureOk(response: Response, context: string): Promise<Response> {
     if (response.ok) {
         return Promise.resolve(response);
@@ -146,9 +178,21 @@ export class MoorWebClient {
     private readonly shutdown = new AbortController();
     private readonly timeoutMs: number;
 
-    constructor(config: MoorWebMcpConfig) {
+    /**
+     * `reload` rereads the configuration, so a password changed in the file is used at the
+     * next login without restarting.
+     */
+    constructor(config: MoorWebMcpConfig, private readonly reload?: () => MoorWebMcpConfig) {
         this.config = config;
         this.timeoutMs = config.timeoutMs ?? 30000;
+    }
+
+    /**
+     * The deadline the daemon gets for captured work: a little under this client's own, so
+     * the daemon cancels the task and says so before this client gives up on the request.
+     */
+    private get taskDeadlineMs(): number {
+        return Math.max(1, this.timeoutMs - Math.min(1000, Math.floor(this.timeoutMs / 10)));
     }
 
     getRecentEvents(character: CharacterRef): string[] {
@@ -172,9 +216,8 @@ export class MoorWebClient {
         expression: string,
         signal?: AbortSignal,
     ): Promise<{ js: unknown; literal: string }> {
-        const trimmed = expression.trim();
-        const body = /(^return\b|;\s*$)/.test(trimmed) ? expression : `return ${trimmed};`;
-        const response = await this.authorizedRequest(character, "/v1/eval", {
+        const body = evalBody(expression);
+        const response = await this.authorizedRequest(character, `/v1/eval?timeout_ms=${this.taskDeadlineMs}`, {
             method: "POST",
             headers: { Accept: "application/x-flatbuffers", "Content-Type": "text/plain" },
             body,
@@ -296,7 +339,13 @@ export class MoorWebClient {
         return reply ?? data;
     }
 
-    private async authorizedRequest(character: CharacterRef, path: string, init: RequestInit): Promise<Response> {
+    /** A request as the character. Statuses in `diagnostic` with a FlatBuffers body are returned. */
+    private async authorizedRequest(
+        character: CharacterRef,
+        path: string,
+        init: RequestInit,
+        diagnostic: number[] = [],
+    ): Promise<Response> {
         const session = await this.ensureSession(character);
         const { moo } = this.findCharacter(character);
         const response = await this.fetch(`${trimTrailingSlash(moo.connectAddress)}${path}`, {
@@ -307,6 +356,10 @@ export class MoorWebClient {
             this.sessions.delete(this.sessionKey(character));
             session.ws?.terminate();
         }
+        if (
+            diagnostic.includes(response.status)
+            && response.headers.get("content-type")?.startsWith("application/x-flatbuffers")
+        ) return response;
         return ensureOk(response, path);
     }
 
@@ -392,6 +445,33 @@ export class MoorWebClient {
         );
     }
 
+    /** Program a verb, reporting a refusal or compile error as text rather than raising it. */
+    async programVerb(
+        character: CharacterRef,
+        objectCurie: string,
+        verb: string,
+        code: string,
+        signal?: AbortSignal,
+    ): Promise<{ ok: true } | { ok: false; message: string }> {
+        const response = await this.authorizedRequest(
+            character,
+            `/v1/verbs/${encodeURIComponent(objectCurie)}/${encodeURIComponent(verb)}`,
+            {
+                method: "POST",
+                headers: { Accept: "application/x-flatbuffers", "Content-Type": "text/plain" },
+                body: code,
+                signal,
+            },
+            // Programming failures carry their diagnostic in a FlatBuffers body.
+            [403, 404, 422, 500],
+        );
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        const outcome = parseVerbProgramCompileOutcome(parseClientReplyUnion(bytes, "Program verb"), "Program verb");
+        if (outcome.success) return { ok: true };
+        const detail = outcome.error.compileError ? `: ${formatCompileError(outcome.error.compileError)}` : "";
+        return { ok: false, message: `Verb not programmed. ${outcome.error.message}${detail}` };
+    }
+
     async functionHelp(
         character: CharacterRef,
         functionName: string,
@@ -439,24 +519,47 @@ export class MoorWebClient {
         return pending;
     }
 
+    private connect(selected: { moo: MooConfig; player: PlayerConfig }): Promise<Response> {
+        return this.fetch(`${trimTrailingSlash(selected.moo.connectAddress)}/auth/connect`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                player: selected.player.username,
+                password: selected.player.password,
+            }).toString(),
+        });
+    }
+
+    /** Take the player's credentials from a fresh read of the configuration, if they changed. */
+    private reloadCredentials(selected: { moo: MooConfig; player: PlayerConfig }): boolean {
+        if (!this.reload) return false;
+        let fresh: MoorWebMcpConfig;
+        try {
+            fresh = this.reload();
+        } catch {
+            return false;
+        }
+        const player = fresh.moos.find(moo => moo.id === selected.moo.id)?.players
+            .find(candidate => candidate.id === selected.player.id);
+        if (!player || (player.username === selected.player.username && player.password === selected.player.password)) {
+            return false;
+        }
+        selected.player.username = player.username;
+        selected.player.password = player.password;
+        return true;
+    }
+
     private async login(character: CharacterRef): Promise<CharacterSessionState> {
         const key = this.sessionKey(character);
         const selected = this.findCharacter(character);
-        const formBody = new URLSearchParams({
-            player: selected.player.username,
-            password: selected.player.password,
-        }).toString();
-
-        const response = await ensureOk(
-            await this.fetch(`${trimTrailingSlash(selected.moo.connectAddress)}/auth/connect`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: formBody,
-            }),
-            "auth/connect",
-        );
+        let attempt = await this.connect(selected);
+        if ((attempt.status === 401 || attempt.status === 403) && this.reloadCredentials(selected)) {
+            await attempt.body?.cancel();
+            attempt = await this.connect(selected);
+        }
+        const response = await ensureOk(attempt, "auth/connect");
 
         const authToken = response.headers.get("X-Moor-Auth-Token");
         if (!authToken) {

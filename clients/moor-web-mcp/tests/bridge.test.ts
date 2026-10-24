@@ -38,16 +38,18 @@ class World extends MoorWebClient {
     fetches: string[] = [];
     generation = 0;
     fail = false;
+    clash = false;
     override async refreshDynamicTools(character: CharacterRef) {
         this.fetches.push(character.mooId);
         if (this.fail) throw new Error("World unavailable");
-        return [{
+        const inspect = {
             name: "inspect",
             description: "Inspect",
             inputSchema: { type: "object", properties: {} },
             targetObj: character.mooId === "a" ? "#10" : `#${20 + this.generation}`,
             targetVerb: "inspect",
-        }];
+        };
+        return this.clash ? [{ ...inspect, name: "moo_eval" }, inspect] : [inspect];
     }
     override async refreshDynamicResources(character: CharacterRef) {
         return [{
@@ -64,6 +66,9 @@ class World extends MoorWebClient {
     }
     override async evalExpression(): Promise<never> {
         throw new Error("E_PERM: permission denied");
+    }
+    override async functionHelp() {
+        return { js: { name: "notify" }, literal: "[\"name\" -> \"notify\"]" };
     }
 }
 
@@ -142,4 +147,28 @@ test("configuration rejects invalid selections and never quotes malformed creden
     assert.throws(() => loadConfig(path), /timeoutMs/);
     writeFileSync(path, JSON.stringify(config));
     assert.deepEqual(loadConfig(path), config);
+});
+
+test("a world tool with a reserved name is skipped, not fatal", async t => {
+    const { world, client } = await bridge(t);
+    world.clash = true;
+    const tools = (await client.listTools()).tools.map(tool => tool.name);
+    assert.equal(tools.filter(name => name === "moo_eval").length, 1);
+    assert.ok(tools.includes("inspect"));
+});
+
+test("refreshing world tools tells the client its lists changed", async t => {
+    const { client } = await bridge(t);
+    const changed = new Promise<void>(resolve => {
+        client.setNotificationHandler("notifications/tools/list_changed", () => resolve());
+    });
+    await client.callTool({ name: "moo_refresh_dynamic_tools", arguments: {} });
+    await changed;
+});
+
+test("values come back once as text, with their JSON as structured content", async t => {
+    const { client } = await bridge(t);
+    const result = await client.callTool({ name: "moo_function_help", arguments: { function_name: "notify" } });
+    assert.deepEqual(result.content, [{ type: "text", text: "[\"name\" -> \"notify\"]" }]);
+    assert.deepEqual(result.structuredContent, { value: { name: "notify" } });
 });
