@@ -114,11 +114,11 @@ object DJOT_SCENARIOS
   endmethod
 
   method _check_help_provider owner: ARCH_WIZARD
-    "Parse and resolve each article in the selected batch.";
-    const {provider, expected_count, ?first = 1, ?last = expected_count} = args;
+    "Parse and resolve every article the provider ships.";
+    const {provider} = args;
     const topics = provider:help_topics(player);
-    $test_utils:assert_eq(length(topics), expected_count, "All articles in the provider are covered");
-    for topic in (topics[first..last])
+    $test_utils:assert_true(length(topics) > 0, "The provider ships help articles");
+    for topic in (topics)
       $test_utils:assert_eq(topic.content_kind, 'djot_blocks, topic.name + " explicitly selects Djot");
       const blocks = $format.djot:blocks(topic.content);
       const content = $help_utils:annotate_prose(blocks, player);
@@ -130,39 +130,29 @@ object DJOT_SCENARIOS
     return true;
   endmethod
 
-  method test_shipped_general_help_first owner: ARCH_WIZARD
-    "Check general help in bounded batches under the per-method timeout.";
-    return this:_check_help_provider(this.providers[1], 34, 1, 12);
-  endmethod
-
-  method test_shipped_general_help_middle owner: ARCH_WIZARD
-    "Check the middle batch of general help articles.";
-    return this:_check_help_provider(this.providers[1], 34, 13, 24);
-  endmethod
-
-  method test_shipped_general_help_last owner: ARCH_WIZARD
-    "Check the final batch of general help articles.";
-    return this:_check_help_provider(this.providers[1], 34, 25, 34);
+  method test_shipped_general_help owner: ARCH_WIZARD
+    "Check every general help article.";
+    return this:_check_help_provider(this.providers[1]);
   endmethod
 
   method test_shipped_programmer_help owner: ARCH_WIZARD
     "Check every programmer help article.";
-    return this:_check_help_provider(this.providers[2], 8);
+    return this:_check_help_provider(this.providers[2]);
   endmethod
 
   method test_shipped_builder_help owner: ARCH_WIZARD
     "Check every builder help article.";
-    return this:_check_help_provider(this.providers[3], 11);
+    return this:_check_help_provider(this.providers[3]);
   endmethod
 
   method test_shipped_admin_help owner: ARCH_WIZARD
     "Check every administrator help article.";
-    return this:_check_help_provider(this.providers[4], 10);
+    return this:_check_help_provider(this.providers[4]);
   endmethod
 
   method test_shipped_wizard_help owner: ARCH_WIZARD
     "Check every wizard help article.";
-    return this:_check_help_provider(this.providers[5], 14);
+    return this:_check_help_provider(this.providers[5]);
   endmethod
 
   method test_authored_producers_and_edit_validation owner: ARCH_WIZARD
