@@ -1396,6 +1396,20 @@ mod tests {
     }
 
     #[test]
+    fn test_variables_in_scopes_inside_empty_scopes() {
+        // A block that declares nothing still counts when the blocks inside it number their
+        // variables, so it must be opened at run time too; these used to panic the VM.
+        for program in [
+            "begin begin let y = {1}; return y; end end",
+            "const f = fn (x) begin let y = {x}; return y; end endfn; return f(1);",
+            "const f = fn (x) begin begin let y = {x}; return y; end end endfn; return f(1);",
+            "const f = fn () if (1) let y = {1}; return y; endif endfn; return f();",
+        ] {
+            assert_eq!(run_moo(program).unwrap(), v_list(&[v_int(1)]), "{program}");
+        }
+    }
+
+    #[test]
     fn test_for_list_comprehension_scope_regression() {
         assert_eq!(
             run_moo(

@@ -423,6 +423,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A variable declared in a block nested inside a block that declares nothing no longer crashes the
+  task. This was easy to hit in a `fn ... endfn` lambda whose body declares nothing at its top
+  level, and in the `fn (...) begin ... end endfn` form decompiled lambdas were written in. Verbs
+  compiled before this fix keep the fault until they are recompiled.
 - The web MCP server's `moo_eval` no longer rewrites multi-statement code: code without a final
   semicolon was wrapped in `return ...;`, so `x = 1; return x + 1` returned 1. Evaluations and world
   tools give the daemon a deadline just under the client's, so a slow task is cancelled and reported
