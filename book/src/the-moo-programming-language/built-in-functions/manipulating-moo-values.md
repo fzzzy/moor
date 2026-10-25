@@ -73,6 +73,12 @@ toliteral([1 -> 2]    =>   "[1 -> 2]"
 toliteral(E_PERM)     =>   "E_PERM"
 ```
 
+Strings are written with printable characters as they are, including non-ASCII text such as `é`, `—`
+or `日本`. Control characters are escaped (`\n`, `\t`, `\x01`), and so are invisible characters that
+change how text around them is shown, such as zero-width spaces and right-to-left overrides
+(`\u200B`, `\u202E`, or `\u{E0041}` beyond `\uFFFF`), so the literal shows everything the string
+holds.
+
 ### `fromliteral`
 
 ```

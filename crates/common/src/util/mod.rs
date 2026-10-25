@@ -156,6 +156,27 @@ pub fn unquote_str(s: &str) -> Result<String, String> {
     fn parse_unicode_escape(
         chars: &mut std::iter::Peekable<std::str::Chars>,
     ) -> Result<char, String> {
+        // `\u{1F600}`: one to six hex digits, for characters beyond `\uXXXX`.
+        if chars.peek() == Some(&'{') {
+            chars.next();
+            let mut hex_str = String::new();
+            loop {
+                match chars.next() {
+                    Some('}') if !hex_str.is_empty() => break,
+                    Some(c) if c.is_ascii_hexdigit() && hex_str.len() < 6 => hex_str.push(c),
+                    Some(c) => {
+                        return Err(format!(
+                            "Invalid unicode escape: expected 1 to 6 hex digits and '}}', got '{c}'"
+                        ));
+                    }
+                    None => return Err("Incomplete unicode escape: expected '}'".to_string()),
+                }
+            }
+            let unicode_value = u32::from_str_radix(&hex_str, 16)
+                .map_err(|_| "Invalid unicode escape value".to_string())?;
+            return char::from_u32(unicode_value)
+                .ok_or_else(|| "Invalid unicode code point".to_string());
+        }
         let mut hex_str = String::new();
         for _ in 0..4 {
             match chars.next() {
@@ -291,7 +312,45 @@ pub fn write_i64_decimal<W: std::fmt::Write + ?Sized>(
     writer.write_str(unsafe { std::str::from_utf8_unchecked(&digits[cursor..]) })
 }
 
+/// Unicode format characters (general category Cf) and the line and paragraph separators:
+/// characters that are invisible or change how surrounding text is laid out, such as zero-width
+/// spaces and joiners, bidirectional controls and tag characters. Literals escape them, so what
+/// a reader sees is what the string holds.
+const INVISIBLE: &[(u32, u32)] = &[
+    (0x00AD, 0x00AD),
+    (0x0600, 0x0605),
+    (0x061C, 0x061C),
+    (0x06DD, 0x06DD),
+    (0x070F, 0x070F),
+    (0x0890, 0x0891),
+    (0x08E2, 0x08E2),
+    (0x180E, 0x180E),
+    (0x200B, 0x200F),
+    (0x2028, 0x202E),
+    (0x2060, 0x2064),
+    (0x2066, 0x206F),
+    (0xFEFF, 0xFEFF),
+    (0xFFF9, 0xFFFB),
+    (0x110BD, 0x110BD),
+    (0x110CD, 0x110CD),
+    (0x13430, 0x1343F),
+    (0x1BCA0, 0x1BCA3),
+    (0x1D173, 0x1D17A),
+    (0xE0001, 0xE0001),
+    (0xE0020, 0xE007F),
+];
+
+fn is_invisible(c: char) -> bool {
+    let value = c as u32;
+    INVISIBLE
+        .iter()
+        .any(|(low, high)| (*low..=*high).contains(&value))
+}
+
 /// Write a quoted MOO string literal without allocating an intermediate string.
+///
+/// As Python's `repr`, Rust's `{:?}` and Go's `%q` do, printable characters are written as they
+/// are, non-ASCII included; control characters and invisible format characters are escaped.
 #[inline]
 pub fn write_quoted_str<W: std::fmt::Write + ?Sized>(writer: &mut W, s: &str) -> std::fmt::Result {
     const HEX: &[u8; 16] = b"0123456789ABCDEF";
@@ -331,14 +390,18 @@ pub fn write_quoted_str<W: std::fmt::Write + ?Sized>(writer: &mut W, s: &str) ->
                 writer.write_char(HEX[(value & 0x0f) as usize] as char)?;
                 unescaped_start = offset + c.len_utf8();
             }
-            c if !c.is_ascii() && (c as u32) <= 0xFFFF => {
+            c if is_invisible(c) => {
                 let value = c as u32;
                 writer.write_str(&s[unescaped_start..offset])?;
-                writer.write_str("\\u")?;
-                writer.write_char(HEX[((value >> 12) & 0x0f) as usize] as char)?;
-                writer.write_char(HEX[((value >> 8) & 0x0f) as usize] as char)?;
-                writer.write_char(HEX[((value >> 4) & 0x0f) as usize] as char)?;
-                writer.write_char(HEX[(value & 0x0f) as usize] as char)?;
+                if value <= 0xFFFF {
+                    writer.write_str("\\u")?;
+                    writer.write_char(HEX[((value >> 12) & 0x0f) as usize] as char)?;
+                    writer.write_char(HEX[((value >> 8) & 0x0f) as usize] as char)?;
+                    writer.write_char(HEX[((value >> 4) & 0x0f) as usize] as char)?;
+                    writer.write_char(HEX[(value & 0x0f) as usize] as char)?;
+                } else {
+                    write!(writer, "\\u{{{value:X}}}")?;
+                }
                 unescaped_start = offset + c.len_utf8();
             }
             _ => {}
@@ -432,6 +495,39 @@ mod tests {
     }
 
     #[test]
+    fn printable_unicode_is_written_as_it_is() {
+        assert_eq!(quote_str("a\u{2014}b"), "\"a\u{2014}b\"");
+        assert_eq!(
+            quote_str("caf\u{e9} \u{65e5}\u{672c}"),
+            "\"caf\u{e9} \u{65e5}\u{672c}\""
+        );
+        assert_eq!(quote_str("\u{1F600}"), "\"\u{1F600}\"");
+    }
+
+    #[test]
+    fn invisible_characters_are_escaped() {
+        // Zero-width space, a right-to-left override and a byte-order mark.
+        assert_eq!(quote_str("a\u{200B}b"), r#""a\u200Bb""#);
+        assert_eq!(quote_str("\u{202E}evil"), r#""\u202Eevil""#);
+        assert_eq!(quote_str("\u{FEFF}x"), r#""\uFEFFx""#);
+        // A tag character, beyond \uXXXX.
+        assert_eq!(quote_str("x\u{E0041}"), r#""x\u{E0041}""#);
+    }
+
+    #[test]
+    fn braced_unicode_escapes_parse() {
+        assert_eq!(unquote_str(r#""\u{1F600}""#).unwrap(), "\u{1F600}");
+        assert_eq!(unquote_str(r#""\u{41}\u{E0041}""#).unwrap(), "A\u{E0041}");
+        assert!(unquote_str(r#""\u{}""#).is_err());
+        assert!(unquote_str(r#""\u{1234567}""#).is_err());
+        assert!(
+            unquote_str(r#""\u{D800}""#).is_err(),
+            "surrogates are not characters"
+        );
+        assert!(unquote_str(r#""\u{41""#).is_err());
+    }
+
+    #[test]
     fn test_string_unquote() {
         assert_eq!(unquote_str(r#""foo""#).unwrap(), "foo");
         assert_eq!(unquote_str(r#""foo\"bar""#).unwrap(), r#"foo"bar"#);
@@ -494,6 +590,10 @@ mod tests {
             "hello'world",
             "hello\x01world", // control character
             "hello\x7fworld", // DEL character
+            "em\u{2014}dash",
+            "\u{1F600} \u{1F468}\u{200D}\u{1F469}",
+            "\u{202E}\u{2066}\u{E0041}",
+            "\u{85}\u{9F}", // C1 controls
         ];
 
         for test_case in test_cases {
