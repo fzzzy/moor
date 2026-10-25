@@ -22,7 +22,7 @@ mod tests;
 use axum::extract::ws::{Message, WebSocket};
 use futures_util::{Sink, Stream, StreamExt};
 use moor_runtime_api::{
-    AuthToken, ClientToken, HostType,
+    AuthToken, ClientToken,
     api::{
         BroadcastEvent, ClientBroadcastSubscription, ClientEvent, ClientEventSubscription,
         ClientReply, ClientRequest, InvocationMode, RuntimeClient,
@@ -323,7 +323,6 @@ impl ClientSession {
                                 client_token: self.client_token.clone(),
                                 client_sys_time: timestamp,
                                 player: self.player,
-                                host_type: HostType::WebSocket,
                                 socket_addr: self.peer_addr.to_string(),
                             };
                             if let Err(e) = self.daemon_client.client_call(self.client_id, request).await {

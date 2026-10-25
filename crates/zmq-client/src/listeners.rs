@@ -11,6 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use moor_runtime_api::ListenerKind;
 use moor_var::Obj;
 use std::net::SocketAddr;
 use tokio::sync::{mpsc, oneshot};
@@ -34,16 +35,32 @@ pub struct ListenersClient {
 /// Information about a listener.
 #[derive(Debug, Clone)]
 pub struct ListenerInfo {
+    pub kind: ListenerKind,
     pub handler: Obj,
     pub addr: SocketAddr,
     pub is_tls: bool,
 }
 
 pub enum ListenersMessage {
-    AddListener(Obj, SocketAddr, oneshot::Sender<Result<(), ListenersError>>),
+    AddListener(
+        ListenerKind,
+        Obj,
+        SocketAddr,
+        oneshot::Sender<Result<(), ListenersError>>,
+    ),
     /// Add a TLS listener. The actual TLS config is stored in the host's Listeners struct.
-    AddTlsListener(Obj, SocketAddr, oneshot::Sender<Result<(), ListenersError>>),
-    RemoveListener(SocketAddr, oneshot::Sender<Result<(), ListenersError>>),
+    AddTlsListener(
+        ListenerKind,
+        Obj,
+        SocketAddr,
+        oneshot::Sender<Result<(), ListenersError>>,
+    ),
+    /// Remove the listener of this kind at this address.
+    RemoveListener(
+        ListenerKind,
+        SocketAddr,
+        oneshot::Sender<Result<(), ListenersError>>,
+    ),
     GetListeners(oneshot::Sender<Vec<ListenerInfo>>),
 }
 
@@ -54,12 +71,13 @@ impl ListenersClient {
 
     pub async fn add_listener(
         &self,
+        kind: ListenerKind,
         handler: &Obj,
         addr: SocketAddr,
     ) -> Result<(), ListenersError> {
         let (tx, rx) = oneshot::channel();
         self.listeners_channel
-            .send(ListenersMessage::AddListener(*handler, addr, tx))
+            .send(ListenersMessage::AddListener(kind, *handler, addr, tx))
             .await
             .map_err(|_| ListenersError::AddListenerFailed(*handler, addr))?;
         rx.await
@@ -68,22 +86,27 @@ impl ListenersClient {
 
     pub async fn add_tls_listener(
         &self,
+        kind: ListenerKind,
         handler: &Obj,
         addr: SocketAddr,
     ) -> Result<(), ListenersError> {
         let (tx, rx) = oneshot::channel();
         self.listeners_channel
-            .send(ListenersMessage::AddTlsListener(*handler, addr, tx))
+            .send(ListenersMessage::AddTlsListener(kind, *handler, addr, tx))
             .await
             .map_err(|_| ListenersError::AddListenerFailed(*handler, addr))?;
         rx.await
             .map_err(|_| ListenersError::AddListenerFailed(*handler, addr))?
     }
 
-    pub async fn remove_listener(&self, addr: SocketAddr) -> Result<(), ListenersError> {
+    pub async fn remove_listener(
+        &self,
+        kind: ListenerKind,
+        addr: SocketAddr,
+    ) -> Result<(), ListenersError> {
         let (tx, rx) = oneshot::channel();
         self.listeners_channel
-            .send(ListenersMessage::RemoveListener(addr, tx))
+            .send(ListenersMessage::RemoveListener(kind, addr, tx))
             .await
             .map_err(|_| ListenersError::RemoveListenerFailed(addr))?;
         rx.await

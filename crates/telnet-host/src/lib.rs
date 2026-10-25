@@ -34,7 +34,7 @@ use eyre::{Result, bail, eyre};
 pub use listeners::load_tls_config;
 use listeners::{Listeners, SessionSettings};
 use moor_runtime_api::{
-    HostType,
+    ListenerKind,
     api::{HostReply, HostRequest, HostServices},
     client_args::RpcClientConfig,
 };
@@ -146,7 +146,7 @@ async fn run_with_host_services(
     });
 
     listeners
-        .add_listener(&SYSTEM_OBJECT, telnet_sockaddr)
+        .add_listener(ListenerKind::TELNET, &SYSTEM_OBJECT, telnet_sockaddr)
         .await?;
 
     if let Some(tls_port) = config.tls_port {
@@ -155,7 +155,7 @@ async fn run_with_host_services(
             .parse::<SocketAddr>()
             .map_err(|e| eyre!("Failed to parse TLS socket address {tls_listen_addr}: {e}"))?;
         listeners
-            .add_tls_listener(&SYSTEM_OBJECT, tls_sockaddr)
+            .add_tls_listener(ListenerKind::TELNET, &SYSTEM_OBJECT, tls_sockaddr)
             .await?;
     }
 
@@ -171,7 +171,7 @@ async fn run_with_host_services(
         host_id,
         runtime.kill_switch.clone(),
         listeners.clone(),
-        HostType::TCP,
+        vec![ListenerKind::TELNET],
         host_services.clone(),
     )
     .await
@@ -188,7 +188,7 @@ async fn run_with_host_services(
         config.telnet_address.clone(),
         runtime.kill_switch.clone(),
         listeners.clone(),
-        HostType::TCP,
+        vec![ListenerKind::TELNET],
         host_services,
         Some(last_daemon_ping),
     );

@@ -324,11 +324,6 @@ table InvalidAssignment {
 // Enums
 // ============================================================================
 
-enum HostType: uint8 {
-    TCP = 0,
-    WebSocket = 1
-}
-
 enum ConnectType: uint8 {
     Connected = 0,
     Reconnected = 1,
@@ -388,7 +383,7 @@ union HostToDaemonMessageUnion {
 table RegisterHost {
     host_id: MoorCommon.Uuid (required);
     timestamp: uint64;  // SystemTime as nanos since epoch
-    host_type: HostType;
+    listener_kinds: [string] (required);  // Kinds of listener this host can open, such as "tcp"
     listeners: [Listener] (required);
 }
 
@@ -405,13 +400,14 @@ table GetServerFeatures {
 table HostPong {
     host_id: MoorCommon.Uuid (required);
     timestamp: uint64;  // SystemTime as nanos since epoch
-    host_type: HostType;
+    listener_kinds: [string] (required);  // Kinds of listener this host can open, such as "tcp"
     listeners: [Listener] (required);
 }
 
 table Listener {
     handler_object: MoorCommon.Obj (required);
     socket_addr: string (required);  // SocketAddr serialized as string
+    kind: string (required);  // Listener kind, such as "tcp" or "http"
 }
 
 table HostToDaemonMessage {
@@ -486,13 +482,13 @@ union HostBroadcastEventUnion {
 
 table HostBroadcastListen {
     handler_object: MoorCommon.Obj (required);
-    host_type: HostType;
+    kind: string (required);  // Listener kind, such as "tcp" or "http"
     port: uint16;
     options: [MoorVar.VarMapPair];  // Symbol->Var options (tls, print_messages, etc.)
 }
 
 table HostBroadcastUnlisten {
-    host_type: HostType;
+    kind: string (required);  // Listener kind, such as "tcp" or "http"
     port: uint16;
 }
 
@@ -873,7 +869,6 @@ table ClientPong {
     client_token: ClientToken (required);
     client_sys_time: uint64;  // SystemTime as nanos since epoch
     player: MoorCommon.Obj (required);
-    host_type: HostType;
     socket_addr: string (required);  // SocketAddr as string
 }
 

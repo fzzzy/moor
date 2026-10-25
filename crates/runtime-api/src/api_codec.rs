@@ -24,8 +24,8 @@ use crate::api::{
     HostRequest, InvocationMode, ListenerInfo,
 };
 use crate::{
-    AuthToken, HostType, RpcErr, RpcError, RpcMessageError, auth_token_fb, auth_token_from_ref,
-    client_token_fb, client_token_from_ref, extract_field_rpc, extract_host_type, extract_obj,
+    AuthToken, ListenerKind, RpcErr, RpcError, RpcMessageError, auth_token_fb, auth_token_from_ref,
+    client_token_fb, client_token_from_ref, extract_field_rpc, extract_listener_kind, extract_obj,
     extract_obj_rpc, extract_object_ref_rpc, extract_string_list_rpc, extract_string_rpc,
     extract_symbol, extract_symbol_rpc, extract_uuid_rpc, extract_var, extract_var_rpc,
     mk_client_attribute_set_reply, mk_daemon_to_host_ack, mk_disconnected_reply,
@@ -49,22 +49,22 @@ pub fn decode_host_request(
         RpcMessageError::InvalidRequest(format!("missing host message union: {e:?}"))
     })? {
         moor_rpc::HostToDaemonMessageUnionRef::RegisterHost(reg) => {
-            let host_type = extract_host_type(&reg, "host_type", |r| r.host_type())?;
+            let listener_kinds = decode_listener_kinds(reg.listener_kinds())?;
             let listeners = decode_listeners(reg.listeners().ok());
             let timestamp = reg.timestamp().unwrap_or(0);
             Ok(HostRequest::RegisterHost {
                 timestamp,
-                host_type,
+                listener_kinds,
                 listeners,
             })
         }
         moor_rpc::HostToDaemonMessageUnionRef::HostPong(pong) => {
-            let host_type = extract_host_type(&pong, "host_type", |p| p.host_type())?;
+            let listener_kinds = decode_listener_kinds(pong.listener_kinds())?;
             let listeners = decode_listeners(pong.listeners().ok());
             let timestamp = pong.timestamp().unwrap_or(0);
             Ok(HostRequest::HostPong {
                 timestamp,
-                host_type,
+                listener_kinds,
                 listeners,
             })
         }
@@ -81,6 +81,22 @@ pub fn decode_host_request(
     }
 }
 
+fn decode_listener_kinds(
+    kinds: Result<planus::Vector<'_, planus::Result<&str>>, planus::Error>,
+) -> Result<Vec<ListenerKind>, RpcMessageError> {
+    let kinds = kinds
+        .map_err(|e| RpcMessageError::InvalidRequest(format!("Missing listener_kinds: {e}")))?;
+    kinds
+        .iter()
+        .map(|kind| {
+            let kind = kind
+                .map_err(|e| RpcMessageError::InvalidRequest(format!("Bad listener kind: {e}")))?;
+            ListenerKind::parse(kind)
+                .map_err(|e| RpcMessageError::InvalidRequest(format!("Invalid listener kind: {e}")))
+        })
+        .collect()
+}
+
 fn decode_listeners<'a>(
     listeners: Option<planus::Vector<'a, ::planus::Result<moor_rpc::ListenerRef<'a>>>>,
 ) -> Vec<ListenerInfo> {
@@ -92,8 +108,10 @@ fn decode_listeners<'a>(
                     let obj = convert::obj_from_ref(l.handler_object().ok()?).ok()?;
                     let addr_str = l.socket_addr().ok()?;
                     let socket_addr: SocketAddr = addr_str.parse().ok()?;
+                    let kind = ListenerKind::parse(l.kind().ok()?).ok()?;
                     Some(ListenerInfo {
                         handler_object: obj,
+                        kind,
                         socket_addr,
                     })
                 })
@@ -325,7 +343,7 @@ pub fn encode_host_broadcast_event(
     let event = match event {
         HostBroadcastEvent::Listen {
             handler_object,
-            host_type,
+            kind,
             port,
             options,
         } => {
@@ -341,29 +359,20 @@ pub fn encode_host_broadcast_event(
                 }
                 Some(pairs)
             };
-            let host_type = match host_type {
-                HostType::TCP => moor_rpc::HostType::Tcp,
-                HostType::WebSocket => moor_rpc::HostType::WebSocket,
-            };
+            let kind = kind.id_str().to_string();
             moor_rpc::HostBroadcastEventUnion::HostBroadcastListen(Box::new(
                 moor_rpc::HostBroadcastListen {
                     handler_object: obj_fb(handler_object),
-                    host_type,
+                    kind,
                     port: *port,
                     options,
                 },
             ))
         }
-        HostBroadcastEvent::Unlisten { host_type, port } => {
-            let host_type = match host_type {
-                HostType::TCP => moor_rpc::HostType::Tcp,
-                HostType::WebSocket => moor_rpc::HostType::WebSocket,
-            };
+        HostBroadcastEvent::Unlisten { kind, port } => {
+            let kind = kind.id_str().to_string();
             moor_rpc::HostBroadcastEventUnion::HostBroadcastUnlisten(Box::new(
-                moor_rpc::HostBroadcastUnlisten {
-                    host_type,
-                    port: *port,
-                },
+                moor_rpc::HostBroadcastUnlisten { kind, port: *port },
             ))
         }
         HostBroadcastEvent::PingPong => moor_rpc::HostBroadcastEventUnion::HostBroadcastPingPong(
@@ -539,36 +548,26 @@ pub fn decode_host_broadcast_event_ref(
         moor_rpc::HostBroadcastEventUnionRef::HostBroadcastListen(listen) => {
             let handler_object = extract_obj(&listen, "handler_object", |l| l.handler_object())
                 .map_err(RpcError::CouldNotDecode)?;
-            let host_type = match listen
-                .host_type()
-                .map_err(|e| RpcError::CouldNotDecode(format!("Missing host_type: {e}")))?
-            {
-                moor_rpc::HostType::Tcp => HostType::TCP,
-                moor_rpc::HostType::WebSocket => HostType::WebSocket,
-            };
+            let kind = extract_listener_kind(&listen, "kind", |l| l.kind())
+                .map_err(|e| RpcError::CouldNotDecode(e.to_string()))?;
             let port = listen
                 .port()
                 .map_err(|e| RpcError::CouldNotDecode(format!("Missing port: {e}")))?;
             let options = decode_var_map_options(listen.options().ok().flatten())?;
             Ok(HostBroadcastEvent::Listen {
                 handler_object,
-                host_type,
+                kind,
                 port,
                 options,
             })
         }
         moor_rpc::HostBroadcastEventUnionRef::HostBroadcastUnlisten(unlisten) => {
-            let host_type = match unlisten
-                .host_type()
-                .map_err(|e| RpcError::CouldNotDecode(format!("Missing host_type: {e}")))?
-            {
-                moor_rpc::HostType::Tcp => HostType::TCP,
-                moor_rpc::HostType::WebSocket => HostType::WebSocket,
-            };
+            let kind = extract_listener_kind(&unlisten, "kind", |l| l.kind())
+                .map_err(|e| RpcError::CouldNotDecode(e.to_string()))?;
             let port = unlisten
                 .port()
                 .map_err(|e| RpcError::CouldNotDecode(format!("Missing port: {e}")))?;
-            Ok(HostBroadcastEvent::Unlisten { host_type, port })
+            Ok(HostBroadcastEvent::Unlisten { kind, port })
         }
         moor_rpc::HostBroadcastEventUnionRef::HostBroadcastPingPong(_) => {
             Ok(HostBroadcastEvent::PingPong)
@@ -738,13 +737,11 @@ pub fn decode_client_request(
                 .and_then(|r| client_token_from_ref(r).rpc_err())?;
             let client_sys_time = pong.client_sys_time().unwrap_or(0);
             let player = extract_obj_rpc(&pong, "player", |p| p.player())?;
-            let host_type = extract_host_type(&pong, "host_type", |p| p.host_type())?;
             let socket_addr = extract_string_rpc(&pong, "socket_addr", |p| p.socket_addr())?;
             Ok(ClientRequest::ClientPong {
                 client_token,
                 client_sys_time,
                 player,
-                host_type,
                 socket_addr,
             })
         }
@@ -2102,17 +2099,22 @@ mod tests {
     use planus::ReadAsRoot;
 
     use crate::{
-        AuthToken, ClientToken,
-        api::{BatchAction, ClientEvent, ClientEventMessage, ClientRequest, InvocationMode},
+        AuthToken, ClientToken, ListenerKind,
+        api::{
+            BatchAction, ClientEvent, ClientEventMessage, ClientRequest, HostBroadcastEvent,
+            HostRequest, InvocationMode, ListenerInfo,
+        },
         client_messages::{
             mk_client_data_msg, mk_command_capture_msg, mk_command_msg, mk_invoke_verb_capture_msg,
             mk_invoke_verb_msg, mk_invoke_welcome_message_msg, mk_set_client_attribute_msg,
         },
+        host_messages::listener_fb,
     };
 
     use super::{
-        decode_client_event_message_ref, decode_client_request, decode_owned_batch_actions,
-        encode_client_event_bytes,
+        decode_client_event_message_ref, decode_client_request, decode_host_broadcast_event_ref,
+        decode_host_request, decode_owned_batch_actions, encode_client_event_bytes,
+        encode_host_broadcast_event_bytes,
     };
 
     /// Round-trip a client message through the wire format the way the daemon sees it.
@@ -2156,6 +2158,110 @@ mod tests {
                 client_token: ClientToken("client".to_string())
             }
         );
+    }
+
+    #[test]
+    fn host_broadcasts_carry_any_listener_kind() {
+        let minecraft = ListenerKind::parse("minecraft").unwrap();
+        let events = [
+            HostBroadcastEvent::Listen {
+                handler_object: Obj::mk_id(0),
+                kind: minecraft,
+                port: 25565,
+                options: vec![(Symbol::mk("tls"), v_int(0))],
+            },
+            HostBroadcastEvent::Unlisten {
+                kind: minecraft,
+                port: 25565,
+            },
+        ];
+        for event in events {
+            let bytes = encode_host_broadcast_event_bytes(&event).unwrap();
+            let decoded = decode_host_broadcast_event_ref(
+                rpc::HostBroadcastEventRef::read_as_root(&bytes).unwrap(),
+            )
+            .unwrap();
+            match (event, decoded) {
+                (
+                    HostBroadcastEvent::Listen { kind, port, .. },
+                    HostBroadcastEvent::Listen {
+                        kind: decoded_kind,
+                        port: decoded_port,
+                        ..
+                    },
+                )
+                | (
+                    HostBroadcastEvent::Unlisten { kind, port },
+                    HostBroadcastEvent::Unlisten {
+                        kind: decoded_kind,
+                        port: decoded_port,
+                    },
+                ) => {
+                    assert_eq!(decoded_kind, kind);
+                    assert_eq!(decoded_port, port);
+                }
+                (sent, got) => panic!("sent {sent:?}, got {got:?}"),
+            }
+        }
+    }
+
+    fn decode_registration(
+        listener_kinds: Vec<String>,
+        listeners: Vec<rpc::Listener>,
+    ) -> Result<HostRequest, crate::RpcMessageError> {
+        let message = rpc::HostToDaemonMessage {
+            message: rpc::HostToDaemonMessageUnion::RegisterHost(Box::new(rpc::RegisterHost {
+                host_id: crate::helpers::uuid_fb(uuid::Uuid::nil()),
+                timestamp: 0,
+                listener_kinds,
+                listeners,
+            })),
+        };
+        let mut builder = planus::Builder::new();
+        let bytes = builder.finish(&message, None).to_vec();
+        decode_host_request(rpc::HostToDaemonMessageRef::read_as_root(&bytes).unwrap())
+    }
+
+    #[test]
+    fn host_registration_carries_kinds_per_listener() {
+        let web = ListenerInfo {
+            handler_object: Obj::mk_id(0),
+            kind: ListenerKind::HTTP,
+            socket_addr: "127.0.0.1:8080".parse().unwrap(),
+        };
+        let quic = ListenerInfo {
+            handler_object: Obj::mk_id(5),
+            kind: ListenerKind::parse("webtransport").unwrap(),
+            socket_addr: "127.0.0.1:4433".parse().unwrap(),
+        };
+        let Ok(HostRequest::RegisterHost {
+            listener_kinds,
+            listeners,
+            ..
+        }) = decode_registration(
+            vec!["http".to_string(), "webtransport".to_string()],
+            vec![listener_fb(&web), listener_fb(&quic)],
+        )
+        else {
+            panic!("expected RegisterHost");
+        };
+        assert_eq!(listener_kinds, vec![web.kind, quic.kind]);
+        let decoded: Vec<_> = listeners
+            .iter()
+            .map(|l| (l.handler_object, l.kind, l.socket_addr))
+            .collect();
+        assert_eq!(
+            decoded,
+            vec![
+                (web.handler_object, web.kind, web.socket_addr),
+                (quic.handler_object, quic.kind, quic.socket_addr),
+            ]
+        );
+    }
+
+    #[test]
+    fn host_registration_rejects_invalid_listener_kind() {
+        assert!(decode_registration(vec!["Not A Kind".to_string()], vec![]).is_err());
     }
 
     #[test]

@@ -26,7 +26,7 @@ use futures_util::StreamExt;
 use hickory_resolver::{TokioResolver, proto::rr::RData};
 use moor_common::util::TokenBucket;
 use moor_runtime_api::{
-    ClientToken,
+    ClientToken, ListenerKind,
     api::{ClientReply, ClientRequest, ConnectionAttribute, HostServices, RuntimeClient},
 };
 use moor_var::{Obj, Symbol};
@@ -252,10 +252,17 @@ impl Listeners {
 
     async fn handle_listener_message(&mut self, message: ListenersMessage) {
         match message {
-            ListenersMessage::AddListener(handler, addr, reply) => {
+            ListenersMessage::AddListener(kind, handler, addr, reply)
+            | ListenersMessage::AddTlsListener(kind, handler, addr, reply)
+                if kind != ListenerKind::TELNET =>
+            {
+                error!(?addr, %kind, "The telnet host only opens telnet listeners");
+                let _ = reply.send(Err(ListenersError::AddListenerFailed(handler, addr)));
+            }
+            ListenersMessage::AddListener(_, handler, addr, reply) => {
                 self.start_listener(handler, addr, reply, false).await;
             }
-            ListenersMessage::AddTlsListener(handler, addr, reply) => {
+            ListenersMessage::AddTlsListener(_, handler, addr, reply) => {
                 if self.tls_config.is_none() {
                     error!("TLS listener requested but no TLS config available");
                     let _ = reply.send(Err(ListenersError::AddListenerFailed(handler, addr)));
@@ -263,7 +270,11 @@ impl Listeners {
                 }
                 self.start_listener(handler, addr, reply, true).await;
             }
-            ListenersMessage::RemoveListener(addr, reply) => {
+            ListenersMessage::RemoveListener(kind, addr, reply) => {
+                if kind != ListenerKind::TELNET {
+                    let _ = reply.send(Err(ListenersError::RemoveListenerFailed(addr)));
+                    return;
+                }
                 self.remove_listener(addr, reply);
             }
             ListenersMessage::GetListeners(tx) => {
@@ -294,6 +305,7 @@ impl Listeners {
             .listeners
             .iter()
             .map(|(addr, listener)| ListenerInfo {
+                kind: ListenerKind::TELNET,
                 handler: listener.handler_object,
                 addr: *addr,
                 is_tls: listener.is_tls,

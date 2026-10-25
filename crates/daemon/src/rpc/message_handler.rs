@@ -54,7 +54,7 @@ use moor_kernel::{
 
 use crate::runtime::RuntimeApi;
 use moor_runtime_api::{
-    AuthToken, ClientToken, HostType, RpcMessageError,
+    AuthToken, ClientToken, ListenerKind, RpcMessageError,
     api::{BroadcastEvent, ClientEvent, ClientEventMessage, HostBroadcastEvent},
     api_codec::encode_client_event_bytes,
 };
@@ -102,8 +102,8 @@ pub(crate) static BF_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("bf"));
 /// If we don't hear from a host in this time, we consider it dead and its listeners gone.
 pub const HOST_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Internal listener info: (handler_object, host_type, port, options)
-type InternalListenerInfo = (Obj, HostType, u16, Vec<(Symbol, Var)>);
+/// Internal listener info: (handler_object, kind, port, options)
+type InternalListenerInfo = (Obj, ListenerKind, u16, Vec<(Symbol, Var)>);
 
 /// Trait for handling RPC message business logic
 pub trait MessageHandler: RuntimeApi + Send + Sync {
@@ -126,13 +126,13 @@ pub trait MessageHandler: RuntimeApi + Send + Sync {
     fn broadcast_listen(
         &self,
         handler_object: Obj,
-        host_type: HostType,
+        kind: ListenerKind,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Result<(), SessionError>;
 
     /// Broadcast an unlisten event to hosts
-    fn broadcast_unlisten(&self, host_type: HostType, port: u16) -> Result<(), SessionError>;
+    fn broadcast_unlisten(&self, kind: ListenerKind, port: u16) -> Result<(), SessionError>;
 
     /// Get current listeners
     fn get_listeners(&self) -> Vec<InternalListenerInfo>;
@@ -267,13 +267,16 @@ impl MessageHandler for RpcMessageHandler {
     fn broadcast_listen(
         &self,
         handler_object: Obj,
-        host_type: HostType,
+        kind: ListenerKind,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Result<(), SessionError> {
+        if !self.hosts.read().unwrap().offers(kind) {
+            warn!(%kind, port, "No connected host opens this kind of listener");
+        }
         let event = HostBroadcastEvent::Listen {
             handler_object,
-            host_type,
+            kind,
             port,
             options,
         };
@@ -283,8 +286,8 @@ impl MessageHandler for RpcMessageHandler {
             .map_err(|_| SessionError::DeliveryError)
     }
 
-    fn broadcast_unlisten(&self, host_type: HostType, port: u16) -> Result<(), SessionError> {
-        let event = HostBroadcastEvent::Unlisten { host_type, port };
+    fn broadcast_unlisten(&self, kind: ListenerKind, port: u16) -> Result<(), SessionError> {
+        let event = HostBroadcastEvent::Unlisten { kind, port };
 
         self.transport
             .broadcast_host_event(event)

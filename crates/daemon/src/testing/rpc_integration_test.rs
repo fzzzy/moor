@@ -240,6 +240,7 @@ mod tests {
         moor_rpc::Listener {
             handler_object: obj_fb(&obj),
             socket_addr: addr.to_string(),
+            kind: "telnet".to_string(),
         }
     }
 
@@ -408,7 +409,7 @@ mod tests {
         let message = mk_register_host_msg(
             host_id,
             systemtime_to_nanos(SystemTime::now()),
-            moor_rpc::HostType::WebSocket,
+            &[moor_runtime_api::ListenerKind::HTTP],
             listeners,
         );
 
@@ -481,7 +482,7 @@ mod tests {
         let register_message = mk_register_host_msg(
             host_id,
             systemtime_to_nanos(SystemTime::now()),
-            moor_rpc::HostType::WebSocket,
+            &[moor_runtime_api::ListenerKind::HTTP],
             listeners.clone(),
         );
 
@@ -578,7 +579,7 @@ mod tests {
         let register_message = mk_register_host_msg(
             host_id,
             systemtime_to_nanos(SystemTime::now()),
-            moor_rpc::HostType::WebSocket,
+            &[moor_runtime_api::ListenerKind::HTTP],
             listeners,
         );
 
@@ -690,7 +691,6 @@ mod tests {
             &client_token,
             systemtime_to_nanos(SystemTime::now()),
             &connection_obj,
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 
@@ -806,7 +806,7 @@ mod tests {
         let register_message = mk_register_host_msg(
             host_id,
             systemtime_to_nanos(SystemTime::now()),
-            moor_rpc::HostType::WebSocket,
+            &[moor_runtime_api::ListenerKind::HTTP],
             vec![create_listener(
                 Obj::mk_id(100),
                 "127.0.0.1:8080".parse::<SocketAddr>().unwrap(),
@@ -880,7 +880,6 @@ mod tests {
             &client_token,
             systemtime_to_nanos(SystemTime::now()),
             &connection_obj,
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 
@@ -943,7 +942,6 @@ mod tests {
             &invalid_token,
             systemtime_to_nanos(SystemTime::now()),
             &Obj::mk_id(1),
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 
@@ -985,7 +983,6 @@ mod tests {
             &invalid_token,
             systemtime_to_nanos(SystemTime::now()),
             &Obj::mk_id(1),
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 
@@ -2256,7 +2253,7 @@ mod tests {
         // Test broadcast_listen
         let listen_result = env.message_handler.broadcast_listen(
             Obj::mk_id(100),
-            moor_runtime_api::HostType::WebSocket,
+            moor_runtime_api::ListenerKind::HTTP,
             8080,
             vec![],
         );
@@ -2266,7 +2263,7 @@ mod tests {
         // Test broadcast_unlisten
         let unlisten_result = env
             .message_handler
-            .broadcast_unlisten(moor_runtime_api::HostType::WebSocket, 8080);
+            .broadcast_unlisten(moor_runtime_api::ListenerKind::HTTP, 8080);
 
         assert!(unlisten_result.is_ok(), "Broadcast unlisten should succeed");
     }
@@ -2284,7 +2281,7 @@ mod tests {
         let register_message = mk_register_host_msg(
             host_id,
             systemtime_to_nanos(SystemTime::now()),
-            moor_rpc::HostType::Tcp,
+            &[moor_runtime_api::ListenerKind::TELNET],
             listeners.clone(),
         );
 
@@ -2300,7 +2297,7 @@ mod tests {
         let pong_message = mk_host_pong_msg(
             host_id,
             systemtime_to_nanos(pong_time),
-            moor_rpc::HostType::Tcp,
+            &[moor_runtime_api::ListenerKind::TELNET],
             listeners,
         );
 
@@ -2325,7 +2322,6 @@ mod tests {
             &client_token,
             systemtime_to_nanos(client_pong_time),
             &SYSTEM_OBJECT,
-            moor_rpc::HostType::Tcp,
             "127.0.0.1:12345".to_string(),
         );
 
@@ -2404,7 +2400,6 @@ mod tests {
             &client_token,
             systemtime_to_nanos(SystemTime::now()),
             &connection_obj,
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 
@@ -2425,7 +2420,6 @@ mod tests {
             &invalid_token,
             systemtime_to_nanos(SystemTime::now()),
             &connection_obj,
-            moor_rpc::HostType::WebSocket,
             "127.0.0.1:8080".to_string(),
         );
 

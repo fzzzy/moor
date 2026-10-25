@@ -28,7 +28,7 @@ use moor_runtime_api::api::{
     InvocationMode, InvocationOutcome, InvocationResponse, ObjectInfo, ServerFeatures,
     SystemHandlerResponse, VerbProgramResponse, WorldStateResult, WorldStateResultEntry,
 };
-use moor_runtime_api::{AuthToken, ClientToken, RpcMessageError};
+use moor_runtime_api::{AuthToken, ClientToken, ListenerKind, RpcMessageError};
 use moor_schema::rpc as moor_rpc;
 use moor_var::{Obj, SYSTEM_OBJECT, Symbol, Var, Variant, v_empty_str, v_str, v_string};
 use std::sync::Arc;
@@ -69,12 +69,12 @@ impl RuntimeApi for RpcMessageHandler {
         match request {
             HostRequest::RegisterHost {
                 timestamp: _,
-                host_type,
+                listener_kinds,
                 listeners,
             } => {
-                let listeners: Vec<(Obj, std::net::SocketAddr)> = listeners
+                let listeners: Vec<(Obj, ListenerKind, std::net::SocketAddr)> = listeners
                     .into_iter()
-                    .map(|l| (l.handler_object, l.socket_addr))
+                    .map(|l| (l.handler_object, l.kind, l.socket_addr))
                     .collect();
                 info!(
                     "Host {} registered with {} listeners",
@@ -82,21 +82,21 @@ impl RuntimeApi for RpcMessageHandler {
                     listeners.len()
                 );
                 let mut hosts = self.hosts.write().unwrap();
-                hosts.receive_ping(host_id, host_type, listeners);
+                hosts.receive_ping(host_id, listener_kinds, listeners);
                 Ok(HostReply::Ack)
             }
             HostRequest::HostPong {
                 timestamp: _,
-                host_type,
+                listener_kinds,
                 listeners,
             } => {
-                let listeners: Vec<(Obj, std::net::SocketAddr)> = listeners
+                let listeners: Vec<(Obj, ListenerKind, std::net::SocketAddr)> = listeners
                     .into_iter()
-                    .map(|l| (l.handler_object, l.socket_addr))
+                    .map(|l| (l.handler_object, l.kind, l.socket_addr))
                     .collect();
                 let num_listeners = listeners.len();
                 let mut hosts = self.hosts.write().unwrap();
-                if hosts.receive_ping(host_id, host_type, listeners) {
+                if hosts.receive_ping(host_id, listener_kinds, listeners) {
                     info!(
                         "Host {} registered with {} listeners",
                         host_id, num_listeners

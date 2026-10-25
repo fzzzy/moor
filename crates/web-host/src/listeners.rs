@@ -23,6 +23,7 @@ use std::{
 };
 
 use axum::Router;
+use moor_runtime_api::ListenerKind;
 use moor_var::Obj;
 use moor_zmq_client::{ListenerInfo, ListenersClient, ListenersError, ListenersMessage};
 use tokio::{net::TcpListener, select};
@@ -78,15 +79,25 @@ impl Listeners {
             };
 
             match message {
-                Some(ListenersMessage::AddTlsListener(handler, addr, reply)) => {
+                Some(ListenersMessage::AddTlsListener(_, handler, addr, reply)) => {
                     error!(?addr, "TLS listeners not supported by web-host");
                     let _ = reply.send(Err(ListenersError::AddListenerFailed(handler, addr)));
                 }
-                Some(ListenersMessage::AddListener(handler, addr, reply)) => {
+                Some(ListenersMessage::AddListener(kind, handler, addr, reply))
+                    if kind != ListenerKind::HTTP =>
+                {
+                    error!(?addr, %kind, "The web host only opens http listeners");
+                    let _ = reply.send(Err(ListenersError::AddListenerFailed(handler, addr)));
+                }
+                Some(ListenersMessage::AddListener(_, handler, addr, reply)) => {
                     self.add_listener(handler, addr, reply).await;
                 }
-                Some(ListenersMessage::RemoveListener(addr, reply)) => {
-                    self.remove_listener(addr, reply);
+                Some(ListenersMessage::RemoveListener(kind, addr, reply)) => {
+                    if kind == ListenerKind::HTTP {
+                        self.remove_listener(addr, reply);
+                    } else {
+                        let _ = reply.send(Err(ListenersError::RemoveListenerFailed(addr)));
+                    }
                 }
                 Some(ListenersMessage::GetListeners(tx)) => {
                     self.send_listeners(tx);
@@ -197,6 +208,7 @@ impl Listeners {
             .listeners
             .iter()
             .map(|(addr, listener)| ListenerInfo {
+                kind: ListenerKind::HTTP,
                 handler: listener.handler_object,
                 addr: *addr,
                 is_tls: false,

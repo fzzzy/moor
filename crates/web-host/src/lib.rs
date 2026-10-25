@@ -31,7 +31,7 @@ use eyre::{Result, eyre};
 use host::{HostShared, OAuth2Config, OAuth2Manager};
 use ipnet::IpNet;
 use listeners::Listeners;
-use moor_runtime_api::{HostType, api::HostServices, client_args::RpcClientConfig};
+use moor_runtime_api::{ListenerKind, api::HostServices, client_args::RpcClientConfig};
 use moor_var::SYSTEM_OBJECT;
 use moor_zmq_client::{
     ZmqHostServices, process_hosts_events_with_services, start_host_session_with_services,
@@ -146,14 +146,16 @@ async fn run_with_host_services(
             config.listen_address
         )
     })?;
-    listeners.add_listener(&SYSTEM_OBJECT, listen_addr).await?;
+    listeners
+        .add_listener(ListenerKind::HTTP, &SYSTEM_OBJECT, listen_addr)
+        .await?;
 
     info!("Starting host session....");
     let host_id = start_host_session_with_services(
         host_id,
         runtime.kill_switch.clone(),
         listeners.clone(),
-        HostType::TCP,
+        vec![ListenerKind::HTTP],
         host_services.clone(),
     )
     .await
@@ -164,7 +166,7 @@ async fn run_with_host_services(
         config.listen_address.clone(),
         runtime.kill_switch.clone(),
         listeners.clone(),
-        HostType::TCP,
+        vec![ListenerKind::HTTP],
         host_services,
         Some(last_daemon_ping),
     );

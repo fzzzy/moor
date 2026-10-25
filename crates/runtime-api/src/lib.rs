@@ -30,7 +30,7 @@ mod client_event_replay;
 pub mod task_client;
 #[cfg(feature = "task-client")]
 pub use client_event_replay::RecoveringClientEventSubscription;
-pub use host::{HostType, extract_host_type};
+pub use host::{ListenerKind, extract_listener_kind};
 pub use tokens::{
     AuthToken, ClientToken, KeyError, MOOR_AUTH_TOKEN_FOOTER, MOOR_SESSION_TOKEN_FOOTER,
     load_keypair, parse_keypair,
@@ -81,8 +81,8 @@ pub use client_messages::{
     mk_update_property_msg, mk_verbs_msg, mk_verified_oauth_login_msg,
 };
 pub use host_messages::{
-    mk_detach_host_msg, mk_get_server_features_msg, mk_get_server_status_msg, mk_host_pong_msg,
-    mk_register_host_msg, mk_request_performance_counters_msg,
+    listener_fb, mk_detach_host_msg, mk_get_server_features_msg, mk_get_server_status_msg,
+    mk_host_pong_msg, mk_register_host_msg, mk_request_performance_counters_msg,
 };
 
 // Re-export worker message builders

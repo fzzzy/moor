@@ -13,7 +13,7 @@
 
 use crate::{ListenersClient, ZmqHostServices, rpc_client::RpcClient};
 use moor_runtime_api::{
-    HostType, RpcError,
+    ListenerKind, RpcError,
     api::{HostBroadcastEvent, HostReply, HostRequest, HostServices, ListenerInfo},
 };
 use moor_var::{Symbol, Var};
@@ -43,7 +43,7 @@ pub async fn start_host_session(
         host_id,
         kill_switch,
         listeners,
-        HostType::TCP,
+        vec![ListenerKind::TELNET],
         Arc::new(services.clone()),
     )
     .await?;
@@ -54,7 +54,7 @@ pub async fn start_host_session_with_services(
     host_id: Uuid,
     kill_switch: Arc<AtomicBool>,
     listeners: ListenersClient,
-    host_type: HostType,
+    listener_kinds: Vec<ListenerKind>,
     services: Arc<dyn HostServices>,
 ) -> Result<Uuid, RpcError> {
     loop {
@@ -79,6 +79,7 @@ pub async fn start_host_session_with_services(
             .iter()
             .map(|info| ListenerInfo {
                 handler_object: info.handler,
+                kind: info.kind,
                 socket_addr: info.addr,
             })
             .collect();
@@ -89,7 +90,7 @@ pub async fn start_host_session_with_services(
                 host_id,
                 HostRequest::RegisterHost {
                     timestamp,
-                    host_type,
+                    listener_kinds: listener_kinds.clone(),
                     listeners,
                 },
             )
@@ -131,7 +132,7 @@ pub async fn process_hosts_events(
     listen_address: String,
     kill_switch: Arc<AtomicBool>,
     listeners: ListenersClient,
-    our_host_type: HostType,
+    listener_kinds: Vec<ListenerKind>,
     curve_keys: Option<(String, String, String)>, // (client_secret, client_public, server_public) - Z85 encoded
     last_daemon_ping: Option<Arc<AtomicU64>>,
 ) -> Result<(), RpcError> {
@@ -147,7 +148,7 @@ pub async fn process_hosts_events(
         listen_address,
         kill_switch,
         listeners,
-        our_host_type,
+        listener_kinds,
         services,
         last_daemon_ping,
     )
@@ -159,7 +160,7 @@ pub async fn process_hosts_events_with_services(
     listen_address: String,
     kill_switch: Arc<AtomicBool>,
     listeners: ListenersClient,
-    our_host_type: HostType,
+    listener_kinds: Vec<ListenerKind>,
     services: Arc<dyn HostServices>,
     last_daemon_ping: Option<Arc<AtomicU64>>,
 ) -> Result<(), RpcError> {
@@ -196,6 +197,7 @@ pub async fn process_hosts_events_with_services(
                     .iter()
                     .map(|info| ListenerInfo {
                         handler_object: info.handler,
+                        kind: info.kind,
                         socket_addr: info.addr,
                     })
                     .collect();
@@ -206,7 +208,7 @@ pub async fn process_hosts_events_with_services(
                         host_id,
                         HostRequest::HostPong {
                             timestamp,
-                            host_type: our_host_type,
+                            listener_kinds: listener_kinds.clone(),
                             listeners,
                         },
                     )
@@ -226,12 +228,12 @@ pub async fn process_hosts_events_with_services(
             }
             HostBroadcastEvent::Listen {
                 handler_object,
-                host_type,
+                kind,
                 port,
                 options,
             } => {
                 let use_tls = bool_option(&options, "tls");
-                if host_type != our_host_type {
+                if !listener_kinds.contains(&kind) {
                     continue;
                 }
 
@@ -244,12 +246,7 @@ pub async fn process_hosts_events_with_services(
                     }
                 };
                 let tls_label = if use_tls { " (TLS)" } else { "" };
-                info!(
-                    "Starting listener for {} on {}{}",
-                    host_type.id_str(),
-                    sockaddr,
-                    tls_label
-                );
+                info!("Starting {} listener on {}{}", kind, sockaddr, tls_label);
                 let listeners = listeners.clone();
                 tokio::spawn(async move {
                     let sockaddr = match listen_addr.parse::<SocketAddr>() {
@@ -260,17 +257,21 @@ pub async fn process_hosts_events_with_services(
                         }
                     };
                     let result = if use_tls {
-                        listeners.add_tls_listener(&handler_object, sockaddr).await
+                        listeners
+                            .add_tls_listener(kind, &handler_object, sockaddr)
+                            .await
                     } else {
-                        listeners.add_listener(&handler_object, sockaddr).await
+                        listeners
+                            .add_listener(kind, &handler_object, sockaddr)
+                            .await
                     };
                     if let Err(e) = result {
                         error!("Error starting listener: {}", e);
                     }
                 });
             }
-            HostBroadcastEvent::Unlisten { host_type, port } => {
-                if host_type == our_host_type {
+            HostBroadcastEvent::Unlisten { kind, port } => {
+                if listener_kinds.contains(&kind) {
                     let listen_addr = format!("{listen_address}:{port}");
                     let sockaddr = match listen_addr.parse::<SocketAddr>() {
                         Ok(sockaddr) => sockaddr,
@@ -279,12 +280,8 @@ pub async fn process_hosts_events_with_services(
                             continue;
                         }
                     };
-                    info!(
-                        "Stopping listener for {} on {}",
-                        host_type.id_str(),
-                        sockaddr
-                    );
-                    if let Err(e) = listeners.remove_listener(sockaddr).await {
+                    info!("Stopping {} listener on {}", kind, sockaddr);
+                    if let Err(e) = listeners.remove_listener(kind, sockaddr).await {
                         error!("Unable to stop listener {}: {}", sockaddr, e);
                     }
                 }

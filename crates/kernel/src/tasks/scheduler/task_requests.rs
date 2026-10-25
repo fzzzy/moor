@@ -343,21 +343,21 @@ impl Scheduler {
         &self,
         task_id: TaskId,
         handler_object: Obj,
-        host_type: String,
+        kind: String,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Option<Error> {
         let Some(dispatch) = self.capture_task_dispatch(task_id) else {
             return Some(E_INVARG.msg("Task not found"));
         };
-        self.handle_listen_for_dispatch(&dispatch, handler_object, host_type, port, options)
+        self.handle_listen_for_dispatch(&dispatch, handler_object, kind, port, options)
     }
 
     pub(crate) fn handle_listen_for_dispatch(
         &self,
         dispatch: &TaskDispatch,
         handler_object: Obj,
-        host_type: String,
+        kind: String,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Option<Error> {
@@ -370,21 +370,21 @@ impl Scheduler {
         drop(lc);
 
         self.system_control
-            .listen(handler_object, &host_type, port, options)
+            .listen(handler_object, &kind, port, options)
             .err()
     }
 
-    pub fn handle_unlisten(&self, task_id: TaskId, host_type: String, port: u16) -> Option<Error> {
+    pub fn handle_unlisten(&self, task_id: TaskId, kind: String, port: u16) -> Option<Error> {
         let Some(dispatch) = self.capture_task_dispatch(task_id) else {
             return Some(E_INVARG.msg("Task not found"));
         };
-        self.handle_unlisten_for_dispatch(&dispatch, host_type, port)
+        self.handle_unlisten_for_dispatch(&dispatch, kind, port)
     }
 
     pub(crate) fn handle_unlisten_for_dispatch(
         &self,
         dispatch: &TaskDispatch,
-        host_type: String,
+        kind: String,
         port: u16,
     ) -> Option<Error> {
         let task_id = dispatch.task_id();
@@ -395,7 +395,7 @@ impl Scheduler {
         };
         drop(lc);
 
-        match self.system_control.unlisten(port, &host_type) {
+        match self.system_control.unlisten(port, &kind) {
             Ok(_) => None,
             Err(_) => Some(E_PERM.msg("Permission denied on unlisten")),
         }

@@ -51,11 +51,11 @@ pub async fn noop_listeners_loop() -> (ListenersClient, JoinHandle<()>) {
     let t = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             match msg {
-                ListenersMessage::AddListener(_, _, reply)
-                | ListenersMessage::AddTlsListener(_, _, reply) => {
+                ListenersMessage::AddListener(_, _, _, reply)
+                | ListenersMessage::AddTlsListener(_, _, _, reply) => {
                     let _ = reply.send(Ok(()));
                 }
-                ListenersMessage::RemoveListener(_, reply) => {
+                ListenersMessage::RemoveListener(_, _, reply) => {
                     let _ = reply.send(Ok(()));
                 }
                 ListenersMessage::GetListeners(r) => {
@@ -101,7 +101,6 @@ pub async fn broadcast_handle(
                             &client_token,
                             timestamp,
                             &connection_oid,
-                            moor_rpc::HostType::Tcp,
                             SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0).to_string(),
                         );
                         let _ = rpc_client.make_client_rpc_call(client_id, pong_msg).await;
