@@ -9,10 +9,12 @@ database or call back into MOO verbs; instead, callers supply ordinary values su
 maps, and edge lists, and the server performs bounded search or traversal over those values more
 efficiently than MOO code would.
 
-The functions fall into three related groups. The `term_*` builtins match and transform nested list
+The functions fall into four related groups. The `term_*` builtins match and transform nested list
 and map structures, including small rule queries over caller-supplied facts. The grid functions work
 with flat tile maps for pathfinding, line-of-sight checks, and flood fills. The graph functions work
-over explicit edge lists for shortest paths, reachability, and topological ordering.
+over explicit edge lists for shortest paths, reachability, and topological ordering. The procedural
+functions give smooth noise and repeatable random numbers for generating terrain, maps and other
+content.
 
 ## Terms and small rule searches
 
@@ -725,4 +727,73 @@ Returns a topological ordering of the directed graph. If the graph contains a cy
 ```moo
 graph_topsort({{'cook, 'eat}, {'shop, 'cook}})
 => {'shop, 'cook, 'eat}
+```
+
+## Procedural generation
+
+These functions generate content that must come out the same every time, such as terrain that is
+recreated rather than stored. Their results depend only on their arguments: the same arguments give
+the same result on every platform and in every release.
+
+## `noise_2d`
+
+```moo
+FLOAT noise_2d(NUM x, NUM y, INT seed [, MAP options])
+```
+
+Returns smooth 2D simplex noise at `(x, y)`, from `-1.0` to `1.0`. Nearby points give nearby values,
+so noise suits hills, coastlines and regions that change gradually. Each seed gives a different
+pattern.
+
+Options:
+
+- `octaves`: how many layers of finer noise to add, from 1 to 16. The default is 1.
+- `frequency`: how quickly the noise changes with the coordinates. The default is `1.0`; smaller
+  values give broader features.
+- `lacunarity`: how much faster each further octave changes. The default is `2.0`.
+- `persistence`: how much each further octave counts. The default is `0.5`.
+
+`E_INVARG` is raised for an unknown option or a value out of range.
+
+```moo
+floatstr(noise_2d(12.5, -3.0, 42), 6)
+=> "-0.431678"
+
+"Rolling hills: broad shapes from the first octave, detail from the rest.";
+height = 64 + toint(noise_2d(x, z, 42, ["octaves" -> 4, "frequency" -> 0.01]) * 20.0);
+```
+
+## `noise_grid`
+
+```moo
+LIST noise_grid(NUM x, NUM y, INT width, INT height, INT seed [, MAP options])
+```
+
+Returns `noise_2d()` sampled over a grid in one call: a list of `height` rows, each a list of
+`width` floats, where row `r`, column `c` (both from 1) is the noise at `(x + c - 1, y + r - 1)`. It
+takes the same options as `noise_2d()`. Use it when you need many nearby samples, such as every
+position of a map tile, rather than calling `noise_2d()` in a loop. A grid may hold at most 65,536
+points.
+
+```moo
+rows = noise_grid(100, 200, 16, 16, 42, ["frequency" -> 0.05]);
+"rows[1][1] is noise_2d(100, 200, 42, ...), and rows[16][16] is noise_2d(115, 215, 42, ...).";
+```
+
+## `random_at`
+
+```moo
+INT random_at(INT seed, LIST coordinates [, INT max])
+```
+
+Returns an integer from 1 to `max`, like `random()`, but fixed by the seed and a list of integer
+coordinates: the same arguments always give the same number. `max` defaults to the largest integer.
+The order of the coordinates matters. Use it to make repeatable choices about places, such as
+whether a map cell holds a building and which one.
+
+`E_TYPE` is raised for coordinates that are not integers, and `E_INVARG` for a `max` below 1.
+
+```moo
+"Does the 64 by 64 cell at (3, -2) hold a building? About one cell in five does.";
+random_at(42, {3, -2}, 5) == 1
 ```

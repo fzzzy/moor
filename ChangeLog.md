@@ -14,6 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `noise_2d(x, y, seed [, options])` returns smooth seeded 2D simplex noise, `noise_grid()` samples
+  it over a grid in one call, and `random_at(seed, coordinates [, max])` returns a random number
+  fixed by its inputs. They are for generating terrain, maps and other content that must come out
+  the same every time; their results do not change between platforms or releases.
+
 - Listeners have a kind, such as `"telnet"` for the telnet host or `"http"` for the web host, in
   place of a fixed set of host types. Each host declares the kinds it can open, so one host can
   serve several, and new hosts need no schema change. `listen()` takes a `"kind"` option, such as

@@ -24,12 +24,12 @@ use std::sync::LazyLock;
 use ahash::HashMap;
 use moor_compiler::offset_for_builtin;
 use moor_var::{
-    Associative, E_ARGS, E_INVARG, E_MAXREC, E_TYPE, Map, Symbol, Var, Variant, v_int, v_list,
-    v_list_iter, v_map, v_sym,
+    Associative, E_ARGS, E_INVARG, E_MAXREC, E_TYPE, Map, Symbol, Var, Variant, v_float, v_int,
+    v_list, v_list_iter, v_map, v_sym,
 };
 
 use crate::vm::builtins::{
-    BfCallState, BfErr, BfRet, BfRet::Ret, BuiltinFunction, BuiltinTickBudget,
+    BfCallState, BfErr, BfRet, BfRet::Ret, BuiltinFunction, BuiltinTickBudget, noise,
 };
 
 static VAR_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("var"));
@@ -2461,8 +2461,191 @@ fn bf_graph_topsort(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     Ok(Ret(v_list(&sorted)))
 }
 
+static OCTAVES_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("octaves"));
+static FREQUENCY_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("frequency"));
+static PERSISTENCE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("persistence"));
+static LACUNARITY_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("lacunarity"));
+
+/// The most points one `noise_grid()` call may sample.
+const MAX_NOISE_GRID_POINTS: usize = 65_536;
+
+fn noise_coordinate(value: &Var, name: &str) -> Result<f64, BfErr> {
+    value
+        .as_float_numeric()
+        .filter(|n| n.is_finite())
+        .ok_or_else(|| BfErr::ErrValue(E_TYPE.msg(format!("{name} must be a number"))))
+}
+
+fn noise_seed(value: &Var) -> Result<i64, BfErr> {
+    value
+        .as_integer()
+        .ok_or_else(|| BfErr::ErrValue(E_TYPE.msg("seed must be an integer")))
+}
+
+fn parse_noise_options(value: Option<&Var>, function: &str) -> Result<noise::Octaves, BfErr> {
+    let mut options = noise::Octaves::default();
+    let Some(value) = value else {
+        return Ok(options);
+    };
+    let Some(map) = value.as_map() else {
+        return Err(BfErr::ErrValue(
+            E_TYPE.msg(format!("{function}() options must be a map")),
+        ));
+    };
+    for (key, value) in map.iter_ref() {
+        let key = option_key_symbol(key)?;
+        if key == *OCTAVES_SYM {
+            match value.as_integer() {
+                Some(n) if (1..=i64::from(noise::MAX_OCTAVES)).contains(&n) => {
+                    options.octaves = n as u32;
+                }
+                Some(_) => {
+                    return Err(BfErr::ErrValue(E_INVARG.msg(format!(
+                        "octaves option must be from 1 to {}",
+                        noise::MAX_OCTAVES
+                    ))));
+                }
+                None => {
+                    return Err(BfErr::ErrValue(
+                        E_TYPE.msg("octaves option must be an integer"),
+                    ));
+                }
+            }
+            continue;
+        }
+        let slot = if key == *FREQUENCY_SYM {
+            &mut options.frequency
+        } else if key == *PERSISTENCE_SYM {
+            &mut options.persistence
+        } else if key == *LACUNARITY_SYM {
+            &mut options.lacunarity
+        } else {
+            return Err(BfErr::ErrValue(
+                E_INVARG.msg(format!("unknown {function}() option: {key}")),
+            ));
+        };
+        let n = value
+            .as_float_numeric()
+            .ok_or_else(|| BfErr::ErrValue(E_TYPE.msg(format!("{key} option must be a number"))))?;
+        if !n.is_finite() || n <= 0.0 {
+            return Err(BfErr::ErrValue(
+                E_INVARG.msg(format!("{key} option must be a positive number")),
+            ));
+        }
+        *slot = n;
+    }
+    Ok(options)
+}
+
+/// Usage: `float noise_2d(num x, num y, int seed [, map options])`
+///
+/// Returns smooth, seeded 2D simplex noise at (x, y), from -1.0 to 1.0. Nearby points
+/// give nearby values, and the same arguments always give the same result, on every
+/// platform and in every release.
+///
+/// Options: `octaves` (1 to 16, default 1) layers finer noise over coarser; `frequency`
+/// (default 1.0) scales the coordinates; each further octave multiplies the frequency by
+/// `lacunarity` (default 2.0) and its weight by `persistence` (default 0.5).
+fn bf_noise_2d(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() < 3 || bf_args.args.len() > 4 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("noise_2d() takes 3 or 4 arguments"),
+        ));
+    }
+    let x = noise_coordinate(&bf_args.args[0], "x")?;
+    let y = noise_coordinate(&bf_args.args[1], "y")?;
+    let seed = noise_seed(&bf_args.args[2])?;
+    let options = parse_noise_options(bf_args.args.iter_ref().nth(3), "noise_2d")?;
+    let noise = noise::Simplex::new(seed);
+    Ok(Ret(v_float(options.sample(&noise, x, y))))
+}
+
+/// Usage: `list noise_grid(num x, num y, int width, int height, int seed [, map options])`
+///
+/// Returns `noise_2d()` sampled over a grid in one call: a list of `height` rows, each a
+/// list of `width` values, where row r, column c is the noise at (x + c, y + r). Takes the
+/// same options as `noise_2d()`. At most 65,536 points.
+fn bf_noise_grid(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() < 5 || bf_args.args.len() > 6 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("noise_grid() takes 5 or 6 arguments"),
+        ));
+    }
+    let x = noise_coordinate(&bf_args.args[0], "x")?;
+    let y = noise_coordinate(&bf_args.args[1], "y")?;
+    let width = positive_dimension(&bf_args.args[2], "width")?;
+    let height = positive_dimension(&bf_args.args[3], "height")?;
+    if width.saturating_mul(height) > MAX_NOISE_GRID_POINTS {
+        return Err(BfErr::ErrValue(E_INVARG.msg(format!(
+            "noise_grid() samples at most {MAX_NOISE_GRID_POINTS} points"
+        ))));
+    }
+    let seed = noise_seed(&bf_args.args[4])?;
+    let options = parse_noise_options(bf_args.args.iter_ref().nth(5), "noise_grid")?;
+    let noise = noise::Simplex::new(seed);
+    let mut budget = bf_args.tick_budget();
+    let mut rows = Vec::with_capacity(height);
+    for row in 0..height {
+        budget.consume_ticks(1)?;
+        let row_y = y + row as f64;
+        rows.push(v_list_iter((0..width).map(|col| {
+            v_float(options.sample(&noise, x + col as f64, row_y))
+        })));
+    }
+    Ok(Ret(v_list_iter(rows)))
+}
+
+/// Usage: `int random_at(int seed, list coordinates [, int max])`
+///
+/// Returns an integer from 1 to `max` (default the largest integer) fixed by the seed and
+/// a list of integer coordinates: like `random()`, but repeatable. The same arguments
+/// always give the same result, on every platform and in every release, and the order of
+/// the coordinates matters.
+fn bf_random_at(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() < 2 || bf_args.args.len() > 3 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("random_at() takes 2 or 3 arguments"),
+        ));
+    }
+    let seed = noise_seed(&bf_args.args[0])?;
+    let Some(list) = bf_args.args[1].as_list() else {
+        return Err(BfErr::ErrValue(
+            E_TYPE.msg("random_at() coordinates must be a list"),
+        ));
+    };
+    let mut coordinates = Vec::with_capacity(list.len());
+    for item in list.iter() {
+        let Some(n) = item.as_integer() else {
+            return Err(BfErr::ErrValue(
+                E_TYPE.msg("random_at() coordinates must be integers"),
+            ));
+        };
+        coordinates.push(n);
+    }
+    let max = match bf_args.args.iter_ref().nth(2) {
+        None => i64::MAX,
+        Some(value) => match value.as_integer() {
+            Some(max) if max >= 1 => max,
+            Some(_) => {
+                return Err(BfErr::ErrValue(
+                    E_INVARG.msg("random_at() max must be at least 1"),
+                ));
+            }
+            None => {
+                return Err(BfErr::ErrValue(
+                    E_TYPE.msg("random_at() max must be an integer"),
+                ));
+            }
+        },
+    };
+    Ok(Ret(v_int(noise::random_at(seed, &coordinates, max))))
+}
+
 pub(crate) fn register_bf_algorithms(builtins: &mut [BuiltinFunction]) {
     builtins[offset_for_builtin("grid_astar")] = bf_grid_astar;
+    builtins[offset_for_builtin("noise_2d")] = bf_noise_2d;
+    builtins[offset_for_builtin("noise_grid")] = bf_noise_grid;
+    builtins[offset_for_builtin("random_at")] = bf_random_at;
     builtins[offset_for_builtin("grid_reachable")] = bf_grid_reachable;
     builtins[offset_for_builtin("grid_line")] = bf_grid_line;
     builtins[offset_for_builtin("grid_los")] = bf_grid_los;

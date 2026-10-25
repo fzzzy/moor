@@ -28,3 +28,42 @@
 
 ; return typeof(value_hash($tmp, "sha256", 1));
 17
+
+// test_that_procedural_builtins_are_repeatable
+@programmer
+
+; return toint(noise_2d(0.3, 0.7, 42) * 1000000.0);
+692706
+
+; return toint(noise_2d(5.5, 1.25, 3, ["octaves" -> 4, "frequency" -> 0.1]) * 1000000.0);
+-468291
+
+; return {length(noise_grid(10, 20, 16, 4, 7)), length(noise_grid(10, 20, 16, 4, 7)[1])};
+{4, 16}
+
+; return noise_grid(10.0, 20.0, 3, 2, 7)[2][3] == noise_2d(12.0, 21.0, 7) ? 1 | 0;
+1
+
+; return random_at(7, {10, -20}, 100);
+95
+
+; return random_at(7, {10, -20}) == random_at(7, {10, -20}) ? 1 | 0;
+1
+
+; return `noise_2d(1, 2, 3, ["octaves" -> 0]) ! E_INVARG => 1';
+1
+
+; return `noise_2d(1, 2, 3, ["wiggle" -> 1]) ! E_INVARG => 1';
+1
+
+; return `noise_grid(0, 0, 300, 300, 1) ! E_INVARG => 1';
+1
+
+; return `random_at(1, {"a"}) ! E_TYPE => 1';
+1
+
+; return `random_at(1, {1}, 0) ! E_INVARG => 1';
+1
+
+; return floatstr(noise_2d(12.5, -3.0, 42), 6);
+"-0.431678"
