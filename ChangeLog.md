@@ -423,6 +423,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Decompiled code, exports and `@changes` write a `fn ... endfn` lambda of more than one line as an
+  indented block, as it would be written by hand, instead of running its statements together on one
+  line.
 - A variable declared in a block nested inside a block that declares nothing no longer crashes the
   task. This was easy to hit in a `fn ... endfn` lambda whose body declares nothing at its top
   level, and in the `fn (...) begin ... end endfn` form decompiled lambdas were written in. Verbs

@@ -35,6 +35,9 @@ pub(crate) struct Unparse<'a> {
     indent_width: usize,
     name_subs: Option<&'a HashMap<Obj, String>>,
     comparison_literals: Option<RefCell<Vec<Var>>>,
+    /// The indent level of the statement being written, so an expression inside it, such as a
+    /// multi-line lambda, can line up with it.
+    statement_indent: std::cell::Cell<usize>,
 }
 
 const INDENT_LEVEL: usize = 2;
@@ -48,6 +51,7 @@ impl<'a> Unparse<'a> {
             indent_width,
             name_subs: None,
             comparison_literals: None,
+            statement_indent: std::cell::Cell::new(0),
         }
     }
 
