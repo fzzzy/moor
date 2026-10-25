@@ -5,8 +5,8 @@ object HEADLESS_MATCHING_SCENARIOS [
 ]
   name: "Matching Boundary Scenarios"
   parent: ROOT
-  owner: RUNTIME_WIZARD
-  method test_integer_fuzzy_threshold owner: RUNTIME_WIZARD
+  owner: fixtures::RUNTIME_WIZARD
+  method test_integer_fuzzy_threshold owner: fixtures::RUNTIME_WIZARD
     "Integer tolerance must work for empty scope and real aliases.";
     $test_utils:assert_eq($match:resolve_in_scope("missing", {}, ['fuzzy_threshold -> 1]), $failed_match);
     const scope = {{#90113, "lobby"}};
@@ -15,7 +15,7 @@ object HEADLESS_MATCHING_SCENARIOS [
     $test_utils:assert_eq($match:resolve_in_scope("lobbi", scope, ['fuzzy_threshold -> false]), $failed_match);
     $test_utils:assert_eq($match:resolve_in_scope("lobby", scope, ['fuzzy_threshold -> true]), #90113);
   endmethod
-  method test_alias_ordinal_and_literal_contract owner: RUNTIME_WIZARD
+  method test_alias_ordinal_and_literal_contract owner: fixtures::RUNTIME_WIZARD
     "Aliases, ordinals, and explicit object references retain their contracts.";
     const scope = {{#90113, "probe"}, {#90114, "probe", "special probe"}};
     $test_utils:assert_eq($match:resolve_in_scope("second probe", scope), #90114);
@@ -32,7 +32,7 @@ object HEADLESS_MATCHING_SCENARIOS [
       recycle(uuid_object);
     endtry
   endmethod
-  method test_shared_scope_names owner: RUNTIME_WIZARD
+  method test_shared_scope_names owner: fixtures::RUNTIME_WIZARD
     "Mixed and repeated scope entries keep aliases and one stable candidate per object.";
     const scope = {{#90113, "alpha"}, #90113, {#90113, "other"}, #90114};
     const {objects, names} = $match:normalize_scope(scope);

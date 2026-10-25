@@ -6,12 +6,11 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
 ]
   name: "Rule Authority Scenarios"
   parent: ROOT
-  owner: RUNTIME_WIZARD
+  owner: fixtures::RUNTIME_WIZARD
   readable: true
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_rule_authority_scenarios";
 
-  method test_foreign_reaction_mutation_denied owner: RUNTIME_WIZARD
+  method test_foreign_reaction_mutation_denied owner: fixtures::RUNTIME_WIZARD
     "A direct generic effect must preserve the invoking programmer's principal.";
     const victim = create($root, $hacker, 2);
     try
@@ -27,7 +26,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_owned_reaction_and_delay_preserve_caller owner: RUNTIME_WIZARD
+  method test_owned_reaction_and_delay_preserve_caller owner: fixtures::RUNTIME_WIZARD
     "Generic effects and their delayed continuations keep the owner's invoking principal.";
     const target = create($root, #90101, 2);
     try
@@ -42,7 +41,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_guest_runs_installed_owner_reaction owner: RUNTIME_WIZARD
+  method test_guest_runs_installed_owner_reaction owner: fixtures::RUNTIME_WIZARD
     "A real guest operation runs approved effects; forged events and transitions do not.";
     const target = create($container, #90101, 2);
     try
@@ -65,7 +64,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _trigger_as_guest owner: RUNTIME_PLAYER
+  method _trigger_as_guest owner: fixtures::RUNTIME_PLAYER
     "Invoke entries as an ordinary guest, without wizard authority from the test.";
     caller == #90013 || raise(E_PERM);
     const {target, attack} = args;
@@ -78,7 +77,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     raise(E_INVARG);
   endmethod
 
-  method test_consumption_authenticates_actor_and_emits_threshold owner: RUNTIME_WIZARD
+  method test_consumption_authenticates_actor_and_emits_threshold owner: fixtures::RUNTIME_WIZARD
     "A guest can consume food, but cannot substitute another actor or invoke the test bypass.";
     const food = create($food, #90100, 2);
     try
@@ -99,7 +98,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _consume_as_guest owner: RUNTIME_PLAYER
+  method _consume_as_guest owner: fixtures::RUNTIME_PLAYER
     caller == #90013 || raise(E_PERM);
     const {food, entry} = args;
     entry == "actor" && return food:action_consume(#90100, [], 2);
@@ -107,7 +106,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return food:action_consume(#90102, [], 2);
   endmethod
 
-  method test_reaction_installation_rejects_stale_authority owner: RUNTIME_WIZARD
+  method test_reaction_installation_rejects_stale_authority owner: fixtures::RUNTIME_WIZARD
     "Ownership changes, copied grants, and edited definitions invalidate installation authority.";
     const target = create($container, #90101, 2);
     const other = create($container, #90101, 2);
@@ -150,20 +149,20 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _install_as_programmer owner: RUNTIME_PROGRAMMER
+  method _install_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     caller == #90013 || raise(E_PERM);
     const {target} = args;
     return $reaction:install(target, "probe_reaction", $reaction:mk('on_open, 0, {{'increment, 'audit_value, 7}}));
   endmethod
 
-  method _transfer_as_programmer owner: RUNTIME_PROGRAMMER
+  method _transfer_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     caller == #90013 || raise(E_PERM);
     const {target} = args;
     target:set_owner(#90100);
     $test_utils:assert_raises(E_PERM, target, "fire_trigger", {'on_open}, "The former owner cannot request triggers after transfer");
   endmethod
 
-  method test_delayed_reaction_rechecks_installation owner: RUNTIME_WIZARD
+  method test_delayed_reaction_rechecks_installation owner: fixtures::RUNTIME_WIZARD
     "Revocation and transfer cancel delayed effects; an unchanged installation still runs.";
     let targets = {};
     try
@@ -196,7 +195,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_movement_reactions_require_real_callbacks owner: RUNTIME_WIZARD
+  method test_movement_reactions_require_real_callbacks owner: fixtures::RUNTIME_WIZARD
     "Native movement fires installed room reactions; direct hook calls do not.";
     const room = create($room, #90101, 2);
     const item = create($thing, #90101, 2);
@@ -214,7 +213,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_anonymous_installations_preserve_identity owner: RUNTIME_WIZARD
+  method test_anonymous_installations_preserve_identity owner: fixtures::RUNTIME_WIZARD
     "Anonymous hosts remain distinct even though their display names omit their identity.";
     const target = create($root, #90101, 1);
     const other = create($root, #90101, 1);
@@ -229,7 +228,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_rule_predicate_preserves_caller owner: RUNTIME_WIZARD
+  method test_rule_predicate_preserves_caller owner: fixtures::RUNTIME_WIZARD
     "Nested engine and flyweight entries must pass the original caller to predicates.";
     $rule_engine:register_predicate('audit_principal,
       ['description -> "Observe the incoming principal.", 'inputs -> [],
@@ -248,7 +247,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_rule_cartesian_alternatives owner: RUNTIME_WIZARD
+  method test_rule_cartesian_alternatives owner: fixtures::RUNTIME_WIZARD
     "Independent two-valued predicates retain all four conjunction bindings.";
     $rule_engine:register_predicate('audit_numbers,
       ['description -> "Two numbers.", 'inputs -> [], 'outputs -> ['value -> 'integer]],
@@ -274,7 +273,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _invoke_as_programmer owner: RUNTIME_PROGRAMMER
+  method _invoke_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Invoke a reaction entry with a verified programmer principal.";
     caller == #90013 || raise(E_PERM);
     const {entry, target} = args;
@@ -286,7 +285,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     raise(E_INVARG);
   endmethod
 
-  method _evaluate_as_programmer owner: RUNTIME_PROGRAMMER
+  method _evaluate_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Evaluate through each public rule entry as the programmer fixture.";
     caller == #90013 || raise(E_PERM);
     const {entry, rule} = args;
@@ -295,22 +294,22 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     raise(E_INVARG);
   endmethod
 
-  method query_principal owner: RUNTIME_WIZARD
+  method query_principal owner: fixtures::RUNTIME_WIZARD
     "Observe the principal passed by the engine's predicate call.";
     return ['rows -> {['principal -> caller_perms()]}, 'complete -> true];
   endmethod
 
-  method query_numbers owner: RUNTIME_WIZARD
+  method query_numbers owner: fixtures::RUNTIME_WIZARD
     "Enumerate two independent number bindings.";
     return ['rows -> {['value -> 1], ['value -> 2]}, 'complete -> true];
   endmethod
 
-  method query_letters owner: RUNTIME_WIZARD
+  method query_letters owner: fixtures::RUNTIME_WIZARD
     "Enumerate two independent letter bindings.";
     return ['rows -> {['value -> "a"], ['value -> "b"]}, 'complete -> true];
   endmethod
 
-  method test_invalid_conditions_fail_closed owner: RUNTIME_WIZARD
+  method test_invalid_conditions_fail_closed owner: fixtures::RUNTIME_WIZARD
     "Unknown predicates fail authoring, and failed queries cannot satisfy negation.";
     $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT audit_missing()"},
       "An unknown predicate cannot become an installed condition");
@@ -337,7 +336,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method query_broken owner: RUNTIME_WIZARD
+  method query_broken owner: fixtures::RUNTIME_WIZARD
     "A broken predicate must not look like an ordinary negative result.";
     return this:audit_missing_internal_method();
   endmethod

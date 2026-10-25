@@ -1,3 +1,5 @@
+package "headless" [objdef_version -> 2, depends -> {"fixtures"}];
+
 define HEADLESS_BOOT_SCENARIOS = #90000;
 define HEADLESS_SCHEDULER_SCENARIOS = #90001;
 define HEADLESS_OBJECT_SCENARIOS = #90002;

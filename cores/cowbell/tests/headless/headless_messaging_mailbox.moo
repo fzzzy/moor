@@ -5,6 +5,6 @@ object HEADLESS_MESSAGING_MAILBOX [
 ]
   name: "Runtime Messaging Mailbox"
   parent: MAILBOX
-  owner: RUNTIME_PROGRAMMER
-  location: RUNTIME_ROOM
+  owner: fixtures::RUNTIME_PROGRAMMER
+  location: fixtures::RUNTIME_ROOM
 endobject

@@ -8,7 +8,6 @@ object HEADLESS_WORLD_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
   override import_export_id = "headless_world_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
   method test_view_and_take_policies_are_independent owner: ARCH_WIZARD
     "An item-specific take rule does not break looking, and both take paths emit the same events.";
     const room = create($room, #90100, 2);
@@ -111,7 +110,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method _action_as_guest owner: RUNTIME_PLAYER
+  method _action_as_guest owner: fixtures::RUNTIME_PLAYER
     "Exercise action authority as a non-programmer who owns an NPC.";
     caller == this || raise(E_PERM);
     const {target, method, @parameters} = args;
@@ -189,7 +188,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method _as_programmer owner: RUNTIME_PROGRAMMER
+  method _as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Run the public operation as a verified nonwizard programmer.";
     caller == this && this == #90014 || raise(E_PERM);
     const {operation, subject, @rest} = args;
@@ -239,7 +238,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method call_as_programmer owner: RUNTIME_PROGRAMMER
+  method call_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Invoke a world entry with verified nonwizard permissions.";
     const {target, method, @parameters} = args;
     return target:(method)(@parameters);

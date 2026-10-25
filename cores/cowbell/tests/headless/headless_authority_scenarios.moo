@@ -5,23 +5,21 @@ object HEADLESS_AUTHORITY_SCENARIOS [
 ]
   name: "Headless Authority Scenarios"
   parent: ROOT
-  owner: RUNTIME_WIZARD
+  owner: fixtures::RUNTIME_WIZARD
   readable: true
-
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_authority_scenarios";
 
-  method test_hostile_root_permission_override owner: RUNTIME_WIZARD
+  method test_hostile_root_permission_override owner: fixtures::RUNTIME_WIZARD
     "Root mutation rejects an untrusted permission checker override.";
     return this:_probe_hostile_permission_override("set_description");
   endmethod
 
-  method test_hostile_player_permission_override owner: RUNTIME_WIZARD
+  method test_hostile_player_permission_override owner: fixtures::RUNTIME_WIZARD
     "Player mutation rejects an untrusted permission checker override.";
     return this:_probe_hostile_permission_override("set_email_address");
   endmethod
 
-  method _probe_hostile_permission_override owner: RUNTIME_WIZARD
+  method _probe_hostile_permission_override owner: fixtures::RUNTIME_WIZARD
     "Inherited wizard mutators must validate their subject independently of child helpers.";
     const {mutation} = args;
     let target = #-1;
@@ -51,7 +49,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_pronouns_use_callers_authority owner: RUNTIME_WIZARD
+  method test_pronouns_use_callers_authority owner: fixtures::RUNTIME_WIZARD
     "Profile mutations honor their MOO caller even when the task player is a wizard.";
     const own_pronouns = #90102.pronouns;
     const other_pronouns = #90100.pronouns;
@@ -71,7 +69,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_reconnect_updates_timestamp owner: RUNTIME_WIZARD
+  method test_reconnect_updates_timestamp owner: fixtures::RUNTIME_WIZARD
     "Reconnect records activity through the single server callback.";
     const original = #90102.last_connected;
     try
@@ -84,7 +82,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_merge_rejects_rebound_tokens owner: RUNTIME_WIZARD
+  method test_merge_rejects_rebound_tokens owner: fixtures::RUNTIME_WIZARD
     "Merge must bind each signed target to its flyweight delegate before reissuing authority.";
     let target = #-1;
     let other = #-1;
@@ -109,7 +107,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_player_setup_rejects_requested_wizard_authority owner: RUNTIME_WIZARD
+  method test_player_setup_rejects_requested_wizard_authority owner: fixtures::RUNTIME_WIZARD
     "A child-owned callback must not choose wizard authority for player setup.";
     let proxy = #-1;
     let created = #-1;
@@ -132,7 +130,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _call_as_player owner: RUNTIME_PLAYER
+  method _call_as_player owner: fixtures::RUNTIME_PLAYER
     "Run a mutation with the ordinary fixture principal's permissions.";
     caller == #90010 || raise(E_PERM);
     const {target, mutation, value} = args;
@@ -140,7 +138,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return target:(mutation)(value);
   endmethod
 
-  method test_walk_driver_rejects_unrelated_callers owner: RUNTIME_WIZARD
+  method test_walk_driver_rejects_unrelated_callers owner: fixtures::RUNTIME_WIZARD
     "The fork-only walking driver must not install a victim's authority for an unrelated caller.";
     let target = #-1;
     try
@@ -161,13 +159,13 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _call_walk_as_player owner: RUNTIME_PLAYER
+  method _call_walk_as_player owner: fixtures::RUNTIME_PLAYER
     "Attempt to invoke the internal walking driver as an ordinary principal.";
     caller == #90010 || raise(E_PERM);
     const {target} = args;
     return target:_do_walk({{target.location, 0}});
   endmethod
-  method test_login_setup_requires_wizard owner: RUNTIME_WIZARD
+  method test_login_setup_requires_wizard owner: fixtures::RUNTIME_WIZARD
     "Ordinary callers must not create a welcome mailbox for a wizard-owned player.";
     const original_letter = $login.new_player_letter;
     const original_contents = $mail_room.contents;
@@ -200,7 +198,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     return true;
   endmethod
 
-  method _call_login_setup_as_player owner: RUNTIME_PLAYER
+  method _call_login_setup_as_player owner: fixtures::RUNTIME_PLAYER
     "Invoke login setup under the ordinary fixture principal.";
     caller == #90010 || raise(E_PERM);
     const {target} = args;

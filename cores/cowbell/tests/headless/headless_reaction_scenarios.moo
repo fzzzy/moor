@@ -7,7 +7,6 @@ object HEADLESS_REACTION_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for reaction state mutation, thresholds, and trigger chaining.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_reaction_scenarios";
 
   method test_named_timers_and_declared_state owner: ARCH_WIZARD
@@ -78,7 +77,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method _timer_as_owner owner: RUNTIME_PLAYER
+  method _timer_as_owner owner: fixtures::RUNTIME_PLAYER
     "Use timer and state services as the non-programmer who owns the object.";
     caller == this || raise(E_PERM);
     const {host, operation} = args;

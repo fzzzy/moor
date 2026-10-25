@@ -5,8 +5,6 @@ object HEADLESS_LLM_SCENARIOS [
   parent: ROOT
   owner: HACKER
   readable: true
-
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_llm_scenarios";
 
   method test_rule_tool_uses_supplied_inputs_and_actor owner: ARCH_WIZARD
@@ -128,7 +126,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _direct_rename_as_player owner: RUNTIME_PLAYER
+  method _direct_rename_as_player owner: fixtures::RUNTIME_PLAYER
     "Attempt only the direct actor-spoof regression under player permissions.";
     caller == this && this == #90012 || raise(E_PERM);
     const {target} = args;
@@ -172,7 +170,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _gift_agent_as_player owner: RUNTIME_PLAYER
+  method _gift_agent_as_player owner: fixtures::RUNTIME_PLAYER
     "Transfer an owned hostile agent to the core owner to test provenance claims.";
     caller == this && this == #90012 || raise(E_PERM);
     const {agent} = args;
@@ -198,7 +196,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _append_context_as_player owner: RUNTIME_PLAYER
+  method _append_context_as_player owner: fixtures::RUNTIME_PLAYER
     "Attempt only the public agent-state regression under player permissions.";
     caller == this && this == #90012 || raise(E_PERM);
     const {agent} = args;
@@ -254,7 +252,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _tool_as_player owner: RUNTIME_PLAYER
+  method _tool_as_player owner: fixtures::RUNTIME_PLAYER
     "Invoke a selected real endpoint under player authority for these fixed regressions.";
     caller == this && this == #90012 || raise(E_PERM);
     const {endpoint, values} = args;
@@ -326,7 +324,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _send_as_player owner: RUNTIME_PLAYER
+  method _send_as_player owner: fixtures::RUNTIME_PLAYER
     "Exercise the ordinary public agent entry as the real requesting player.";
     caller == this && this == #90012 || raise(E_PERM);
     const {agent, prompt} = args;
@@ -434,7 +432,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _sign_as_player owner: RUNTIME_PLAYER
+  method _sign_as_player owner: fixtures::RUNTIME_PLAYER
     "A visitor can authorize its own bounded request, with no room ownership required.";
     caller == this && this == #90012 || raise(E_PERM);
     const {room, task} = args;
@@ -525,7 +523,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _send_observer_as_player owner: RUNTIME_PLAYER
+  method _send_observer_as_player owner: fixtures::RUNTIME_PLAYER
     "Exercise the observer owner control boundary as an ordinary principal.";
     caller == this && this == #90012 || raise(E_PERM);
     const {observer, prompt} = args;
@@ -547,7 +545,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method _configure_agent_as_player owner: RUNTIME_PLAYER
+  method _configure_agent_as_player owner: fixtures::RUNTIME_PLAYER
     "Exercise foreign registration as an ordinary authenticated principal.";
     caller == this && this == #90012 || raise(E_PERM);
     const {agent} = args;

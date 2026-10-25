@@ -8,8 +8,6 @@ object DJOT_SCENARIOS [
 
   property providers (owner: HACKER, flags: "r") =
     {HELP_TOPICS, PROG_HELP_TOPICS, BUILDER_HELP_TOPICS, ADMIN_HELP_TOPICS, WIZARD_HELP_TOPICS};
-
-  override import_export_hierarchy = {"tests", "baseline"};
   override import_export_id = "djot_scenarios";
 
   method _parse owner: HACKER

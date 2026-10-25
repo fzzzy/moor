@@ -5,8 +5,6 @@ object #90032 [
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_llm_suggestion_scenarios";
 
   method fixture owner: ARCH_WIZARD
@@ -119,21 +117,21 @@ object #90032 [
     raise(E_ASSERT, "Suggestion did not release its owned tasks.");
   endmethod
 
-  method _as_player owner: RUNTIME_PLAYER
+  method _as_player owner: fixtures::RUNTIME_PLAYER
     "Exercise the real entry under ordinary player authority.";
     caller == this && this == #90032 || raise(E_PERM);
     const {target, name, values} = args;
     return target:(name)(@values);
   endmethod
 
-  method _as_programmer owner: RUNTIME_PROGRAMMER
+  method _as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Exercise native metadata reads as their ordinary programmer owner.";
     caller == this && this == #90032 || raise(E_PERM);
     const {target, name, values} = args;
     return target:(name)(@values);
   endmethod
 
-  method _read_assist_contexts owner: RUNTIME_PROGRAMMER
+  method _read_assist_contexts owner: fixtures::RUNTIME_PROGRAMMER
     "Read another player's retained opt-in state under ordinary programmer permissions.";
     caller == this && this == #90032 || raise(E_PERM);
     return #90102.llm_assist_contexts;

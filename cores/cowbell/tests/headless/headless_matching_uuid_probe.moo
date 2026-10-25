@@ -5,9 +5,9 @@ object HEADLESS_MATCHING_UUID_PROBE [
 ]
   name: "UUID matching probe"
   parent: THING
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
-  verb "runtime-match-probe" (this none none) owner: RUNTIME_WIZARD flags: "rd"
+  owner: fixtures::RUNTIME_WIZARD
+  location: fixtures::RUNTIME_ROOM
+  verb "runtime-match-probe" (this none none) owner: fixtures::RUNTIME_WIZARD flags: "rd"
     "Expose dispatch through an actual UUID object reference.";
     player:inform_current($event:mk_note(player, "MATCHING DISPATCH " + tostr(this)):with_audience('utility));
   endverb
