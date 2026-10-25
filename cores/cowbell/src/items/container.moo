@@ -10,148 +10,148 @@ object CONTAINER [
   readable: true
 
   property already_closed_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " already closed."
   };
   property already_locked_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " already locked."
   };
   property already_open_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " already open."
   };
   property already_unlocked_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " already unlocked."
   };
   property close_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " won't close."
   };
   property close_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "close", .singular_form = "closes">,
+    <SUB, .binding_name = 'actor, .plural_form = "close", .type = 'agree, .subject_form = 'name, .singular_form = "closes">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property close_rule (owner: HACKER, flags: "rc") = 0;
   property lock_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " won't lock."
   };
   property lock_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "lock", .singular_form = "locks">,
+    <SUB, .binding_name = 'actor, .plural_form = "lock", .type = 'agree, .subject_form = 'name, .singular_form = "locks">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = false>,
     " with ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property lock_rule (owner: HACKER, flags: "rc") = 0;
   property locked (owner: HACKER, flags: "r") = false;
   property not_closeable_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " can't be closed."
   };
   property not_lockable_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">,
+    <SUB, .binding_name = 'iobj, .plural_form = "do not", .type = 'agree, .subject_form = 'name, .singular_form = "does not">,
     " have a lock."
   };
   property not_openable_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " can't be opened."
   };
   property not_unlockable_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">,
+    <SUB, .binding_name = 'iobj, .plural_form = "do not", .type = 'agree, .subject_form = 'name, .singular_form = "does not">,
     " have a lock."
   };
   property open (owner: HACKER, flags: "r") = true;
   property open_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " won't open."
   };
   property open_locked_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " locked."
   };
   property open_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "open", .singular_form = "opens">,
+    <SUB, .binding_name = 'actor, .plural_form = "open", .type = 'agree, .subject_form = 'name, .singular_form = "opens">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property open_rule (owner: HACKER, flags: "rc") = 0;
   property put_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'iobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " closed."
   };
   property put_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "put", .singular_form = "puts">,
+    <SUB, .binding_name = 'actor, .plural_form = "put", .type = 'agree, .subject_form = 'name, .singular_form = "puts">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'prep, .type = 'binding>,
+    <SUB, .binding_name = 'prep, .type = 'binding, .capitalize = false>,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property put_prep_display (owner: HACKER, flags: "rc") = "in";
   property put_preps (owner: HACKER, flags: "rc") = {"in", "inside", "into"};
   property put_rule (owner: HACKER, flags: "rc") = 0;
   property take_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'iobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " closed."
   };
   property take_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
+    <SUB, .binding_name = 'actor, .plural_form = "take", .type = 'agree, .subject_form = 'name, .singular_form = "takes">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     " from ",
-    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property take_rule (owner: HACKER, flags: "rc") = 0;
   property unlock_denied_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = true>,
     " won't unlock."
   };
   property unlock_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "unlock", .singular_form = "unlocks">,
+    <SUB, .binding_name = 'actor, .plural_form = "unlock", .type = 'agree, .subject_form = 'name, .singular_form = "unlocks">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
+    <SUB, .binding_name = 'iobj, .type = 'article_the, .capitalize = false>,
     " with ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property unlock_rule (owner: HACKER, flags: "rc") = 0;

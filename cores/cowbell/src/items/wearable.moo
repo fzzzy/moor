@@ -10,19 +10,19 @@ object WEARABLE [
 
   property body_area (owner: HACKER, flags: "rw") = false;
   property remove_msg (owner: HACKER, flags: "rw") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "remove", .singular_form = "removes">,
+    <SUB, .binding_name = 'actor, .plural_form = "remove", .type = 'agree, .subject_form = 'name, .singular_form = "removes">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property wear_msg (owner: HACKER, flags: "rw") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "put on", .singular_form = "puts on">,
+    <SUB, .binding_name = 'actor, .plural_form = "put on", .type = 'agree, .subject_form = 'name, .singular_form = "puts on">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
 

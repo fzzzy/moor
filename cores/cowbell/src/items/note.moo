@@ -11,31 +11,31 @@ object NOTE [
 
   property content_kind (owner: ARCH_WIZARD, flags: "rc") = 'literal;
   property erase_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "erase", .singular_form = "erases">,
+    <SUB, .binding_name = 'actor, .plural_form = "erase", .type = 'agree, .subject_form = 'name, .singular_form = "erases">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property read_denied_msg (owner: ARCH_WIZARD, flags: "rc") = {"You can't read that."};
   property read_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "read", .singular_form = "reads">,
+    <SUB, .binding_name = 'actor, .plural_form = "read", .type = 'agree, .subject_form = 'name, .singular_form = "reads">,
     " ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property read_rule (owner: ARCH_WIZARD, flags: "rc") = 0;
   property text (owner: ARCH_WIZARD, flags: "c") = {};
   property write_denied_msg (owner: ARCH_WIZARD, flags: "rc") = {"You can't write on that."};
   property write_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "write", .singular_form = "writes">,
+    <SUB, .binding_name = 'actor, .plural_form = "write", .type = 'agree, .subject_form = 'name, .singular_form = "writes">,
     " on ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property write_rule (owner: ARCH_WIZARD, flags: "rc") = 0;

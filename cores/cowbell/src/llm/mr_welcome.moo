@@ -16,30 +16,30 @@ object MR_WELCOME [
 
   override aliases (owner: HACKER, flags: "rc") = {"Mr.Welcome", "Mx.Welcome"};
   override already_off_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     " stands frozen like a mannequin, eyes dim. Perhaps try the switch behind ",
-    <SUB, .capitalize = false, .type = 'dobj_pos_adj>,
+    <SUB, .type = 'dobj_pos_adj, .capitalize = false>,
     " head?"
   };
   override already_on_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     " tilts ",
-    <SUB, .capitalize = false, .type = 'dobj_pos_adj>,
+    <SUB, .type = 'dobj_pos_adj, .capitalize = false>,
     " head quizzically. \"I am already fully operational, though I appreciate your concern for my well-being.\""
   };
   override description (owner: HACKER, flags: "rc") = "A cheerful, helpful guide who welcomes visitors and helps them navigate this world.";
   override shut_off_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "reach", .singular_form = "reaches">,
+    <SUB, .binding_name = 'actor, .plural_form = "reach", .type = 'agree, .subject_form = 'name, .singular_form = "reaches">,
     " behind ",
-    <SUB, .capitalize = false, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = false>,
     "'s head, finding a small recessed switch that ",
-    <SUB, .capitalize = false, .type = 'dobj_subject>,
+    <SUB, .type = 'dobj_subject, .capitalize = false>,
     " did not know was there. *click* ",
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     "'s eyes go dim and ",
-    <SUB, .capitalize = false, .type = 'dobj_subject>,
+    <SUB, .type = 'dobj_subject, .capitalize = false>,
     " freeze in place, mouth half-open mid-sentence, like an android whose positronic brain has been politely asked to take a nap."
   };
   override thinking_interval (owner: HACKER, flags: "rc") = 8;
@@ -53,15 +53,15 @@ object MR_WELCOME [
   override triage_model (owner: HACKER, flags: "rc") = "";
   override triage_prompt (owner: HACKER, flags: "rc") = "You are a triage filter for Mr. Welcome, the hotel concierge. Decide if he should engage.\n\nEXAMPLES:\n\nActivity: Alice says, \"Mr. Welcome, where's the dining room?\"\nAnswer: ENGAGE (directly addressed, asking for directions)\n\nActivity: Bob says, \"I have a commit locally that might help\"\nAnswer: IGNORE (developers discussing code, not hotel business)\n\nActivity: Carol arrives from the revolving door.\nCarol says, \"wow, what is this place?\"\nAnswer: ENGAGE (newcomer confused, needs orientation)\n\nActivity: Dan [to Eve]: \"yeah the websocket handling is tricky\"\nAnswer: IGNORE (technical conversation between others)\n\nActivity: Frank says, \"anyone know where I can get some food?\"\nAnswer: ENGAGE (guest asking about hotel services)\n\nActivity: Grace nods\nActivity: Henry says, \"interesting point about the architecture\"\nAnswer: IGNORE (casual agreement, technical discussion)\n\nActivity: Iris says, \"Welcome! Good to see you\"\nAnswer: IGNORE (\"Welcome\" here is a greeting word, not addressing Mr. Welcome)\n\nActivity: Jack says, \"hey Mr. Welcome\"\nAnswer: ENGAGE (directly addressed by name)\n\nActivity: Kate says, \"I need to check in, is there a front desk?\"\nAnswer: ENGAGE (guest needs hotel assistance)\n\nActivity: Leo says, \"the bug is in the parser somewhere\"\nAnswer: IGNORE (technical debugging discussion)\n\nNOW DECIDE for this activity:\n{events}\n\nAnswer with ONLY one word: ENGAGE or IGNORE";
   override turn_on_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "flip", .singular_form = "flips">,
+    <SUB, .binding_name = 'actor, .plural_form = "flip", .type = 'agree, .subject_form = 'name, .singular_form = "flips">,
     " the small switch behind ",
-    <SUB, .capitalize = false, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = false>,
     "'s head. *click* ",
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     " blinks rapidly, systems rebooting. \"I... appear to have been deactivated. How very disconcerting. I was in the middle of a thought about\u2014\" ",
-    <SUB, .capitalize = true, .type = 'dobj_subject>,
+    <SUB, .type = 'dobj_subject, .capitalize = true>,
     " pause. \"Actually, I have no idea what I was thinking about.\""
   };
 
