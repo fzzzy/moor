@@ -31,6 +31,8 @@ struct MapContext {
     small_values: Vec<Var>,
     small_insert_key: Var,
     update_value: Var,
+    pairs: Vec<(Var, Var)>,
+    small_pairs: Vec<(Var, Var)>,
 }
 
 impl BenchContext for MapContext {
@@ -40,7 +42,13 @@ impl BenchContext for MapContext {
         let mut insert_keys = Vec::with_capacity(WORKING_KEY_SET_SIZE);
         let mut missing_keys = Vec::with_capacity(WORKING_KEY_SET_SIZE);
 
+        // Create the three key sets interleaved, and visit them shuffled below, so that no result
+        // depends on the order symbols happen to be created in. When symbols ordered by creation,
+        // keys created and visited in sequence walked the tree in order, and every missing key
+        // sorted after every existing one, which flattered lookups.
         for i in 0..BASE_MAP_SIZE {
+            Symbol::mk(&format!("k_insert_{i}"));
+            Symbol::mk(&format!("k_missing_{i}"));
             let sym = Symbol::mk(&format!("k_existing_{i}"));
             let key = v_sym(sym);
             pairs.push((key.clone(), v_int(i as i64)));
@@ -73,6 +81,15 @@ impl BenchContext for MapContext {
             .map(|idx| v_int((idx + 100) as i64))
             .collect();
 
+        // A fixed permutation: the same visiting order on every run.
+        let shuffle = |keys: Vec<Var>| {
+            (0..keys.len())
+                .map(|i| keys[(i * 2654435761usize) % keys.len()].clone())
+                .collect::<Vec<_>>()
+        };
+        let existing_keys = shuffle(existing_keys);
+        let insert_keys = shuffle(insert_keys);
+        let missing_keys = shuffle(missing_keys);
         Self {
             base_map: Var::mk_map(&pairs),
             existing_keys,
@@ -83,7 +100,23 @@ impl BenchContext for MapContext {
             small_values,
             small_insert_key: v_str("new_small_key"),
             update_value: v_int(42),
+            pairs,
+            small_pairs,
         }
+    }
+}
+
+/// Build the 4096-entry symbol-keyed map from its pairs, as a map literal or mk_map does.
+fn map_build_large(ctx: &mut MapContext, chunk_size: usize, _chunk_num: usize) {
+    for _ in 0..chunk_size {
+        black_box(Var::mk_map(&ctx.pairs));
+    }
+}
+
+/// Build the eight-entry map from its pairs.
+fn map_build_small(ctx: &mut MapContext, chunk_size: usize, _chunk_num: usize) {
+    for _ in 0..chunk_size {
+        black_box(Var::mk_map(&ctx.small_pairs));
     }
 }
 
@@ -288,7 +321,7 @@ fn map_remove_insert_case_sensitive_steady(
 
 benchmark_main!(
     BenchmarkMainOptions {
-        report_context: Some(ReportContext::default().with_environment("workload_revision", "2")),
+        report_context: Some(ReportContext::default().with_environment("workload_revision", "3")),
         filter_help: Some("all or any benchmark name substring".to_string()),
         runtime: BenchmarkRuntimeOptions {
             warm_up_duration: Duration::from_millis(250),
@@ -302,6 +335,8 @@ benchmark_main!(
         runner.group::<MapContext>("Map Operations", |g| {
             let g = g.throughput(Throughput::per_operation(1, "map_ops"));
             g.bench("map_get_hit", map_get_hit);
+            g.bench("map_build_large", map_build_large);
+            g.bench("map_build_small", map_build_small);
             g.bench("map_get_miss", map_get_miss);
             g.bench("map_set_existing", map_set_existing);
             g.bench("map_set_new_insert_batches", map_set_new_insert_batches);
