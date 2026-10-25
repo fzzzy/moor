@@ -341,6 +341,9 @@ impl CodegenState {
                     end_label,
                     loop_start_label,
                 ));
+                // The result list sits on the stack until the comprehension ends; count it, so
+                // `$` inside finds the list it indexes.
+                self.push_stack(1);
                 self.generate_expr(from.as_ref())?;
                 self.emit_put_name(index_variable);
                 self.emit(Op::Pop);
@@ -362,6 +365,7 @@ impl CodegenState {
                     self.pop_stack(1);
                     self.generate_expr(producer_expr.as_ref())?;
                     self.emit(ContinueComprehension(index_variable));
+                    self.pop_stack(1);
                     self.emit(Jump {
                         label: loop_start_label,
                     });
@@ -373,6 +377,7 @@ impl CodegenState {
                 } else {
                     self.generate_expr(producer_expr.as_ref())?;
                     self.emit(ContinueComprehension(index_variable));
+                    self.pop_stack(1);
                     self.emit(Jump {
                         label: loop_start_label,
                     });
@@ -398,6 +403,9 @@ impl CodegenState {
                     end_label,
                     loop_start_label,
                 ));
+                // The result list sits on the stack until the comprehension ends; count it, so
+                // `$` inside finds the list it indexes.
+                self.push_stack(1);
                 self.generate_expr(list.as_ref())?;
                 self.emit_put_name(list_register);
                 self.emit(Op::Pop);
@@ -420,6 +428,7 @@ impl CodegenState {
                     self.pop_stack(1);
                     self.generate_expr(producer_expr.as_ref())?;
                     self.emit(ContinueComprehension(position_register));
+                    self.pop_stack(1);
                     self.emit(Jump {
                         label: loop_start_label,
                     });
@@ -431,6 +440,7 @@ impl CodegenState {
                 } else {
                     self.generate_expr(producer_expr.as_ref())?;
                     self.emit(ContinueComprehension(position_register));
+                    self.pop_stack(1);
                     self.emit(Jump {
                         label: loop_start_label,
                     });

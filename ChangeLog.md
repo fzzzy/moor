@@ -437,6 +437,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   task. This was easy to hit in a `fn ... endfn` lambda whose body declares nothing at its top
   level, and in the `fn (...) begin ... end endfn` form decompiled lambdas were written in. Verbs
   compiled before this fix keep the fault until they are recompiled.
+- `$` inside a list comprehension now means the length of the list being indexed. It read the length
+  of the list the comprehension was building, so `{x for x in (l[2..$])}` gave `{}`. Verbs compiled
+  before this fix keep the old behaviour until they are recompiled, by programming them again or
+  importing them from source.
 - The web MCP server's `moo_eval` no longer rewrites multi-statement code: code without a final
   semicolon was wrapped in `return ...;`, so `x = 1; return x + 1` returned 1. Evaluations and world
   tools give the daemon a deadline just under the client's, so a slow task is cancelled and reported
