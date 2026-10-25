@@ -1,4 +1,6 @@
-object HEADLESS_SITTABLE_SCENARIOS
+object HEADLESS_SITTABLE_SCENARIOS [
+  import_export_id -> "headless_sittable_scenarios"
+]
   name: "Owned Furniture Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

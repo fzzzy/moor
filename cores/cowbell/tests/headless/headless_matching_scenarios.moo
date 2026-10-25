@@ -1,6 +1,8 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-object HEADLESS_MATCHING_SCENARIOS
+object HEADLESS_MATCHING_SCENARIOS [
+  import_export_id -> "headless_matching_scenarios"
+]
   name: "Matching Boundary Scenarios"
   parent: ROOT
   owner: RUNTIME_WIZARD

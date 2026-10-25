@@ -10,7 +10,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-object RUNTIME_WIZARD
+object RUNTIME_WIZARD [
+  import_export_id -> "runtime_wizard"
+]
   name: "RUNTIME_WIZARD"
   parent: PLAYER
   owner: RUNTIME_WIZARD
@@ -32,7 +34,9 @@ object RUNTIME_WIZARD
   endverb
 endobject
 
-object RUNTIME_PROGRAMMER
+object RUNTIME_PROGRAMMER [
+  import_export_id -> "runtime_programmer"
+]
   name: "RUNTIME_PROGRAMMER"
   parent: PLAYER
   owner: RUNTIME_PROGRAMMER
@@ -53,7 +57,9 @@ object RUNTIME_PROGRAMMER
   endverb
 endobject
 
-object RUNTIME_PLAYER
+object RUNTIME_PLAYER [
+  import_export_id -> "runtime_player"
+]
   name: "RUNTIME_PLAYER"
   parent: PLAYER
   owner: RUNTIME_PLAYER
@@ -81,7 +87,9 @@ object RUNTIME_PLAYER
   endverb
 endobject
 
-object RUNTIME_ROOM
+object RUNTIME_ROOM [
+  import_export_id -> "runtime_room"
+]
   name: "Runtime Test Chamber"
   parent: ROOM
   owner: RUNTIME_WIZARD
@@ -91,7 +99,9 @@ object RUNTIME_ROOM
   override import_export_hierarchy = {"tests", "baseline"};
 endobject
 
-object RUNTIME_BASELINE
+object RUNTIME_BASELINE [
+  import_export_id -> "runtime_baseline"
+]
   name: "Runtime Baseline Scenarios"
   parent: ROOT
   owner: RUNTIME_WIZARD

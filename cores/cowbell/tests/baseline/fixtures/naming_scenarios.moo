@@ -1,4 +1,6 @@
-object NAMING_SCENARIOS
+object NAMING_SCENARIOS [
+  import_export_id -> "naming_scenarios"
+]
   name: "Naming Scenarios"
   parent: THING
   owner: ARCH_WIZARD

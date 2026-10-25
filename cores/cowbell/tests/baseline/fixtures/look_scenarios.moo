@@ -1,4 +1,6 @@
-object LOOK_SCENARIOS
+object LOOK_SCENARIOS [
+  import_export_id -> "look_scenarios"
+]
   name: "Captured Look Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

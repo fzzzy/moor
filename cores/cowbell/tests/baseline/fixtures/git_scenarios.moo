@@ -1,4 +1,6 @@
-object GIT_SCENARIOS
+object GIT_SCENARIOS [
+  import_export_id -> "git_scenarios"
+]
   name: "Git Wrapper Scenarios"
   parent: ROOT
   owner: #90100

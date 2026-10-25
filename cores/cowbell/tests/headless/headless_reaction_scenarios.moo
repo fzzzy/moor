@@ -1,4 +1,6 @@
-object HEADLESS_REACTION_SCENARIOS
+object HEADLESS_REACTION_SCENARIOS [
+  import_export_id -> "headless_reaction_scenarios"
+]
   name: "Headless Reaction Runtime Scenarios"
   parent: ROOT
   owner: HACKER

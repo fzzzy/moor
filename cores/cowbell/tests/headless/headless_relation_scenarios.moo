@@ -1,4 +1,6 @@
-object HEADLESS_RELATION_SCENARIOS
+object HEADLESS_RELATION_SCENARIOS [
+  import_export_id -> "headless_relation_scenarios"
+]
   name: "Headless Relation Runtime Scenarios"
   parent: ROOT
   owner: HACKER

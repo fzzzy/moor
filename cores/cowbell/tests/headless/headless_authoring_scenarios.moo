@@ -1,4 +1,6 @@
-object HEADLESS_AUTHORING_SCENARIOS
+object HEADLESS_AUTHORING_SCENARIOS [
+  import_export_id -> "headless_authoring_scenarios"
+]
   name: "Headless Nonprogrammer Authoring Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

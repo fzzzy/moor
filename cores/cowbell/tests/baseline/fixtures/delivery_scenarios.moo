@@ -1,4 +1,6 @@
-object DELIVERY_SCENARIOS
+object DELIVERY_SCENARIOS [
+  import_export_id -> "delivery_scenarios"
+]
   name: "Document Delivery Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

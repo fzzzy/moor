@@ -1,4 +1,6 @@
-object CONDITION_SCENARIOS
+object CONDITION_SCENARIOS [
+  import_export_id -> "condition_scenarios"
+]
   name: "Condition Runtime Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

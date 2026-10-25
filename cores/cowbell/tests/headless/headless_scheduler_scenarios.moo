@@ -1,4 +1,6 @@
-object HEADLESS_SCHEDULER_SCENARIOS
+object HEADLESS_SCHEDULER_SCENARIOS [
+  import_export_id -> "headless_scheduler_scenarios"
+]
   name: "Headless Native Schedule Scenarios"
   parent: ROOT
   owner: HACKER

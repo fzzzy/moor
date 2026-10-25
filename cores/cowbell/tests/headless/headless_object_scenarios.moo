@@ -1,4 +1,6 @@
-object HEADLESS_OBJECT_SCENARIOS
+object HEADLESS_OBJECT_SCENARIOS [
+  import_export_id -> "headless_object_scenarios"
+]
   name: "Headless Object Runtime Scenarios"
   parent: ROOT
   owner: HACKER
