@@ -1112,11 +1112,13 @@ fn naws_sets_columns_and_rows_before_and_after_login() {
     c.login();
     let conn = c.conn();
     wait_options(&mut c, &["{'columns, 255}", "{'rows, 48}"]);
-    // Delivered before login, with the connection as player.
+    // Delivered before login, with the connection as player. Symbol-keyed maps print in an
+    // order that is the same in every process but otherwise unspecified (the order of the
+    // symbols' compare_ids), so these expectations follow it.
     wait_client_data(
         &mut c,
         &[&format!(
-            "{{{conn}, {{{conn}, 'client, \"attributes\", ['columns -> 255, 'rows -> 48]}}}}"
+            "{{{conn}, {{{conn}, 'client, \"attributes\", ['rows -> 48, 'columns -> 255]}}}}"
         )],
     );
 
@@ -1125,7 +1127,7 @@ fn naws_sets_columns_and_rows_before_and_after_login() {
     wait_client_data(
         &mut c,
         &[&format!(
-            "{{#3, {{{conn}, 'client, \"attributes\", ['columns -> 132, 'rows -> 42]}}}}"
+            "{{#3, {{{conn}, 'client, \"attributes\", ['rows -> 42, 'columns -> 132]}}}}"
         )],
     );
 }
@@ -1220,7 +1222,7 @@ fn gmcp_in_reaches_do_client_data_before_and_after_login() {
                 "{{{conn}, {{{conn}, 'gmcp, \"Core.Hello\", [\"client\" -> \"Mudlet\", \"version\" -> \"4.17\"]}}}}"
             ),
             &format!(
-                "{{{conn}, {{{conn}, 'client, \"attributes\", ['client_name -> \"Mudlet\", 'client_version -> \"4.17\"]}}}}"
+                "{{{conn}, {{{conn}, 'client, \"attributes\", ['client_version -> \"4.17\", 'client_name -> \"Mudlet\"]}}}}"
             ),
             // Before login `player` is the connection; JSON true is 1 without boolean returns.
             &format!(

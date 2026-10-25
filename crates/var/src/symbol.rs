@@ -15,7 +15,8 @@
 //!
 //! This module provides efficient string interning with case-insensitive comparison
 //! while preserving the original case of strings. Symbols are represented by two IDs:
-//! - `compare_id`: Used for equality comparisons (case-insensitive)
+//! - `compare_id`: Used for equality comparisons (case-insensitive), and for ordering. It is a
+//!   stable hash of the case-folded text, so symbols order the same way in every process.
 //! - `repr_id`: Used for retrieving the original string representation
 //!
 //! The implementation is thread-safe and uses lock-free data structures where possible.
@@ -29,10 +30,7 @@ use std::{
     cell::RefCell,
     fmt::{Debug, Display},
     hash::{BuildHasherDefault, Hash, Hasher},
-    sync::{
-        LazyLock, Mutex, OnceLock,
-        atomic::{AtomicU32, Ordering},
-    },
+    sync::{LazyLock, Mutex, OnceLock},
 };
 use unicase::UniCase;
 use zerocopy::{FromBytes, Immutable, IntoBytes};
@@ -222,52 +220,21 @@ impl SymbolGroup {
     }
 }
 
-#[cfg_attr(
-    any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "powerpc64",
-    ),
-    repr(align(128))
-)]
-#[cfg_attr(
-    any(
-        target_arch = "arm",
-        target_arch = "mips",
-        target_arch = "mips64",
-        target_arch = "riscv64",
-    ),
-    repr(align(32))
-)]
-#[cfg_attr(target_arch = "s390x", repr(align(256)))]
-#[cfg_attr(
-    not(any(
-        target_arch = "x86_64",
-        target_arch = "aarch64",
-        target_arch = "powerpc64",
-        target_arch = "arm",
-        target_arch = "mips",
-        target_arch = "mips64",
-        target_arch = "riscv64",
-        target_arch = "s390x",
-    )),
-    repr(align(64))
-)]
-pub struct CachePadded<T> {
-    pub value: T,
+/// FNV-1a, 32-bit: a fixed hash, unlike `AHasher`, so compare_ids are the same in every process
+/// and build.
+fn stable_hash(bytes: impl Iterator<Item = u8>) -> u32 {
+    bytes.fold(0x811c_9dc5u32, |hash, byte| {
+        (hash ^ u32::from(byte)).wrapping_mul(0x0100_0193)
+    })
 }
 
-impl<T> CachePadded<T> {
-    pub fn new(value: T) -> Self {
-        Self { value }
-    }
-}
-
-impl<T> std::ops::Deref for CachePadded<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
+/// The compare_id a symbol group would take without collisions: a stable hash of its
+/// case-folded text, so every case variant gives the same value.
+fn preferred_compare_id(text: &str) -> u32 {
+    if text.is_ascii() {
+        stable_hash(text.bytes().map(|byte| byte.to_ascii_lowercase()))
+    } else {
+        stable_hash(UniCase::new(text).to_folded_case().bytes())
     }
 }
 
@@ -276,8 +243,9 @@ struct GlobalInternerState {
     groups: HashMap<UniCase<String>, std::sync::Arc<SymbolGroup>, BuildHasherDefault<AHasher>>,
     /// Fast reverse lookup: repr_id as index -> symbol data
     repr_id_to_symbol: BoxcarVec<SymbolReprData>,
-    /// Atomic counter for compare_id generation
-    next_compare_id: CachePadded<AtomicU32>,
+    /// compare_id -> the text of the group holding it, so two groups whose texts hash alike get
+    /// different ids.
+    compare_ids: HashMap<u32, ArcStr, BuildHasherDefault<AHasher>>,
 }
 
 impl GlobalInternerState {
@@ -285,7 +253,21 @@ impl GlobalInternerState {
         Self {
             groups: Default::default(),
             repr_id_to_symbol: BoxcarVec::new(),
-            next_compare_id: CachePadded::new(AtomicU32::new(0)),
+            compare_ids: Default::default(),
+        }
+    }
+
+    /// Claim the compare_id for a group's text: its stable hash, or on a collision with another
+    /// text, the next free value after it. Claiming the same text again returns the same id.
+    fn claim_compare_id(&self, text: &str) -> u32 {
+        let guard = self.compare_ids.pin();
+        let mut id = preferred_compare_id(text);
+        loop {
+            let holder = guard.get_or_insert_with(id, || ArcStr::from(text));
+            if UniCase::new(holder.as_str()) == UniCase::new(text) {
+                return id;
+            }
+            id = id.wrapping_add(1);
         }
     }
 
@@ -301,7 +283,7 @@ impl GlobalInternerState {
         } else {
             let case_insensitive_key = UniCase::new(s.to_string());
             guard.get_or_insert(case_insensitive_key, {
-                let compare_id = self.next_compare_id.fetch_add(1, Ordering::Relaxed);
+                let compare_id = self.claim_compare_id(s);
                 std::sync::Arc::new(SymbolGroup::new(compare_id))
             })
         };
@@ -515,9 +497,9 @@ impl PartialOrd for Symbol {
 
 impl Ord for Symbol {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Only compare by compare_id for case-insensitive ordering
-        // repr_id should not affect ordering since symbols with same compare_id
-        // are considered equal for comparison purposes
+        // compare_id is a stable hash of the case-folded text, so this order is arbitrary but the
+        // same in every process: symbol-keyed maps iterate the same way after a restart. repr_id
+        // does not affect ordering, since case variants are equal.
         self.compare_id.cmp(&other.compare_id)
     }
 }
@@ -603,6 +585,70 @@ impl<'de> Deserialize<'de> for Symbol {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compare_ids_depend_only_on_the_folded_text() {
+        // The same in any process, whatever was interned first, and the same for case variants.
+        assert_eq!(
+            preferred_compare_id("look_kind"),
+            stable_hash("look_kind".bytes())
+        );
+        assert_eq!(
+            preferred_compare_id("Look_Kind"),
+            preferred_compare_id("look_kind")
+        );
+        assert_eq!(
+            preferred_compare_id("STRASSE"),
+            preferred_compare_id("straße")
+        );
+        let symbol = Symbol::mk("compare_id_probe_text");
+        assert_eq!(
+            symbol.compare_id(),
+            preferred_compare_id("compare_id_probe_text")
+        );
+    }
+
+    #[test]
+    fn colliding_texts_still_get_distinct_compare_ids() {
+        let interner = GlobalInternerState::new();
+        let first = interner.claim_compare_id("first text");
+        // Occupy the id the second text would prefer with a different text.
+        let preferred = preferred_compare_id("second text");
+        interner
+            .compare_ids
+            .pin()
+            .insert(preferred, ArcStr::from("squatter"));
+        let second = interner.claim_compare_id("second text");
+        assert_eq!(second, preferred.wrapping_add(1));
+        assert_ne!(first, second);
+        assert_eq!(
+            interner.claim_compare_id("SECOND TEXT"),
+            second,
+            "claims are stable"
+        );
+    }
+
+    #[test]
+    fn symbol_keyed_maps_iterate_in_compare_id_order() {
+        let keys = ["map_probe_dobj", "map_probe_actor", "map_probe_location"];
+        let pairs = keys
+            .iter()
+            .map(|key| (crate::v_sym(Symbol::mk(key)), crate::v_int(1)))
+            .collect::<Vec<_>>();
+        let map = crate::v_map(&pairs);
+        let order = map
+            .as_map()
+            .unwrap()
+            .iter()
+            .map(|(key, _)| key.as_symbol().unwrap().compare_id())
+            .collect::<Vec<_>>();
+        let mut expected = keys
+            .iter()
+            .map(|key| preferred_compare_id(key))
+            .collect::<Vec<_>>();
+        expected.sort();
+        assert_eq!(order, expected);
+    }
     use std::{
         collections::{HashMap, HashSet},
         thread,
