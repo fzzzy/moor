@@ -1425,8 +1425,10 @@ object BUILDER_FEATURES [
       lines = $sub_utils:preview(template, bindings, target);
     else
       length(args) == 1 || raise(E_INVARG, "Use @message-bindings OBJECT.PROPERTY.");
-      for name in (mapkeys(bindings))
-        lines = {@lines, "{" + tostr(name) + "}: " + bindings[name]['description] + " (" + tostr(bindings[name]['kind]) + ")"};
+      "List bindings by name; the order of a map's keys says nothing about them.";
+      for text in (sort({ tostr(name) for name in (mapkeys(bindings)) }))
+        const name = tosym(text);
+        lines = {@lines, "{" + text + "}: " + bindings[name]['description] + " (" + tostr(bindings[name]['kind]) + ")"};
       endfor
       if (!length(bindings))
         lines = {@lines, "This message has no declared bindings. Literal text is allowed.", "Its programmer must declare any participants before you can use their names or pronouns."};
