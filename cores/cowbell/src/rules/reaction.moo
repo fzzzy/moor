@@ -63,11 +63,11 @@ object REACTION [
     "",
     "`$reaction:mk(trigger, condition, effects, state_types)` constructs a reaction. The condition can be zero or a condition string. The optional state type map describes declared counters and state values.",
     "`$reaction:install(host, name, reaction)` authorizes the definition on an owned object. The property name ends in `_reaction`. Ownership changes and edits invalidate the authorization.",
-    "Execution uses the installation owner\u2019s permissions. Event participants do not grant authority. For an action, the `actor` argument identifies the person or owned NPC that will act.",
+    "Execution uses the installation owner’s permissions. Event participants do not grant authority. For an action, the `actor` argument identifies the person or owned NPC that will act.",
     "",
     "`$reaction:action_schemas()` lists supported actions and their required named arguments. Action argument values use the same literal, input, state, and binding expressions as conditions.",
     "`$reaction:perform_action(name, arguments)` takes actual values and returns an applied, denied, or error result. A missing argument or unknown action is an error.",
-    "Wizards can register a MOO action service with `register_action(name, schema, provider, method)`. The service receives named values and a reaction context. It must check its caller\u2019s authority, preserve the context for chained actions, and return a structured result. Preview must never call the service.",
+    "Wizards can register a MOO action service with `register_action(name, schema, provider, method)`. The service receives named values and a reaction context. It must check its caller’s authority, preserve the context for chained actions, and return a structured result. Preview must never call the service.",
     "",
     "## State and time",
     "",
@@ -77,7 +77,7 @@ object REACTION [
     "`timers(host)` lists pending names and due times for the owner. `cancel_timer(host, name)` cancels one timer without changing the reaction.",
     "Scheduling commits earlier effects. A later error cannot undo that commit. Explicit reaction chains stop after four steps. Each reaction has at most 64 immediate effects and 16 levels of nested effects.",
     "",
-    "The Cowbell manual\u2019s rule and reaction data reference documents the internal records. The builder authoring commands are separate from this MOO interface."
+    "The Cowbell manual’s rule and reaction data reference documents the internal records. The builder authoring commands are separate from this MOO interface."
   };
 
   method _builtin_action_schemas owner: HACKER

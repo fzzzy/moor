@@ -231,10 +231,10 @@ object STR_PROTO [
 
   method test_unicode_initial_case owner: HACKER
     "Initial case conversion preserves name spelling and supports expanding Unicode mappings.";
-    for example in ({{"\u00E9lo\u00EFse", "\u00C9lo\u00EFse"}, {"\u03C3\u03AC\u03C1\u03B1", "\u03A3\u03AC\u03C1\u03B1"}, {"\u00DFeta", "SSeta"}, {"McDonald", "McDonald"}, {"\u732B", "\u732B"}, {"", ""}, {"!\u00E9", "!\u00E9"}})
+    for example in ({{"éloïse", "Éloïse"}, {"σάρα", "Σάρα"}, {"ßeta", "SSeta"}, {"McDonald", "McDonald"}, {"猫", "猫"}, {"", ""}, {"!é", "!é"}})
       $test_utils:assert_eq(strcmp(this:capitalize(example[1]), example[2]), 0, example[1]);
     endfor
-    $test_utils:assert_eq(strcmp(this:initial_lowercase("\u00C9lo\u00EFse"), "\u00E9lo\u00EFse"), 0, "lowercase initial");
+    $test_utils:assert_eq(strcmp(this:initial_lowercase("Éloïse"), "éloïse"), 0, "lowercase initial");
     return true;
   endmethod
 
@@ -430,7 +430,7 @@ object STR_PROTO [
     length(value) || return {"empty"};
     let issues = {};
     "Marks need a visible base; Hangul fillers and the Braille blank also appear empty.";
-    if (length(pcre_match(value, "\\A[\\p{Z}\\p{C}\\p{M}\u115F\u1160\u2800\u3164\uFFA0]*\\z")))
+    if (length(pcre_match(value, "\\A[\\p{Z}\\p{C}\\p{M}ᅟᅠ⠀ㅤﾠ]*\\z")))
       issues = {@issues, "no visible base character"};
     endif
     if (length(pcre_match(value, "[\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069]")))
@@ -503,10 +503,10 @@ object STR_PROTO [
 
   method test_name_audit_unicode owner: ARCH_WIZARD
     "Report invisible and control names without rejecting ordinary multilingual text.";
-    for value in ({"", " \u00A0", "\u200F", "\u200B", "\u0301", "\uFE0F", "\u3164", "\u2800"})
+    for value in ({"", "  ", "\u200F", "\u200B", "́", "️", "ㅤ", "⠀"})
       $test_utils:assert_true(length($str_proto:name_issues(value)) > 0, "invisible name: " + toliteral(value));
     endfor
-    for value in ({"Gossamer", "Le Spleen", "\u00C9mile", "\u6771\u4EAC", "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", "e\u0301", "\u2615\uFE0F"})
+    for value in ({"Gossamer", "Le Spleen", "Émile", "東京", "العربية", "é", "☕️"})
       $test_utils:assert_eq($str_proto:name_issues(value), {}, "visible Unicode name: " + toliteral(value));
     endfor
     $test_utils:assert_true("directional controls" in $str_proto:name_issues("abc\u202Edef"), "embedded direction control");
@@ -518,15 +518,15 @@ object STR_PROTO [
 
   method test_text_validation owner: ARCH_WIZARD
     "Names reject hidden controls while descriptions retain multiline and structured content.";
-    for name in ({"", "\u200F", "\u200B", "a\nb", "x\u202Ey", " name", "\uFE0F"})
+    for name in ({"", "\u200F", "\u200B", "a\nb", "x\u202Ey", " name", "️"})
       $test_utils:assert_raises(E_INVARG, $str_proto, "validate_name", {name}, "reject suspect name " + toliteral(name));
     endfor
-    for name in ({"\u00C9mile", "\u6771\u4EAC", "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", "e\u0301", "\u2615\uFE0F", "👩\u200D💻", "\u0645\u06CC\u200C\u0631\u0648\u0645"})
+    for name in ({"Émile", "東京", "العربية", "é", "☕️", "👩\u200D💻", "می\u200Cروم"})
       $test_utils:assert_true($str_proto:validate_name(name), "Unicode name remains valid");
     endfor
     $test_utils:assert_raises(E_INVARG, $str_proto, "validate_aliases", {{"good", "\u200F"}}, "every alias is checked");
     $test_utils:assert_raises(E_TYPE, $str_proto, "validate_aliases", {"not a list"}, "aliases must be a list");
-    for description in ({"", "\n\ttext\r\n\u0627\u0644\u0639\u0631\u0628\u064A\u0629", {"line", "", {"more text"}}, $format:authored('djot_blocks, "A **bold** description."), "\x1B[1;31mred\x1B[0m and \x1B[38;5;208morange\x1B[m"})
+    for description in ({"", "\n\ttext\r\nالعربية", {"line", "", {"more text"}}, $format:authored('djot_blocks, "A **bold** description."), "\x1B[1;31mred\x1B[0m and \x1B[38;5;208morange\x1B[m"})
       $test_utils:assert_true($str_proto:validate_description(description), "valid description");
     endfor
     for description in ({"hidden\u200Btext", "\x1B[2Jcleared", "\x1B[Hhome", "\x1B]0;title", "\x1B", "x\u202Ey", "Safe\rFAKE", {"ok", {"bad\x07"}}, $document_node:mk('text, {}, ['text -> "x\u200Fy"])})
@@ -1047,7 +1047,7 @@ object STR_PROTO [
 
   method test_repeat owner: HACKER
     "Repeating preserves the complete string, including case and Unicode.";
-    for example in ({{"Ab", -1, ""}, {"Ab", 0, ""}, {"Ab", 1, "Ab"}, {"Ab", 3, "AbAbAb"}, {"Ab", 4, "AbAbAbAb"}, {"\u00E9🐄", 3, "\u00E9🐄\u00E9🐄\u00E9🐄"}, {"", 9, ""}})
+    for example in ({{"Ab", -1, ""}, {"Ab", 0, ""}, {"Ab", 1, "Ab"}, {"Ab", 3, "AbAbAb"}, {"Ab", 4, "AbAbAbAb"}, {"é🐄", 3, "é🐄é🐄é🐄"}, {"", 9, ""}})
       const {text, count, expected} = example;
       $test_utils:assert_eq(strcmp(text:repeat(count), expected), 0, "repeat " + toliteral(text) + " " + tostr(count) + " times");
     endfor

@@ -114,7 +114,7 @@ object DM [
     const target = valid(recipient) ? $format.annotation:object(recipient, recipient_name) | recipient_name;
     const location_name = valid(loc) ? loc:noun_phrase('definite, sender) | "";
     const place = valid(loc) ? {" (in ", $format.annotation:object(loc, location_name), ")"} | {};
-    const header = $format.paragraph:mk("You", @place, " \u2192 ", target, ":");
+    const header = $format.paragraph:mk("You", @place, " → ", target, ":");
     const spoken_place = valid(loc) ? " in " + location_name | "";
     const spoken_name = valid(recipient) ? recipient:noun_phrase('definite, sender) | recipient_name;
     const spoken = "Message sent to " + spoken_name + spoken_place + ": " + this.text;

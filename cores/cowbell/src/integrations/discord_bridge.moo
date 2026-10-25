@@ -211,7 +211,7 @@ object DISCORD_BRIDGE [
     const {value, limit} = args;
     typeof(value) == TYPE_STR || return "";
     const text = pcre_replace(value, "s/[\\x00-\\x1f\\x7f]+/ /g"):trim();
-    return length(text) > limit ? text[1..limit - 1] + "\u2026" | text;
+    return length(text) > limit ? text[1..limit - 1] + "…" | text;
   endmethod
 
   method _escape owner: ARCH_WIZARD

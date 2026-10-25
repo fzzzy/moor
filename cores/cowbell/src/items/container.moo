@@ -488,7 +488,7 @@ object CONTAINER [
     endfor
     if (this.open)
       const ref = tostr(this);
-      actions = {@actions, ["id" -> "put", "label" -> "Put inside", "command" -> "put {input} in " + ref, "action" -> $container:command_action("put", this:name()), "input" -> ["label" -> "What are you putting inside?", "placeholder" -> "Find a carried item\u2026", "suggestions" -> ["provider" -> $url_utils:to_curie_str(this), "source" -> "inventory"]]], ["id" -> "take_from", "label" -> "Take from", "command" -> "get {input} from " + ref, "action" -> $container:command_action("get", this:name()), "input" -> ["label" -> "What are you taking out?", "placeholder" -> "Find an item inside\u2026", "suggestions" -> ["provider" -> $url_utils:to_curie_str(this), "source" -> "contents"]]]};
+      actions = {@actions, ["id" -> "put", "label" -> "Put inside", "command" -> "put {input} in " + ref, "action" -> $container:command_action("put", this:name()), "input" -> ["label" -> "What are you putting inside?", "placeholder" -> "Find a carried item…", "suggestions" -> ["provider" -> $url_utils:to_curie_str(this), "source" -> "inventory"]]], ["id" -> "take_from", "label" -> "Take from", "command" -> "get {input} from " + ref, "action" -> $container:command_action("get", this:name()), "input" -> ["label" -> "What are you taking out?", "placeholder" -> "Find an item inside…", "suggestions" -> ["provider" -> $url_utils:to_curie_str(this), "source" -> "contents"]]]};
     endif
     return actions;
   endmethod

@@ -510,10 +510,10 @@ object SUB [
   method test_unicode_capitalized_substitutions owner: HACKER
     "Name, text binding, and selected-branch capitalization share Unicode case conversion.";
     const actor = $thing:create(true);
-    actor.name = "\u00E9lo\u00EFse";
-    const event = $event:mk_test(actor, this:nc(), " / ", this:bindingc('word), " / ", this:self_altc("you", {this:n()})):with_text_binding('word, "\u03C3\u03AC\u03C1\u03B1");
+    actor.name = "éloïse";
+    const event = $event:mk_test(actor, this:nc(), " / ", this:bindingc('word), " / ", this:self_altc("you", {this:n()})):with_text_binding('word, "σάρα");
     const rendered = $document:render(event:resolve(player), 'text_plain)['body];
-    $test_utils:assert_eq(strcmp(rendered, "\u00C9lo\u00EFse / \u03A3\u03AC\u03C1\u03B1 / \u00C9lo\u00EFse"), 0, "Unicode substitutions");
+    $test_utils:assert_eq(strcmp(rendered, "Éloïse / Σάρα / Éloïse"), 0, "Unicode substitutions");
     return true;
   endmethod
 

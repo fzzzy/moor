@@ -1761,7 +1761,7 @@ object CHANGE_MANAGER [
     else
       output = {@output, $format.paragraph:mk("Check upstream for updates, compare the code, then choose what to apply."), $format.list:actions({this:_command_action("@changes fetch", "Check for updates")})};
     endif
-    return {@output, $format.list:mk({$format.paragraph:inline($help_utils:command_usage("@changes diff", player, {"any", "any", "any"}), " \u2014 Review changes."), $format.paragraph:inline($help_utils:command_usage("@changes preview", player, {"any", "any", "any"}), " \u2014 Read what applying your choices will do."), $format.paragraph:inline($help_utils:command_usage("@changes status", player, {"any", "any", "any"}), " \u2014 Check progress.")}), $format.list:actions({this:_command_action("help @changes", "Command reference", ["kind" -> "help", "provider" -> $url_utils:to_curie_str($admin_features.help_source), "topic" -> "@changes"])})};
+    return {@output, $format.list:mk({$format.paragraph:inline($help_utils:command_usage("@changes diff", player, {"any", "any", "any"}), " — Review changes."), $format.paragraph:inline($help_utils:command_usage("@changes preview", player, {"any", "any", "any"}), " — Read what applying your choices will do."), $format.paragraph:inline($help_utils:command_usage("@changes status", player, {"any", "any", "any"}), " — Check progress.")}), $format.list:actions({this:_command_action("help @changes", "Command reference", ["kind" -> "help", "provider" -> $url_utils:to_curie_str($admin_features.help_source), "topic" -> "@changes"])})};
   endmethod
 
   method _command_progress owner: ARCH_WIZARD
@@ -1793,13 +1793,13 @@ object CHANGE_MANAGER [
     const id = summary["review_id"];
     const generation = summary["generation"];
     const status = summary["status"];
-    let output = {$format.title:mk(tostr(summary["package"], " \u00B7 Review ", id, " \u00B7 Generation ", generation), 3)};
+    let output = {$format.title:mk(tostr(summary["package"], " · Review ", id, " · Generation ", generation), 3)};
     if (status == "fetching")
-      return {@output, $format.paragraph:mk(tostr("Checking ", summary["package"], " for updates\u2026"))};
+      return {@output, $format.paragraph:mk(tostr("Checking ", summary["package"], " for updates…"))};
     elseif (status == "ready")
       return {@output, $format.list:actions({this:_command_review_link(summary, "Review changes")})};
     elseif (status == "applying")
-      return {@output, $format.paragraph:mk(tostr("Applying changes to ", summary["package"], "\u2026"))};
+      return {@output, $format.paragraph:mk(tostr("Applying changes to ", summary["package"], "…"))};
     elseif (status == "complete")
       return {@output, $format.paragraph:mk("Changes applied.")};
     elseif (status in {"finished", "discarded"})
@@ -1831,7 +1831,7 @@ object CHANGE_MANAGER [
     const rows = record["report"]["rows"];
     const counts = record["report"]["counts"];
     const names = this:_command_names();
-    let output = {$format.title:mk(tostr(record["package"], " \u00B7 Review ", id, " \u00B7 Generation ", generation), 3)};
+    let output = {$format.title:mk(tostr(record["package"], " · Review ", id, " · Generation ", generation), 3)};
     const labels = ["upstream" -> {"upstream update", "upstream updates"}, "local" -> {"local edit", "local edits"}, "conflict" -> {"conflict", "conflicts"}, "converged" -> {"program already matches upstream", "programs already match upstream"}, "unbased" -> {"program without a baseline", "programs without a baseline"}, "incoming_only" -> {"new member", "new members"}];
     let summary = "";
     for classification in ({"upstream", "local", "conflict", "converged", "unbased", "incoming_only"})
@@ -1858,7 +1858,7 @@ object CHANGE_MANAGER [
     const unresolved = choice_counts["unresolved"];
     const descriptions = ["upstream" -> "Upstream edit", "local" -> "Local edit", "conflict" -> "Conflict", "converged" -> "Already matches", "unbased" -> "No baseline", "unchanged" -> "Unchanged", "incoming_only" -> "New member"];
     const decisions = ["incoming" -> "Use upstream", "local" -> "Keep my code", "edited" -> "Use my edited code", "defer" -> "Decide later", "unresolved" -> "Choose"];
-    const reasons = ["adoption_required" -> "Accepted upstream history is unknown; review history repair before adoption", "untrusted_target_authority" -> "Ownership or permissions block upgrades", "object_identity_mismatch" -> "Object identity doesn\u2019t match", "change_group_required" -> "Declare the required change group first", "change_group_member_missing" -> "A required group member is missing", "verb_name_collision" -> "A local or inherited verb uses a conflicting name", "initialization_required" -> "Review the initial value, then use @changes initialize", "initial_value_required" -> "Supply an explicit initial value", "inherited_effects_require_approval" -> "Explicitly permit descendants to inherit this property", "property_name_collision" -> "An existing property conflicts with this addition", "object_address_occupied" -> "Object ID is occupied; discard, choose another binding, and fetch again", "object_binding_changed" -> "Object no longer matches its creation receipt", "creation_requires_wizard" -> "Object creation requires wizard authority", "invalid_object_parent" -> "A parent is missing or inheritance contains a cycle", "invalid_object_location" -> "A location is missing or containment contains a cycle", "missing_inherited_property" -> "An override names a property no parent defines"];
+    const reasons = ["adoption_required" -> "Accepted upstream history is unknown; review history repair before adoption", "untrusted_target_authority" -> "Ownership or permissions block upgrades", "object_identity_mismatch" -> "Object identity doesn’t match", "change_group_required" -> "Declare the required change group first", "change_group_member_missing" -> "A required group member is missing", "verb_name_collision" -> "A local or inherited verb uses a conflicting name", "initialization_required" -> "Review the initial value, then use @changes initialize", "initial_value_required" -> "Supply an explicit initial value", "inherited_effects_require_approval" -> "Explicitly permit descendants to inherit this property", "property_name_collision" -> "An existing property conflicts with this addition", "object_address_occupied" -> "Object ID is occupied; discard, choose another binding, and fetch again", "object_binding_changed" -> "Object no longer matches its creation receipt", "creation_requires_wizard" -> "Object creation requires wizard authority", "invalid_object_parent" -> "A parent is missing or inheritance contains a cycle", "invalid_object_location" -> "A location is missing or containment contains a cycle", "missing_inherited_property" -> "An override names a property no parent defines"];
     for i in [1..length(rows)]
       const row = rows[i];
       const choice = `record["choices"][row["id"]] ! E_RANGE => []';
@@ -1886,7 +1886,7 @@ object CHANGE_MANAGER [
       endif
       const label = row["field"] == "object" ? this:_command_label(row["object"], names) | row["field"] == "property" ? this:_command_label(row["object"], names) + "." + row["names"][1] | this:_command_label(row["object"], names, row["names"][1]);
       const link = this:_command_review_link(record, label, row["id"]);
-      const displayed = $format.paragraph:inline(tostr(i, ". "), link, " \u2014 ", descriptions[row["classification"]], ". ", decision, ".");
+      const displayed = $format.paragraph:inline(tostr(i, ". "), link, " — ", descriptions[row["classification"]], ". ", decision, ".");
       value_bytes(change_rows) + value_bytes(displayed) <= 60000 || raise(E_QUOTA, "Review page is too large.");
       change_rows = {@change_rows, displayed};
       displayed_rows[tostr(i)] = row["id"];
@@ -1937,7 +1937,7 @@ object CHANGE_MANAGER [
     typeof(offset) == TYPE_INT && offset >= 1 || raise(E_INVARG, "Page offset must be a positive number.");
     const id = record["id"];
     const names = this:_command_names();
-    let output = {$format.title:mk(tostr(record["package"], " \u00B7 Review ", id, " details"), 3), $format.paragraph:mk(tostr("Generation ", record["generation"], "."))};
+    let output = {$format.title:mk(tostr(record["package"], " · Review ", id, " details"), 3), $format.paragraph:mk(tostr("Generation ", record["generation"], "."))};
     const provenance = record["provenance"];
     let source = {};
     for field in ({"repository", "revision", "commit", "path", "url", "etag", "digest"})
@@ -1953,7 +1953,7 @@ object CHANGE_MANAGER [
       output = {@output, $format.title:mk("Source", 4), $format.table:mk({"Field", "Value"}, source)};
     endif
     let checks = {};
-    const reasons = ["adoption_required" -> "Accepted upstream history is unknown; review history repair before adoption", "untrusted_target_authority" -> "Ownership or permissions block upgrades", "object_identity_mismatch" -> "Object identity doesn\u2019t match", "change_group_required" -> "Declare the required change group first", "change_group_member_missing" -> "A required group member is missing", "verb_name_collision" -> "A local or inherited verb uses a conflicting name", "initialization_required" -> "Review the initial value, then use @changes initialize", "initial_value_required" -> "Supply an explicit initial value", "inherited_effects_require_approval" -> "Explicitly permit descendants to inherit this property", "property_name_collision" -> "An existing property conflicts with this addition", "object_address_occupied" -> "Object ID is occupied; discard, choose another binding, and fetch again", "object_binding_changed" -> "Object no longer matches its creation receipt", "creation_requires_wizard" -> "Object creation requires wizard authority", "invalid_object_parent" -> "A parent is missing or inheritance contains a cycle", "invalid_object_location" -> "A location is missing or containment contains a cycle", "missing_inherited_property" -> "An override names a property no parent defines"];
+    const reasons = ["adoption_required" -> "Accepted upstream history is unknown; review history repair before adoption", "untrusted_target_authority" -> "Ownership or permissions block upgrades", "object_identity_mismatch" -> "Object identity doesn’t match", "change_group_required" -> "Declare the required change group first", "change_group_member_missing" -> "A required group member is missing", "verb_name_collision" -> "A local or inherited verb uses a conflicting name", "initialization_required" -> "Review the initial value, then use @changes initialize", "initial_value_required" -> "Supply an explicit initial value", "inherited_effects_require_approval" -> "Explicitly permit descendants to inherit this property", "property_name_collision" -> "An existing property conflicts with this addition", "object_address_occupied" -> "Object ID is occupied; discard, choose another binding, and fetch again", "object_binding_changed" -> "Object no longer matches its creation receipt", "creation_requires_wizard" -> "Object creation requires wizard authority", "invalid_object_parent" -> "A parent is missing or inheritance contains a cycle", "invalid_object_location" -> "A location is missing or containment contains a cycle", "missing_inherited_property" -> "An override names a property no parent defines"];
     for row in (record["report"]["rows"])
       if (!row["eligible"])
         const explanation = { `reasons[reason] ! E_RANGE => reason' for reason in (row["blockers"]) }:join("; ");
@@ -1961,7 +1961,7 @@ object CHANGE_MANAGER [
       endif
     endfor
     let property_objects = 0;
-    const diagnostic_labels = ["missing_source" -> "No upstream object definition", "live_definition_unmatched" -> "No matching upstream verb definition", "unsupported_creation" -> "Declare a proposed object binding before reviewing creation", "outside_managed_scope" -> "Object is outside this package scope", "unsupported_removal" -> "Complete source omits a member; removal is unsupported", "unsupported_or_ambiguous_definition" -> "Upstream verb can\u2019t be matched; definition changes aren\u2019t supported", "definition_fields_unmanaged" -> "Owner/flags differ, or upstream includes verb metadata"];
+    const diagnostic_labels = ["missing_source" -> "No upstream object definition", "live_definition_unmatched" -> "No matching upstream verb definition", "unsupported_creation" -> "Declare a proposed object binding before reviewing creation", "outside_managed_scope" -> "Object is outside this package scope", "unsupported_removal" -> "Complete source omits a member; removal is unsupported", "unsupported_or_ambiguous_definition" -> "Upstream verb can’t be matched; definition changes aren’t supported", "definition_fields_unmanaged" -> "Owner/flags differ, or upstream includes verb metadata"];
     for diagnostic in (record["report"]["diagnostics"])
       if (diagnostic["code"] == "property_fields_unmanaged")
         property_objects = property_objects + 1;
@@ -1981,7 +1981,7 @@ object CHANGE_MANAGER [
     endif
     output = {@output, $format.paragraph:mk("Apply updates selected programs and creates approved objects, verbs, and properties. Existing property values and object attributes stay unchanged.")};
     if (property_objects)
-      output = {@output, $format.paragraph:mk(tostr("The source contains property declarations on ", property_objects, " objects; this isn\u2019t a count of property changes."))};
+      output = {@output, $format.paragraph:mk(tostr("The source contains property declarations on ", property_objects, " objects; this isn’t a count of property changes."))};
     endif
     return {@output, $format.list:actions({this:_command_action(tostr("@changes diff ", id), "Back to review")})};
   endmethod
@@ -2103,7 +2103,7 @@ object CHANGE_MANAGER [
     endfor
     let effects = {};
     for item in (prepared["effects"])
-      effects = {@effects, tostr(item["label"], " \u2014 ", labels[item["effect"]], item["defaulted"] ? " (automatic choice)" | "", ".")};
+      effects = {@effects, tostr(item["label"], " — ", labels[item["effect"]], item["defaulted"] ? " (automatic choice)" | "", ".")};
     endfor
     let output = {$format.title:mk("What applying will do", 3), $format.list:mk(counts), $format.paragraph:mk("Counts cover the whole review. Opening another page does not change the selection."), $format.list:mk(effects)};
     this.terminal_contexts[this:_terminal_key()]["prepared"] = prepared["can_apply"] ? prepared["prepared"] | [];
@@ -2128,7 +2128,7 @@ object CHANGE_MANAGER [
     const labels = this:_terminal_effect_names();
     let lines = {};
     for item in (result["decisions"])
-      lines = {@lines, tostr(item["label"], " \u2014 ", labels[item["effect"]], ".")};
+      lines = {@lines, tostr(item["label"], " — ", labels[item["effect"]], ".")};
     endfor
     let output = {$format.title:mk(tostr("Review ", id, " results"), 3), $format.paragraph:mk(tostr(result["decision_count"], " recorded decisions. Status: ", result["status"], ".")), $format.list:mk(lines)};
     if (result["next_decision"])
@@ -2513,7 +2513,7 @@ object CHANGE_MANAGER [
       for name in (mapkeys(this.packages))
         const package = this.packages[name];
         const upstream = package["upstream"];
-        const source = typeof(upstream) == TYPE_STR ? upstream ? upstream | "Not configured" | tostr(upstream["repository"], " \u00B7 ", `upstream["revision"]["ref"] ! E_RANGE => upstream["revision"]["commit"]');
+        const source = typeof(upstream) == TYPE_STR ? upstream ? upstream | "Not configured" | tostr(upstream["repository"], " · ", `upstream["revision"]["ref"] ! E_RANGE => upstream["revision"]["commit"]');
         const review = package["active"] ? this:_command_action(tostr("@changes diff ", package["active"]), tostr("Review ", package["active"])) | "None";
         const complete = `package["policy"]["complete"] ! E_RANGE => {}';
         const scope = length(complete) == length(package["objects"]) && length(complete) > 0 ? "Complete" | complete ? "Mixed" | "Partial";
@@ -2656,7 +2656,7 @@ object CHANGE_MANAGER [
       const row_id = this:_command_row(auth, id, generation, words[4]);
       const result = this:resolve(id, generation, row_id, words[5], program);
       const labels = ["incoming" -> "Use upstream", "local" -> "Keep my code", "defer" -> "Decide later", "edited" -> "Use my edited code"];
-      let output = {$format.title:mk(tostr("Review ", id, " \u00B7 Generation ", result["generation"]), 3), $format.paragraph:mk(tostr(labels[words[5]], " saved for ", this:details(id, result["generation"], row_id)["row"]["label"], "."))};
+      let output = {$format.title:mk(tostr("Review ", id, " · Generation ", result["generation"]), 3), $format.paragraph:mk(tostr(labels[words[5]], " saved for ", this:details(id, result["generation"], row_id)["row"]["label"], "."))};
       for validation in (result["validation"])
         if (validation["id"] == row_id && !validation["valid"])
           output = {@output, $format.paragraph:mk(tostr("Program error at line ", validation["line"], ": ", validation["message"]))};
