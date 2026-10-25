@@ -839,6 +839,7 @@ fn mk_builtin_table() -> Vec<Builtin> {
             vec![Typed(TYPE_OBJ), Typed(TYPE_STR), Any],
             true,
         ),
+        mk_builtin("objects_with_metadata", Q(1), Q(2), vec![Any, Any], true),
     ]);
     // IMPORTANT: ALWAYS APPEND NEW BUILTINS ABOVE THIS LINE
     pad_group(&mut builtins, start, "object/command");

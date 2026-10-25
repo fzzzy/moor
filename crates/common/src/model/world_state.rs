@@ -424,6 +424,15 @@ pub trait WorldState: Send {
         value: Var,
     ) -> Result<(), WorldStateError>;
 
+    /// The objects that have object metadata `key`, and, when `value` is given, whose value for it
+    /// equals `value`, in object order. Objects the permissions may not read are left out.
+    fn objects_with_metadata(
+        &self,
+        permissions: &TaskPermissions,
+        key: Symbol,
+        value: Option<&Var>,
+    ) -> Result<Vec<Obj>, WorldStateError>;
+
     fn clear_object_metadata(
         &mut self,
         permissions: &TaskPermissions,

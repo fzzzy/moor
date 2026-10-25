@@ -2237,6 +2237,23 @@ fn bf_object_metadata_hash(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr
     hash_var_with_optional_args(bf_args, &metadata, 1)
 }
 
+/// Usage: `list objects_with_metadata(str|sym key [, value])`
+/// Returns the objects that have object metadata `key`, in object order. With `value`, returns only
+/// those whose value for the key equals it, as `==` compares. Objects the caller may not read are
+/// left out.
+fn bf_objects_with_metadata(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.is_empty() || bf_args.args.len() > 2 {
+        return Err(BfErr::Code(E_ARGS));
+    }
+    let key = bf_args.args[0].as_symbol().map_err(BfErr::ErrValue)?;
+    let value = (bf_args.args.len() == 2).then(|| bf_args.args[1].clone());
+    let objects = with_current_transaction(|world_state| {
+        world_state.objects_with_metadata(&bf_args.task_permissions(), key, value.as_ref())
+    })
+    .map_err(world_state_bf_err)?;
+    Ok(Ret(v_list_iter(objects.into_iter().map(v_obj))))
+}
+
 /// Usage: `none set_object_metadata(obj object, str|sym key, value)`
 fn bf_set_object_metadata(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     if bf_args.args.len() != 3 {
@@ -2298,6 +2315,7 @@ pub(crate) fn register_bf_objects(builtins: &mut [BuiltinFunction]) {
     builtins[offset_for_builtin("dispatch_command_verb")] = bf_dispatch_command_verb;
     builtins[offset_for_builtin("object_metadata")] = bf_object_metadata;
     builtins[offset_for_builtin("set_object_metadata")] = bf_set_object_metadata;
+    builtins[offset_for_builtin("objects_with_metadata")] = bf_objects_with_metadata;
     builtins[offset_for_builtin("clear_object_metadata")] = bf_clear_object_metadata;
     builtins[offset_for_builtin("object_attrs_hash")] = bf_object_attrs_hash;
     builtins[offset_for_builtin("object_metadata_hash")] = bf_object_metadata_hash;
