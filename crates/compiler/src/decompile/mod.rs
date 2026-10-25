@@ -2229,6 +2229,14 @@ return 0 && "Automatically Added Return";
         assert_trees_match_recursive(&parse.stmts, &decompiled.stmts);
     }
 
+    #[test]
+    fn test_length_inside_comprehensions() {
+        let program =
+            r#"l = {5, 6, 7}; return { l[$] + y for y in ({1, 2, 3}[2..$]) if y != l[$] };"#;
+        let (parse, decompiled) = parse_decompile(program);
+        assert_trees_match_recursive(&parse.stmts, &decompiled.stmts);
+    }
+
     // Tests for multi-statement lambda decompilation
     // These test that fn () ... endfn syntax with multiple statements can be decompiled
     // Note: We use named function syntax (fn name() ... endfn) because it produces

@@ -1410,6 +1410,36 @@ mod tests {
     }
 
     #[test]
+    fn test_length_inside_comprehensions() {
+        // `$` in a comprehension refers to the list being indexed, not to the list the
+        // comprehension is building.
+        assert_eq!(
+            run_moo(r#"return { x for x in ({1, 2, 3}[2..$]) };"#).unwrap(),
+            v_list(&[v_int(2), v_int(3)])
+        );
+        assert_eq!(
+            run_moo(r#"return { x for x in [{4, 5, 6}[$]..7] };"#).unwrap(),
+            v_list(&[v_int(6), v_int(7)])
+        );
+        assert_eq!(
+            run_moo(r#"l = {5, 6, 7}; return { l[$] + x for x in [1..2] };"#).unwrap(),
+            v_list(&[v_int(8), v_int(9)])
+        );
+        assert_eq!(
+            run_moo(r#"return { x for x in ({1, 2, 3}) if x != {9, 2}[$] };"#).unwrap(),
+            v_list(&[v_int(1), v_int(3)])
+        );
+        assert_eq!(
+            run_moo(r#"return {10, 20, 30}[length({ x for x in [1..2] })..$];"#).unwrap(),
+            v_list(&[v_int(20), v_int(30)])
+        );
+        assert_eq!(
+            run_moo(r#"return { { y for y in ({7, 8, 9}[x..$]) } for x in [2..3] };"#).unwrap(),
+            v_list(&[v_list(&[v_int(8), v_int(9)]), v_list(&[v_int(9)])])
+        );
+    }
+
+    #[test]
     fn test_for_list_comprehension_scope_regression() {
         assert_eq!(
             run_moo(
