@@ -19,15 +19,13 @@ object AREA [
     set_task_perms(actor);
     const {what} = args;
     typeof(what) == TYPE_OBJ && valid(what) && isa(what, $room) || return false;
-    const grant = `$root:_check_permissions_as($area:_subject_for(actor, this, 'area), actor, 'add_room)
-      ! E_PERM => {}';
+    const grant = `$root:_check_permissions_as($area:_subject_for(actor, this, 'area), actor, 'add_room) ! E_PERM => {}';
     if (length(grant))
       return true;
     endif
     "An unstored bearer remains available on the checked movement activation.";
     for frame in (callers())
-      if (frame[4] == $area && frame[2] == "_move_room_here" && frame[3] == actor
-          && typeof(frame[1]) == TYPE_FLYWEIGHT && frame[1].delegate == this)
+      if (frame[4] == $area && frame[2] == "_move_room_here" && frame[3] == actor && typeof(frame[1]) == TYPE_FLYWEIGHT && frame[1].delegate == this)
         return `$root:_check_permissions_as(frame[1], actor, 'add_room) ! E_PERM => false';
       endif
     endfor
@@ -66,9 +64,7 @@ object AREA [
     typeof(passage) == TYPE_OBJ || typeof(passage) == TYPE_FLYWEIGHT || raise(E_TYPE);
     const prototype = typeof(passage) == TYPE_FLYWEIGHT ? passage.delegate | passage;
     valid(prototype) && isa(prototype, $passage) || raise(E_TYPE, "Expected a passage.");
-    ((passage.side_a_room == room_a && passage.side_b_room == room_b)
-      || (passage.side_a_room == room_b && passage.side_b_room == room_a))
-      || raise(E_INVARG, "Passage endpoints do not match the connection.");
+    passage.side_a_room == room_a && passage.side_b_room == room_b || (passage.side_a_room == room_b && passage.side_b_room == room_a) || raise(E_INVARG, "Passage endpoints do not match the connection.");
     if (room_a < room_b)
       return {room_a, room_b, passage};
     else
@@ -312,8 +308,7 @@ object AREA [
     const destination = typeof(room_b) == TYPE_FLYWEIGHT ? room_b.delegate | room_b;
     if (!allow_parallel)
       for existing in ($room:passages(source))
-        existing:other_room(source) != destination
-          || raise(E_INVARG, "Those rooms are already connected. Choose parallel mode to add another passage.");
+        existing:other_room(source) != destination || raise(E_INVARG, "Those rooms are already connected. Choose parallel mode to add another passage.");
       endfor
     endif
     $area:_validate_connection_names(passage);
@@ -332,12 +327,10 @@ object AREA [
         if (replacing && existing.connection_id == previous.connection_id)
           continue;
         endif
-        (passage.connection_id == "" || passage.connection_id != existing.connection_id)
-          || raise(E_INVARG, "That connection identity is already installed.");
+        passage.connection_id == "" || passage.connection_id != existing.connection_id || raise(E_INVARG, "That connection identity is already installed.");
         const existing_names = $passage:expand_direction_aliases($passage:command_names(existing, room));
         for alias in (names)
-          !(alias in existing_names)
-            || raise(E_INVARG, "Exit name '" + alias + "' is already used at " + tostr(room) + ".");
+          !(alias in existing_names) || raise(E_INVARG, "Exit name '" + alias + "' is already used at " + tostr(room) + ".");
         endfor
       endfor
     endfor
@@ -353,12 +346,10 @@ object AREA [
     const replacing = typeof(previous) == TYPE_FLYWEIGHT;
     if (replacing)
       const registered = $area:_passage_tuple(this, room_a, room_b, previous.connection_id);
-      length(registered) && equal(registered[3], previous)
-        || raise(E_INVARG, "The passage changed. Read it again before editing.");
+      length(registered) && equal(registered[3], previous) || raise(E_INVARG, "The passage changed. Read it again before editing.");
     endif
     const prototype = typeof(proposed) == TYPE_FLYWEIGHT ? proposed.delegate | proposed;
-    let passage = typeof(proposed) == TYPE_FLYWEIGHT ? proposed
-      | toflyweight(prototype, $passage:configuration(proposed), {});
+    let passage = typeof(proposed) == TYPE_FLYWEIGHT ? proposed | toflyweight(prototype, $passage:configuration(proposed), {});
     if (replacing && keep_identity)
       passage.connection_id = previous.connection_id;
     else
@@ -396,14 +387,12 @@ object AREA [
     let before = $passage:configuration(previous);
     let after = $passage:configuration(proposed);
     const prefix = previous.side_a_room == source ? "side_a_" | "side_b_";
-    for field in ({"label", "aliases", "description", "description_kind", "ambient", "leave_msg", "arrive_msg",
-        "prose_style", "departure_phrase", "arrival_phrase"})
+    for field in ({"label", "aliases", "description", "description_kind", "ambient", "leave_msg", "arrive_msg", "prose_style", "departure_phrase", "arrival_phrase"})
       const key = tosym(prefix + field);
       before = `mapdelete(before, key) ! E_RANGE => before';
       after = `mapdelete(after, key) ! E_RANGE => after';
     endfor
-    const same_behavior = previous.delegate == prototype
-      && equal(flycontents(previous), typeof(proposed) == TYPE_FLYWEIGHT ? flycontents(proposed) | {});
+    const same_behavior = previous.delegate == prototype && equal(flycontents(previous), typeof(proposed) == TYPE_FLYWEIGHT ? flycontents(proposed) | {});
     if (!same_behavior || !equal(before, after))
       $area:_check_room_right(actor, dest_room, 'dig_from);
     endif
@@ -473,9 +462,7 @@ object AREA [
     set_task_perms(caller_perms());
     const {room, ?viewer = player} = args;
     const options = $room:exit_options(room, viewer);
-    return {{option['label] for option in (options) if (!option['ambient])},
-      {{ambient['description], ambient['prose_style], ambient['label], ambient['destination]}
-        for ambient in (options) if (ambient['ambient])}};
+    return {{ option['label] for option in (options) if !option['ambient] }, { {ambient['description], ambient['prose_style], ambient['label], ambient['destination]} for ambient in (options) if ambient['ambient] }};
   endmethod
 
   method test_connectivity owner: HACKER
@@ -658,7 +645,7 @@ object AREA [
     "Look up a stored grant under its holder's authority and check the target binding.";
     const {actor, target, category} = args;
     const principal = caller_perms();
-    (actor == principal || (valid(principal) && principal.wizard)) || raise(E_PERM);
+    actor == principal || (valid(principal) && principal.wizard) || raise(E_PERM);
     set_task_perms(actor);
     const capability = actor:find_capability_for(target, category);
     if (typeof(capability) == TYPE_FLYWEIGHT)
@@ -699,8 +686,7 @@ object AREA [
       for side in ({"a", "b"})
         const prefix = "side_" + side + "_";
         if (typeof(old) == TYPE_FLYWEIGHT && !maphaskey(flyslots(old), tosym(prefix + "enabled")))
-          passage.(prefix + "enabled") = passage.(prefix + "label") != ""
-            || length(passage.(prefix + "aliases")) > 0;
+          passage.(prefix + "enabled") = passage.(prefix + "label") != "" || length(passage.(prefix + "aliases")) > 0;
         endif
       endfor
       for room in ({source, destination})

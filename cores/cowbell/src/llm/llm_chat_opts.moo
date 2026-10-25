@@ -82,5 +82,4 @@ object LLM_CHAT_OPTS [
     slots['response_format] = ["type" -> "json_object"];
     return toflyweight(this.delegate, slots);
   endmethod
-
 endobject

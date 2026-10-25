@@ -13,8 +13,7 @@ object LLM_ASSIST_CONTEXT [
     is_player(actor) && kind in {'command, 'help} || raise(E_INVARG);
     const client = $player.suggestions_llm_client;
     typeof(client) == TYPE_OBJ && valid(client) || return "";
-    typeof(destination) == TYPE_OBJ && destination in {entry[1] for entry in (connections(actor))}
-      || raise(E_PERM, "Assist connection is not attached to the requester.");
+    typeof(destination) == TYPE_OBJ && destination in { entry[1] for entry in (connections(actor)) } || raise(E_PERM, "Assist connection is not attached to the requester.");
     let value = input;
     if (kind == 'command)
       typeof(input) == TYPE_MAP || raise(E_TYPE);
@@ -30,10 +29,7 @@ object LLM_ASSIST_CONTEXT [
     endif
     value_bytes(value) <= 4096 || raise(E_QUOTA, "Assist input exceeds 4 KiB.");
     const token = uuid();
-    const request = <$llm_assist_context, .actor = actor, .destination = destination,
-      .kind = kind, .input = value, .token = token, .expires = time() + 120,
-      .actor_owner = actor.owner, .programmer = actor.programmer, .wizard = actor.wizard,
-      .builder = actor.is_builder, .room = actor.location, .client = client>;
+    const request = <$llm_assist_context, .actor = actor, .destination = destination, .kind = kind, .input = value, .token = token, .expires = time() + 120, .actor_owner = actor.owner, .programmer = actor.programmer, .wizard = actor.wizard, .builder = actor.is_builder, .room = actor.location, .client = client>;
     let retained = $llm_assist_context:prune(actor);
     retained = {@retained, request};
     while (length(retained) > 8 || value_bytes(retained) > 32768)
@@ -48,11 +44,7 @@ object LLM_ASSIST_CONTEXT [
     const {actor} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     typeof(this) == TYPE_FLYWEIGHT && this.delegate == $llm_assist_context || raise(E_INVARG);
-    return this.actor == actor && time() < this.expires && actor.owner == this.actor_owner
-      && actor.programmer == this.programmer && actor.wizard == this.wizard
-      && actor.is_builder == this.builder && actor.location == this.room
-      && valid(this.client) && $player.suggestions_llm_client == this.client
-      && this.destination in {entry[1] for entry in (connections(actor))};
+    return this.actor == actor && time() < this.expires && actor.owner == this.actor_owner && actor.programmer == this.programmer && actor.wizard == this.wizard && actor.is_builder == this.builder && actor.location == this.room && valid(this.client) && $player.suggestions_llm_client == this.client && this.destination in { entry[1] for entry in (connections(actor)) };
   endmethod
 
   method prune owner: ARCH_WIZARD
@@ -60,7 +52,7 @@ object LLM_ASSIST_CONTEXT [
     const {actor} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     is_player(actor) || raise(E_INVARG);
-    const retained = {request for request in (actor.llm_assist_contexts) if (request:current(actor))};
+    const retained = { request for request in (actor.llm_assist_contexts) if request:current(actor) };
     actor.llm_assist_contexts = retained;
     return retained;
   endmethod

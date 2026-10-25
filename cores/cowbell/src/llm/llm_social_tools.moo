@@ -11,22 +11,7 @@ object LLM_SOCIAL_TOOLS [
     "Return shared social inspection and presentation descriptors; each handler authenticates its actor.";
     const text = ["type" -> "string", "maxLength" -> 8192];
     const name = ["type" -> "string", "minLength" -> 1, "maxLength" -> 256];
-    return {
-      $llm_agent_tool:mk("list_players", "List connected people and their activity.",
-        ["type" -> "object", "properties" -> []], this, "list_players", 'inspection),
-      $llm_agent_tool:mk("player_info", "Read a person's description and connection status.",
-        ["type" -> "object", "properties" -> ["player_name" -> name],
-          "required" -> {"player_name"}], this, "player_info", 'inspection),
-      $llm_agent_tool:mk("emote", "Express a brief public action for a significant social moment.",
-        ["type" -> "object", "properties" -> ["action" -> text],
-          "required" -> {"action"}], this, "emote", 'presentation),
-      $llm_agent_tool:mk("directed_say", "Address a person in the same room publicly.",
-        ["type" -> "object", "properties" -> ["target_name" -> name, "message" -> text],
-          "required" -> {"target_name", "message"}], this, "directed_say", 'presentation),
-      $llm_agent_tool:mk("think", "Express a brief visible thought when useful for social context.",
-        ["type" -> "object", "properties" -> ["thought" -> text],
-          "required" -> {"thought"}], this, "think", 'presentation)
-    };
+    return {$llm_agent_tool:mk("list_players", "List connected people and their activity.", ["type" -> "object", "properties" -> []], this, "list_players", 'inspection), $llm_agent_tool:mk("player_info", "Read a person's description and connection status.", ["type" -> "object", "properties" -> ["player_name" -> name], "required" -> {"player_name"}], this, "player_info", 'inspection), $llm_agent_tool:mk("emote", "Express a brief public action for a significant social moment.", ["type" -> "object", "properties" -> ["action" -> text], "required" -> {"action"}], this, "emote", 'presentation), $llm_agent_tool:mk("directed_say", "Address a person in the same room publicly.", ["type" -> "object", "properties" -> ["target_name" -> name, "message" -> text], "required" -> {"target_name", "message"}], this, "directed_say", 'presentation), $llm_agent_tool:mk("think", "Express a brief visible thought when useful for social context.", ["type" -> "object", "properties" -> ["thought" -> text], "required" -> {"thought"}], this, "think", 'presentation)};
   endmethod
 
   method context owner: ARCH_WIZARD
@@ -34,8 +19,7 @@ object LLM_SOCIAL_TOOLS [
     const {actor, principal} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     $llm_tool_provider:_require_tool_dispatch(actor, principal);
-    const job = isa(actor, $llm_room_observer)
-      ? $llm_observer_job:for_observer(actor, principal) | #-1;
+    const job = isa(actor, $llm_room_observer) ? $llm_observer_job:for_observer(actor, principal) | #-1;
     const room = actor.location;
     valid(room) || raise(E_INVARG, "Actor is not in a room.");
     return ['actor -> actor, 'room -> room, 'job -> job];
@@ -64,8 +48,7 @@ object LLM_SOCIAL_TOOLS [
     set_task_perms(actor);
     const name = target:name();
     const location = target.location;
-    let record = ["object" -> tostr(target), "name" -> name,
-      "location" -> valid(location) ? location:name() | "(nowhere)"];
+    let record = ["object" -> tostr(target), "name" -> name, "location" -> valid(location) ? location:name() | "(nowhere)"];
     if (details)
       record["description"] = $llm_tool_provider:description_text(target, actor);
       record["wizard"] = target.wizard;
@@ -76,7 +59,7 @@ object LLM_SOCIAL_TOOLS [
     if (typeof(idle) == TYPE_INT)
       record["idle_seconds"] = idle;
       record["connected_seconds"] = connected_seconds(target);
-      record["activity"] = idle < 60 ? "active" | (idle < 300 ? "recent" | "idle");
+      record["activity"] = idle < 60 ? "active" | idle < 300 ? "recent" | "idle";
     endif
     $llm_social_tools:check_context(context);
     value_bytes(record) <= 16384 || raise(E_QUOTA, "Player information is too large.");
@@ -156,9 +139,7 @@ object LLM_SOCIAL_TOOLS [
     if (kind == 'directed_say)
       valid(target) && target.location == context['room] || raise(E_PERM, "Recipient moved.");
     endif
-    typeof(event) == TYPE_FLYWEIGHT && event.delegate == $event
-      && event.actor == actor && event.location == context['room]
-      || raise(E_INVARG, "Social event changed its actor or location.");
+    typeof(event) == TYPE_FLYWEIGHT && event.delegate == $event && event.actor == actor && event.location == context['room] || raise(E_INVARG, "Social event changed its actor or location.");
     context['room]:announce(event);
     return "Published " + tostr(kind) + ".";
   endmethod

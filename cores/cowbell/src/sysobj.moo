@@ -6,11 +6,6 @@ object SYSOBJ [
   owner: ARCH_WIZARD
   readable: true
 
-  property startup_hooks (owner: ARCH_WIZARD, flags: "r") = {FIRST_ROOM, TRAVEL_EXAMPLES};
-  property behavior_schema (owner: HACKER, flags: "r") = BEHAVIOR_SCHEMA;
-  property condition (owner: HACKER, flags: "r") = CONDITION;
-  property world_facts (owner: HACKER, flags: "r") = WORLD_FACTS;
-
   property actor (owner: HACKER, flags: "r") = ACTOR;
   property admin_features (owner: ARCH_WIZARD, flags: "rc") = ADMIN_FEATURES;
   property agent_building_tools (owner: HACKER, flags: "r") = AGENT_BUILDING_TOOLS;
@@ -19,6 +14,7 @@ object SYSOBJ [
   property arch_wizard (owner: HACKER, flags: "r") = ARCH_WIZARD;
   property architects_compass (owner: HACKER, flags: "r") = ARCHITECTS_COMPASS;
   property area (owner: HACKER, flags: "r") = AREA;
+  property behavior_schema (owner: HACKER, flags: "r") = BEHAVIOR_SCHEMA;
   property bg_ticks (owner: HACKER, flags: "r") = 300000;
   property builder_features (owner: HACKER, flags: "r") = BUILDER_FEATURES;
   property builder_prototypes (owner: HACKER, flags: "r") = {
@@ -36,12 +32,13 @@ object SYSOBJ [
   };
   property change_manager (owner: ARCH_WIZARD, flags: "r") = CHANGE_MANAGER;
   property change_tools (owner: ARCH_WIZARD, flags: "r") = CHANGE_TOOLS;
+  property condition (owner: HACKER, flags: "r") = CONDITION;
   property consumable (owner: ARCH_WIZARD, flags: "r") = CONSUMABLE;
   property container (owner: HACKER, flags: "r") = CONTAINER;
-  property discord_bridge (owner: ARCH_WIZARD, flags: "r") = DISCORD_BRIDGE;
-  property discord_speaker (owner: ARCH_WIZARD, flags: "r") = DISCORD_SPEAKER;
   property core_version (owner: ARCH_WIZARD, flags: "rc") = "0.3.0";
   property data_visor (owner: HACKER, flags: "r") = DATA_VISOR;
+  property discord_bridge (owner: ARCH_WIZARD, flags: "r") = DISCORD_BRIDGE;
+  property discord_speaker (owner: ARCH_WIZARD, flags: "r") = DISCORD_SPEAKER;
   property dm (owner: HACKER, flags: "r") = DM;
   property document (owner: HACKER, flags: "r") = DOCUMENT;
   property document_node (owner: HACKER, flags: "r") = DOCUMENT_NODE;
@@ -58,7 +55,6 @@ object SYSOBJ [
   property fg_ticks (owner: HACKER, flags: "r") = 600000;
   property first_area (owner: HACKER, flags: "r") = FIRST_AREA;
   property first_room (owner: HACKER, flags: "r") = FIRST_ROOM;
-  property travel_examples (owner: HACKER, flags: "r") = TRAVEL_EXAMPLES;
   property food (owner: ARCH_WIZARD, flags: "r") = FOOD;
   property format (owner: HACKER, flags: "r") = FORMAT;
   property git (owner: ARCH_WIZARD, flags: "r") = GIT;
@@ -74,53 +70,54 @@ object SYSOBJ [
   property int_proto (owner: HACKER, flags: "r") = INT_PROTO;
   property letter (owner: HACKER, flags: "r") = LETTER;
   property list_proto (owner: HACKER, flags: "r") = LIST_PROTO;
-  property llm_agent (owner: HACKER, flags: "r") = LLM_AGENT;
-  property llm_coding_room (owner: ARCH_WIZARD, flags: "r") = LLM_CODING_ROOM;
-  property llm_runner (owner: ARCH_WIZARD, flags: "r") = LLM_RUNNER;
-  property llm_prompt_observer (owner: ARCH_WIZARD, flags: "r") = LLM_PROMPT_OBSERVER;
-  property llm_agent_tool (owner: HACKER, flags: "r") = LLM_AGENT_TOOL;
-  property llm_chat_opts (owner: HACKER, flags: "r") = LLM_CHAT_OPTS;
   property llm_account (owner: ARCH_WIZARD, flags: "r") = LLM_ACCOUNT;
-  property llm_observer_runtime (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_RUNTIME;
-  property llm_observer_job (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_JOB;
-  property llm_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_SUGGESTION;
-  property llm_doc_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_DOC_SUGGESTION;
+  property llm_agent (owner: HACKER, flags: "r") = LLM_AGENT;
+  property llm_agent_tool (owner: HACKER, flags: "r") = LLM_AGENT_TOOL;
+  property llm_assist_context (owner: ARCH_WIZARD, flags: "r") = LLM_ASSIST_CONTEXT;
+  property llm_behavior_tools (owner: ARCH_WIZARD, flags: "r") = LLM_BEHAVIOR_TOOLS;
+  property llm_building_tools (owner: ARCH_WIZARD, flags: "r") = LLM_BUILDING_TOOLS;
+  property llm_chat_opts (owner: HACKER, flags: "r") = LLM_CHAT_OPTS;
+  property llm_client (owner: HACKER, flags: "r") = LLM_CLIENT;
+  property llm_code_search (owner: ARCH_WIZARD, flags: "r") = LLM_CODE_SEARCH;
+  property llm_coding_room (owner: ARCH_WIZARD, flags: "r") = LLM_CODING_ROOM;
   property llm_command_context (owner: ARCH_WIZARD, flags: "r") = LLM_COMMAND_CONTEXT;
   property llm_command_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_COMMAND_SUGGESTION;
-  property llm_assist_context (owner: ARCH_WIZARD, flags: "r") = LLM_ASSIST_CONTEXT;
-  property llm_help_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_HELP_SUGGESTION;
-  property llm_social_tools (owner: ARCH_WIZARD, flags: "r") = LLM_SOCIAL_TOOLS;
-  property llm_observation (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVATION;
-  property llm_observer_policy (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_POLICY;
-  property llm_observer_speech (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_SPEECH;
-  property llm_wearable_session (owner: ARCH_WIZARD, flags: "r") = LLM_WEARABLE_SESSION;
   property llm_conversation (owner: ARCH_WIZARD, flags: "r") = LLM_CONVERSATION;
+  property llm_doc_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_DOC_SUGGESTION;
+  property llm_help_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_HELP_SUGGESTION;
+  property llm_help_tools (owner: ARCH_WIZARD, flags: "r") = LLM_HELP_TOOLS;
+  property llm_inspection_tools (owner: ARCH_WIZARD, flags: "r") = LLM_INSPECTION_TOOLS;
+  property llm_job (owner: ARCH_WIZARD, flags: "r") = LLM_JOB;
   property llm_memory (owner: ARCH_WIZARD, flags: "r") = LLM_MEMORY;
-  property llm_room_runtime (owner: ARCH_WIZARD, flags: "r") = LLM_ROOM_RUNTIME;
+  property llm_observation (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVATION;
+  property llm_observer_job (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_JOB;
+  property llm_observer_policy (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_POLICY;
+  property llm_observer_runtime (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_RUNTIME;
+  property llm_observer_speech (owner: ARCH_WIZARD, flags: "r") = LLM_OBSERVER_SPEECH;
   property llm_presenter (owner: ARCH_WIZARD, flags: "r") = LLM_PRESENTER;
+  property llm_programming_tools (owner: ARCH_WIZARD, flags: "r") = LLM_PROGRAMMING_TOOLS;
+  property llm_project (owner: ARCH_WIZARD, flags: "r") = LLM_PROJECT;
+  property llm_project_tools (owner: ARCH_WIZARD, flags: "r") = LLM_PROJECT_TOOLS;
+  property llm_prompt_observer (owner: ARCH_WIZARD, flags: "r") = LLM_PROMPT_OBSERVER;
+  property llm_prompts (owner: ARCH_WIZARD, flags: "r") = LLM_PROMPTS;
   property llm_provider (owner: ARCH_WIZARD, flags: "r") = LLM_PROVIDER;
-  property llm_client (owner: HACKER, flags: "r") = LLM_CLIENT;
   property llm_response (owner: ARCH_WIZARD, flags: "rc") = LLM_RESPONSE;
   property llm_room_observer (owner: HACKER, flags: "r") = LLM_ROOM_OBSERVER;
-  property llm_tool_schema (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_SCHEMA;
-  property llm_tool_result (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_RESULT;
-  property llm_inspection_tools (owner: ARCH_WIZARD, flags: "r") = LLM_INSPECTION_TOOLS;
-  property llm_programming_tools (owner: ARCH_WIZARD, flags: "r") = LLM_PROGRAMMING_TOOLS;
-  property llm_building_tools (owner: ARCH_WIZARD, flags: "r") = LLM_BUILDING_TOOLS;
-  property llm_behavior_tools (owner: ARCH_WIZARD, flags: "r") = LLM_BEHAVIOR_TOOLS;
-  property llm_tool_provider (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_PROVIDER;
-  property llm_tool_catalog (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_CATALOG;
-  property llm_help_tools (owner: ARCH_WIZARD, flags: "r") = LLM_HELP_TOOLS;
-  property llm_job (owner: ARCH_WIZARD, flags: "r") = LLM_JOB;
-  property llm_prompts (owner: ARCH_WIZARD, flags: "r") = LLM_PROMPTS;
-  property llm_verb_source (owner: ARCH_WIZARD, flags: "r") = LLM_VERB_SOURCE;
-  property llm_code_search (owner: ARCH_WIZARD, flags: "r") = LLM_CODE_SEARCH;
-  property llm_tool_progress (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_PROGRESS;
-  property llm_project_tools (owner: ARCH_WIZARD, flags: "r") = LLM_PROJECT_TOOLS;
-  property llm_project (owner: ARCH_WIZARD, flags: "r") = LLM_PROJECT;
-  property llm_value (owner: ARCH_WIZARD, flags: "r") = LLM_VALUE;
+  property llm_room_runtime (owner: ARCH_WIZARD, flags: "r") = LLM_ROOM_RUNTIME;
+  property llm_room_view (owner: ARCH_WIZARD, flags: "r") = LLM_ROOM_VIEW;
+  property llm_runner (owner: ARCH_WIZARD, flags: "r") = LLM_RUNNER;
+  property llm_social_tools (owner: ARCH_WIZARD, flags: "r") = LLM_SOCIAL_TOOLS;
+  property llm_suggestion (owner: ARCH_WIZARD, flags: "r") = LLM_SUGGESTION;
   property llm_task (owner: HACKER, flags: "r") = LLM_TASK;
+  property llm_tool_catalog (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_CATALOG;
+  property llm_tool_progress (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_PROGRESS;
+  property llm_tool_provider (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_PROVIDER;
+  property llm_tool_result (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_RESULT;
+  property llm_tool_schema (owner: ARCH_WIZARD, flags: "r") = LLM_TOOL_SCHEMA;
+  property llm_value (owner: ARCH_WIZARD, flags: "r") = LLM_VALUE;
+  property llm_verb_source (owner: ARCH_WIZARD, flags: "r") = LLM_VERB_SOURCE;
   property llm_wearable (owner: HACKER, flags: "r") = LLM_WEARABLE;
+  property llm_wearable_session (owner: ARCH_WIZARD, flags: "r") = LLM_WEARABLE_SESSION;
   property local (owner: HACKER, flags: "r") = #-1;
   property login (owner: HACKER, flags: "r") = LOGIN;
   property look (owner: HACKER, flags: "r") = LOOK;
@@ -137,6 +134,7 @@ object SYSOBJ [
   property password (owner: HACKER, flags: "r") = PASSWORD;
   property player (owner: HACKER, flags: "r") = PLAYER;
   property player_activity (owner: ARCH_WIZARD, flags: "rc") = PLAYER_ACTIVITY;
+  property presence_listeners (owner: ARCH_WIZARD, flags: "") = {};
   property prog_features (owner: HACKER, flags: "r") = PROG_FEATURES;
   property prog_utils (owner: HACKER, flags: "r") = PROG_UTILS;
   property pronouns (owner: HACKER, flags: "r") = PRONOUNS;
@@ -151,6 +149,7 @@ object SYSOBJ [
   property server_options (owner: ARCH_WIZARD, flags: "r") = SERVER_OPTIONS;
   property sittable (owner: HACKER, flags: "r") = SITTABLE;
   property social_features (owner: HACKER, flags: "r") = SOCIAL_FEATURES;
+  property startup_hooks (owner: ARCH_WIZARD, flags: "r") = {FIRST_ROOM, TRAVEL_EXAMPLES};
   property str_proto (owner: HACKER, flags: "r") = STR_PROTO;
   property sub (owner: HACKER, flags: "r") = SUB;
   property sub_utils (owner: HACKER, flags: "r") = SUB_UTILS;
@@ -159,10 +158,12 @@ object SYSOBJ [
   property test_player (owner: HACKER, flags: "r") = TEST_PLAYER;
   property test_utils (owner: HACKER, flags: "r") = TEST_UTILS;
   property thing (owner: HACKER, flags: "r") = THING;
+  property travel_examples (owner: HACKER, flags: "r") = TRAVEL_EXAMPLES;
   property url_utils (owner: HACKER, flags: "r") = URL_UTILS;
   property verb (owner: HACKER, flags: "r") = VERB;
   property wearable (owner: HACKER, flags: "r") = WEARABLE;
   property wiz_features (owner: HACKER, flags: "r") = WIZ_FEATURES;
+  property world_facts (owner: HACKER, flags: "r") = WORLD_FACTS;
 
   override description (owner: ARCH_WIZARD, flags: "rc") = "System object containing global properties and core server event handlers.";
 
@@ -258,8 +259,7 @@ object SYSOBJ [
     const principal = incoming == #-1 && !callers() && caller == player ? player | incoming;
     $root:check_actor(player, principal);
     set_task_perms(principal);
-    if (typeof(action) == TYPE_MAP && `action["kind"] ! E_RANGE => ""' == "command"
-        && "exit" in mapkeys(action) && "command" in mapkeys(action))
+    if (typeof(action) == TYPE_MAP && `action["kind"] ! E_RANGE => ""' == "command" && "exit" in mapkeys(action) && "command" in mapkeys(action))
       return $room:use_exit_action(player, action["command"], action["exit"]);
     endif
     player:inform_current($event:mk_info(player, "This action is not supported. Look again for current actions."));
@@ -364,13 +364,11 @@ object SYSOBJ [
         endfor
       endfor
       "Identical candidates, such as two mugs of coffee, are interchangeable; use the first.";
-      if (length(viable) > 1 && $match:interchangeable({entry[1]['dobj] for entry in (viable)})
-          && length({choice[1]['iobj] for choice in (viable)}:unique()) == 1)
+      if (length(viable) > 1 && $match:interchangeable({ entry[1]['dobj] for entry in (viable) }) && length({ choice[1]['iobj] for choice in (viable) }:unique()) == 1)
         viable = {viable[1]};
       endif
       if (length(viable) > 1)
-        player:inform_current($event:mk_error(player,
-          "Which one do you mean? Use a more specific name or an object number."));
+        player:inform_current($event:mk_error(player, "Which one do you mean? Use a more specific name or an object number."));
         return true;
       elseif (viable)
         selected_pc = viable[1][1];
@@ -566,8 +564,6 @@ object SYSOBJ [
     callers() && !caller_perms().wizard && return E_PERM;
     server_log(@args);
   endmethod
-  property llm_room_view (owner: ARCH_WIZARD, flags: "r") = LLM_ROOM_VIEW;
-  property presence_listeners (owner: ARCH_WIZARD, flags: "") = {};
 
   method _presence owner: ARCH_WIZARD
     "Tell presence listeners about a new player, a first connection or a last disconnection.";

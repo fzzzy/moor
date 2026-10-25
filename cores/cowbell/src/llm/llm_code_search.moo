@@ -9,21 +9,8 @@ object LLM_CODE_SEARCH [
 
   method get_tools owner: ARCH_WIZARD
     "Describe literal source search with bounded pages and an explicit continuation cursor.";
-    const schema = ["type" -> "object", "properties" -> [
-      "pattern" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 128,
-        "description" -> "Case-insensitive literal text, not a regular expression"],
-      "object" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 256,
-        "description" -> "Optional object; otherwise search local scope, or global scope for a wizard"],
-      "limit" -> ["type" -> "integer", "minimum" -> 1, "maximum" -> 50,
-        "description" -> "Maximum matches in this page; default 20"],
-      "cursor" -> ["type" -> "array", "minItems" -> 3, "maxItems" -> 3,
-        "items" -> ["type" -> "integer", "minimum" -> 1],
-        "description" -> "Copy a nonempty next_cursor with the same pattern and scope"]],
-      "required" -> {"pattern"}, "additionalProperties" -> false];
-    return {$llm_agent_tool:mk("grep",
-      "Search readable local verb definitions. Follow next_cursor until empty and report omissions. "
-        + "Pages read the current world; restart after object or verb changes.",
-      schema, $llm_code_search, "search", 'inspection)};
+    const schema = ["type" -> "object", "properties" -> ["pattern" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 128, "description" -> "Case-insensitive literal text, not a regular expression"], "object" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 256, "description" -> "Optional object; otherwise search local scope, or global scope for a wizard"], "limit" -> ["type" -> "integer", "minimum" -> 1, "maximum" -> 50, "description" -> "Maximum matches in this page; default 20"], "cursor" -> ["type" -> "array", "minItems" -> 3, "maxItems" -> 3, "items" -> ["type" -> "integer", "minimum" -> 1], "description" -> "Copy a nonempty next_cursor with the same pattern and scope"]], "required" -> {"pattern"}, "additionalProperties" -> false];
+    return {$llm_agent_tool:mk("grep", "Search readable local verb definitions. Follow next_cursor until empty and report omissions. " + "Pages read the current world; restart after object or verb changes.", schema, $llm_code_search, "search", 'inspection)};
   endmethod
 
   method _scope owner: ARCH_WIZARD
@@ -77,9 +64,7 @@ object LLM_CODE_SEARCH [
     set_task_perms(actor);
     const {scope, label} = $llm_code_search:_scope(actor, spec);
     object_index <= length(scope) + 1 || raise(E_INVARG, "Search cursor is outside the current scope.");
-    let result = ["scope" -> label, "matches" -> {}, "omitted_lines" -> {},
-      "unreadable_objects" -> 0, "unreadable_verbs" -> 0,
-      "scanned" -> ["objects" -> 0, "verbs" -> 0, "lines" -> 0, "bytes" -> 0]];
+    let result = ["scope" -> label, "matches" -> {}, "omitted_lines" -> {}, "unreadable_objects" -> 0, "unreadable_verbs" -> 0, "scanned" -> ["objects" -> 0, "verbs" -> 0, "lines" -> 0, "bytes" -> 0]];
     while (object_index <= length(scope))
       if (result["scanned"]["objects"] >= 64)
         return $llm_code_search:_page(result, {object_index, verb_index, line_index});
@@ -105,16 +90,13 @@ object LLM_CODE_SEARCH [
           result["unreadable_verbs"] = result["unreadable_verbs"] + 1;
         endtry
         while (line_index <= length(lines))
-          if (result["scanned"]["lines"] >= 512 || length(result["matches"]) >= limit
-              || length(result["omitted_lines"]) >= 16)
+          if (result["scanned"]["lines"] >= 512 || length(result["matches"]) >= limit || length(result["omitted_lines"]) >= 16)
             return $llm_code_search:_page(result, {object_index, verb_index, line_index});
           endif
           const line = lines[line_index];
           const bytes = value_bytes(line);
           if (bytes > 262144)
-            result["omitted_lines"] = {@result["omitted_lines"],
-              ["object" -> tostr(target), "verb_index" -> verb_index, "line" -> line_index,
-                "reason" -> "Line exceeds 256 KiB."]};
+            result["omitted_lines"] = {@result["omitted_lines"], ["object" -> tostr(target), "verb_index" -> verb_index, "line" -> line_index, "reason" -> "Line exceeds 256 KiB."]};
           else
             if (result["scanned"]["bytes"] + bytes > 262144)
               return $llm_code_search:_page(result, {object_index, verb_index, line_index});
@@ -123,9 +105,7 @@ object LLM_CODE_SEARCH [
             const position = index(line, pattern, false);
             if (position > 0)
               const aliases = verb_info(target, verb_index)[3];
-              const match = ["object" -> tostr(target), "verb_index" -> verb_index,
-                "names" -> aliases[1..min(length(aliases), 128)],
-                "line" -> line_index, "text" -> $llm_code_search:_snippet(line, position, length(pattern))];
+              const match = ["object" -> tostr(target), "verb_index" -> verb_index, "names" -> aliases[1..min(length(aliases), 128)], "line" -> line_index, "text" -> $llm_code_search:_snippet(line, position, length(pattern))];
               const matches = {@result["matches"], match};
               if (value_bytes(matches) > 49152)
                 return $llm_code_search:_page(result, {object_index, verb_index, line_index});

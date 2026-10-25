@@ -25,7 +25,7 @@ object LLM_OBSERVER_SPEECH [
       text = (before + after):trim();
     endwhile
     "Leaked tool markup cannot invoke actions or supply spoken parameters.";
-    for marker in ({"<｜DSML｜", "<|DSML|", "<DSML", "<tool_call", "</think>"})
+    for marker in ({"<\uFF5CDSML\uFF5C", "<|DSML|", "<DSML", "<tool_call", "</think>"})
       index(text, marker) > 0 && return <$llm_observer_speech, .text = "">;
     endfor
     text == "SILENT" && (text = "");
@@ -47,19 +47,15 @@ object LLM_OBSERVER_SPEECH [
     "Publish bounded speech as the NPC only while it remains in the captured room.";
     const principal = caller_perms();
     const {observer, destination} = args;
-    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer)
-      || raise(E_TYPE);
-    valid(principal) && (principal == observer || principal == observer.owner || principal.wizard)
-      || raise(E_PERM);
+    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer) || raise(E_TYPE);
+    valid(principal) && (principal == observer || principal == observer.owner || principal.wizard) || raise(E_PERM);
     typeof(destination) == TYPE_OBJ || raise(E_TYPE);
     const speech = $llm_observer_speech:mk(this.text);
-    if (length(speech.text) == 0 || !observer.enabled || !valid(destination)
-        || observer.location != destination)
+    if (length(speech.text) == 0 || !observer.enabled || !valid(destination) || observer.location != destination)
       return false;
     endif
     set_task_perms(observer);
-    const event = $event:mk_say(observer, $sub:thec('actor), " ",
-      $sub:agree('actor, 'name, "say", "says"), ", \"", speech.text, "\"");
+    const event = $event:mk_say(observer, $sub:thec('actor), " ", $sub:agree('actor, 'name, "say", "says"), ", \"", speech.text, "\"");
     destination:announce(event);
     return true;
   endmethod

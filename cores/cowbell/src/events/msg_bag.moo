@@ -29,7 +29,7 @@ object MSG_BAG [
     const {idx} = args;
     typeof(idx) == TYPE_INT || raise(E_TYPE);
     const entries = typeof(this) == TYPE_FLYWEIGHT ? flycontents(this) | this.entries;
-    (idx >= 1 && idx <= length(entries)) || raise(E_RANGE);
+    idx >= 1 && idx <= length(entries) || raise(E_RANGE);
     const new_entries = listdelete(entries, idx);
     if (typeof(this) == TYPE_FLYWEIGHT)
       return toflyweight($msg_bag, flyslots(this), new_entries);
@@ -67,7 +67,7 @@ object MSG_BAG [
     const {idx, text} = args;
     typeof(idx) == TYPE_INT || raise(E_TYPE);
     const entries = typeof(this) == TYPE_FLYWEIGHT ? flycontents(this) | this.entries;
-    (idx >= 1 && idx <= length(entries)) || raise(E_RANGE);
+    idx >= 1 && idx <= length(entries) || raise(E_RANGE);
     if (typeof(this) == TYPE_FLYWEIGHT)
       const new_entries = listset(entries, text, idx);
       return toflyweight($msg_bag, flyslots(this), new_entries);
@@ -85,7 +85,6 @@ object MSG_BAG [
   verb is_msg_bag (none none none) owner: ARCH_WIZARD flags: "rxd"
     "Check if a value is a message bag (object or flyweight).";
     const {value} = args;
-    return (typeof(value) == TYPE_OBJ && isa(value, $msg_bag))
-      || (typeof(value) == TYPE_FLYWEIGHT && value.delegate == $msg_bag);
+    return typeof(value) == TYPE_OBJ && isa(value, $msg_bag) || (typeof(value) == TYPE_FLYWEIGHT && value.delegate == $msg_bag);
   endverb
 endobject

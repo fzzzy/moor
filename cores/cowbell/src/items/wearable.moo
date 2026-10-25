@@ -10,19 +10,19 @@ object WEARABLE [
 
   property body_area (owner: HACKER, flags: "rw") = false;
   property remove_msg (owner: HACKER, flags: "rw") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "remove", .singular_form = "removes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "remove", .singular_form = "removes">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property wear_msg (owner: HACKER, flags: "rw") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "put on", .singular_form = "puts on">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "put on", .singular_form = "puts on">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
 
@@ -115,10 +115,8 @@ object WEARABLE [
     const {property} = args;
     if (tostr(property) in {"wear_msg", "remove_msg"})
       let bindings = $sub_utils:standard_bindings("The person wearing or removing the item.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The wearable item.",
-        'example -> 'host];
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.",
-        'example -> 'location];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The wearable item.", 'example -> 'host];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.", 'example -> 'location];
       return bindings;
     endif
     return pass(@args);
@@ -148,8 +146,7 @@ object WEARABLE [
     !(this in who.wearing) || return false;
     valid($wearable:_conflict(this, who)) && return false;
     who.wearing = setadd(who.wearing, this);
-    $reaction:_dispatch(this, 'on_wear, mapmerge(context,
-      ['Actor -> who, 'Item -> this, 'Location -> who.location]));
+    $reaction:_dispatch(this, 'on_wear, mapmerge(context, ['Actor -> who, 'Item -> this, 'Location -> who.location]));
     set_task_perms(principal);
     if (!silent && valid(who.location))
       const event = $event:mk_info(who, @this.wear_msg):with_dobj(this):with_this(who.location);
@@ -168,8 +165,7 @@ object WEARABLE [
     this.location == who || return false;
     this in who.wearing || return false;
     who.wearing = setremove(who.wearing, this);
-    $reaction:_dispatch(this, 'on_remove, mapmerge(context,
-      ['Actor -> who, 'Item -> this, 'Location -> who.location]));
+    $reaction:_dispatch(this, 'on_remove, mapmerge(context, ['Actor -> who, 'Item -> this, 'Location -> who.location]));
     set_task_perms(principal);
     if (!silent && valid(who.location))
       const event = $event:mk_info(who, @this.remove_msg):with_dobj(this):with_this(who.location);
@@ -182,8 +178,7 @@ object WEARABLE [
   verb wear (this none none) owner: ARCH_WIZARD flags: "rd"
     "Command: put on this wearable item";
     const principal = caller_perms();
-    ((principal == #-1 && caller == player) || principal == player || principal.wizard)
-      || raise(E_PERM);
+    principal == #-1 && caller == player || principal == player || principal.wizard || raise(E_PERM);
     set_task_perms(principal == #-1 ? player | principal);
     if (this.location != player)
       player:inform_current($event:mk_error(player, "You don't have that."));
@@ -205,8 +200,7 @@ object WEARABLE [
   verb remove (this none none) owner: ARCH_WIZARD flags: "rd"
     "Command: remove this wearable item";
     const principal = caller_perms();
-    ((principal == #-1 && caller == player) || principal == player || principal.wizard)
-      || raise(E_PERM);
+    principal == #-1 && caller == player || principal == player || principal.wizard || raise(E_PERM);
     set_task_perms(principal == #-1 ? player | principal);
     if (this.location != player)
       player:inform_current($event:mk_error(player, "You don't have that."));

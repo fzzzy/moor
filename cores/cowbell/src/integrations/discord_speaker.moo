@@ -7,11 +7,11 @@ object DISCORD_SPEAKER [
   owner: ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "A device that carries what happens in this room to a Discord channel, and speaks what is said there.";
-  override portable (owner: ARCH_WIZARD, flags: "rc") = false;
-
   property recent (owner: ARCH_WIZARD, flags: "r") = {};
   property recent_limit (owner: ARCH_WIZARD, flags: "rc") = 10;
+
+  override description (owner: ARCH_WIZARD, flags: "rc") = "A device that carries what happens in this room to a Discord channel, and speaks what is said there.";
+  override portable (owner: ARCH_WIZARD, flags: "rc") = false;
 
   method tell owner: ARCH_WIZARD
     "Relay what this room announces to Discord. Only the room's own announcements are heard.";

@@ -6,12 +6,12 @@ object LLM_PROJECT [
   parent: ROOT
   owner: ARCH_WIZARD
 
+  property active_task_id (owner: ARCH_WIZARD, flags: "") = 0;
+  property next_task_id (owner: ARCH_WIZARD, flags: "") = 1;
+  property next_todo_id (owner: ARCH_WIZARD, flags: "") = 1;
   property subject (owner: ARCH_WIZARD, flags: "") = #-1;
   property tasks (owner: ARCH_WIZARD, flags: "") = [];
   property todos (owner: ARCH_WIZARD, flags: "") = {};
-  property next_task_id (owner: ARCH_WIZARD, flags: "") = 1;
-  property next_todo_id (owner: ARCH_WIZARD, flags: "") = 1;
-  property active_task_id (owner: ARCH_WIZARD, flags: "") = 0;
 
   method new owner: ARCH_WIZARD
     "Create independent anonymous project state for an owned subject.";
@@ -107,7 +107,7 @@ object LLM_PROJECT [
     const {?status = false} = args;
     status == false && return this.todos;
     status in {'pending, 'in_progress, 'completed} || raise(E_INVARG, "Invalid todo status.");
-    return {item for item in (this.todos) if (item["status"] == status)};
+    return { item for item in (this.todos) if item["status"] == status };
   endmethod
 
   method remove_todo owner: ARCH_WIZARD
@@ -116,14 +116,14 @@ object LLM_PROJECT [
     const {id} = args;
     typeof(id) == TYPE_INT || raise(E_TYPE);
     const previous = length(this.todos);
-    this.todos = {item for item in (this.todos) if (item["id"] != id)};
+    this.todos = { item for item in (this.todos) if item["id"] != id };
     return length(this.todos) < previous;
   endmethod
 
   method clear_completed_todos owner: ARCH_WIZARD
     "Release completed todo records.";
     $llm_project:check(this, caller_perms());
-    this.todos = {item for item in (this.todos) if (item["status"] != 'completed)};
+    this.todos = { item for item in (this.todos) if item["status"] != 'completed };
     return true;
   endmethod
 
@@ -204,7 +204,7 @@ object LLM_PROJECT [
   method get_task_status owner: ARCH_WIZARD
     "Return status snapshots for all retained tasks in ID order.";
     $llm_project:check(this, caller_perms());
-    return {this.tasks[id]:get_status() for id in (sort(mapkeys(this.tasks)))};
+    return { this.tasks[id]:get_status() for id in (sort(mapkeys(this.tasks))) };
   endmethod
 
   method children owner: ARCH_WIZARD
@@ -212,7 +212,7 @@ object LLM_PROJECT [
     $llm_project:check(this, caller_perms());
     const {id} = args;
     maphaskey(this.tasks, id) || raise(E_INVARG, "Task not found.");
-    return {child for child in (sort(mapkeys(this.tasks))) if (this.tasks[child].parent_task_id == id)};
+    return { child for child in (sort(mapkeys(this.tasks))) if this.tasks[child].parent_task_id == id };
   endmethod
 
   method remove_task owner: ARCH_WIZARD
@@ -254,9 +254,7 @@ object LLM_PROJECT [
     $llm_project:check(this, caller_perms());
     !maphaskey(this.tasks, this.active_task_id) && return "No active task.";
     const status = this.tasks[this.active_task_id]:get_status();
-    let lines = {"Task #" + tostr(status["task_id"]) + ": " + status["description"],
-      "Status: " + tostr(status["status"]), "Findings: " + tostr(status["finding_count"]),
-      "Subtasks: " + tostr(status["subtask_count"])};
+    let lines = {"Task #" + tostr(status["task_id"]) + ": " + status["description"], "Status: " + tostr(status["status"]), "Findings: " + tostr(status["finding_count"]), "Subtasks: " + tostr(status["subtask_count"])};
     status["status"] == 'completed && (lines = {@lines, "Result: " + status["result"]});
     status["status"] in {'blocked, 'failed} && (lines = {@lines, "Reason: " + status["error"]});
     return lines:join("\n");
@@ -314,5 +312,4 @@ object LLM_PROJECT [
     todos[2]["status"] != 'in_progress && raise(E_ASSERT, "Second should be in_progress");
     return true;
   endmethod
-
 endobject

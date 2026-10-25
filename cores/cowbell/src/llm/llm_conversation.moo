@@ -6,9 +6,9 @@ object LLM_CONVERSATION [
   parent: ROOT
   owner: ARCH_WIZARD
 
-  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
   property messages (owner: ARCH_WIZARD, flags: "") = {};
   property revision (owner: ARCH_WIZARD, flags: "") = 0;
+  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
 
   method new owner: ARCH_WIZARD
     "Create independent anonymous transcript state bound to an owned object.";
@@ -36,19 +36,16 @@ object LLM_CONVERSATION [
     "Require bounded messages and complete tool exchanges before storing a transcript.";
     const {messages} = args;
     typeof(messages) == TYPE_LIST || raise(E_TYPE);
-    length(messages) <= 256 && value_bytes(messages) <= 1048576
-      || raise(E_QUOTA, "Conversation exceeds 256 messages or 1 MiB");
+    length(messages) <= 256 && value_bytes(messages) <= 1048576 || raise(E_QUOTA, "Conversation exceeds 256 messages or 1 MiB");
     $llm_value:validate_json(messages);
     let pending = {};
     for message in (messages)
       typeof(message) == TYPE_MAP && maphaskey(message, "role") || raise(E_INVARG, "Message needs a role");
       const role = message["role"];
       typeof(role) == TYPE_STR || raise(E_TYPE, "Message role must be text");
-      {"system", "user", "assistant", "tool"}:find({known} => strcmp(role, known) == 0)
-        || raise(E_INVARG, "Invalid message role");
+      {"system", "user", "assistant", "tool"}:find({known} => strcmp(role, known) == 0) || raise(E_INVARG, "Invalid message role");
       if (role == "tool")
-        maphaskey(message, "tool_call_id") && typeof(message["tool_call_id"]) == TYPE_STR
-          || raise(E_INVARG, "Tool response needs an ID");
+        maphaskey(message, "tool_call_id") && typeof(message["tool_call_id"]) == TYPE_STR || raise(E_INVARG, "Tool response needs an ID");
         let matched = 0;
         for index in [1..length(pending)]
           if (strcmp(pending[index], message["tool_call_id"]) == 0)
@@ -64,10 +61,9 @@ object LLM_CONVERSATION [
       if (role == "assistant" && maphaskey(message, "tool_calls") && length(message["tool_calls"]) > 0)
         const response = $llm_response:mk(["choices" -> {["message" -> message]}]);
         response:is_valid() || raise(E_INVARG, "Invalid assistant tool calls");
-        pending = {call["id"] for call in (message["tool_calls"])};
+        pending = { call["id"] for call in (message["tool_calls"]) };
       else
-        maphaskey(message, "content") && typeof(message["content"]) in {TYPE_STR, TYPE_LIST}
-          || raise(E_TYPE, "Message needs text or structured content");
+        maphaskey(message, "content") && typeof(message["content"]) in {TYPE_STR, TYPE_LIST} || raise(E_TYPE, "Message needs text or structured content");
       endif
     endfor
     length(pending) == 0 || raise(E_INVARG, "Missing tool responses");
@@ -127,9 +123,7 @@ object LLM_CONVERSATION [
     const {index, id, message} = args;
     typeof(index) == TYPE_INT && index >= 1 && index <= length(this.messages) || raise(E_INVARG, "Tool journal position changed");
     const previous = this.messages[index];
-    maphaskey(previous, "tool_call_id") && strcmp(previous["tool_call_id"], id) == 0
-      && maphaskey(message, "tool_call_id") && strcmp(message["tool_call_id"], id) == 0
-      || raise(E_INVARG, "Tool journal identity changed");
+    maphaskey(previous, "tool_call_id") && strcmp(previous["tool_call_id"], id) == 0 && maphaskey(message, "tool_call_id") && strcmp(message["tool_call_id"], id) == 0 || raise(E_INVARG, "Tool journal identity changed");
     let messages = this.messages;
     messages[index] = message;
     set_task_perms(principal);
@@ -156,16 +150,13 @@ object LLM_CONVERSATION [
     while (split > first)
       const message = snapshot[split];
       const role = message["role"];
-      if (role == "user" || role == "system"
-          || (role == "assistant" && !maphaskey(message, "tool_calls")))
+      if (role == "user" || role == "system" || (role == "assistant" && !maphaskey(message, "tool_calls")))
         break;
       endif
       split = split - 1;
     endwhile
     split <= first && return false;
-    return ['revision -> this.revision, 'owner -> this.subject.owner,
-      'prefix -> has_system ? {snapshot[1]} | {}, 'old -> snapshot[first..split - 1],
-      'recent -> snapshot[split..$]];
+    return ['revision -> this.revision, 'owner -> this.subject.owner, 'prefix -> has_system ? {snapshot[1]} | {}, 'old -> snapshot[first..split - 1], 'recent -> snapshot[split..$]];
   endmethod
 
   method apply_summary owner: ARCH_WIZARD
@@ -176,8 +167,7 @@ object LLM_CONVERSATION [
     typeof(summary) == TYPE_STR && length(summary:trim()) > 0 || raise(E_INVARG, "Empty conversation summary");
     plan['owner] == this.subject.owner || raise(E_PERM, "Conversation ownership changed");
     plan['revision] == this.revision || return false;
-    const messages = {@plan['prefix],
-      ["role" -> "assistant", "content" -> "Previous conversation summary: " + summary], @plan['recent]};
+    const messages = {@plan['prefix], ["role" -> "assistant", "content" -> "Previous conversation summary: " + summary], @plan['recent]};
     set_task_perms(principal);
     this:replace(messages);
     return true;

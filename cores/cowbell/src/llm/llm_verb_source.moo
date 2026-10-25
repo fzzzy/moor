@@ -18,8 +18,7 @@ object LLM_VERB_SOURCE [
       try
         const info = verb_info(definer, name);
         const argspec = verb_args(definer, name);
-        const snapshot = <$llm_verb_source, .target = target, .definer = definer, .name = name,
-          .owner = info[1], .flags = info[2], .names = info[3], .argspec = argspec>;
+        const snapshot = <$llm_verb_source, .target = target, .definer = definer, .name = name, .owner = info[1], .flags = info[2], .names = info[3], .argspec = argspec>;
         value_bytes(snapshot) <= 65536 || raise(E_QUOTA, "Verb metadata exceeds 64 KiB.");
         return snapshot;
       except (E_VERBNF)
@@ -34,8 +33,7 @@ object LLM_VERB_SOURCE [
     const {actor, spec, name, ?start = 1, ?end = 0, ?context = 0} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     typeof(start) == TYPE_INT && typeof(end) == TYPE_INT && typeof(context) == TYPE_INT || raise(E_TYPE);
-    start >= 1 && (end == 0 || end >= start) && context >= 0 && context <= 1000
-      || raise(E_INVARG, "Invalid source range.");
+    start >= 1 && (end == 0 || end >= start) && context >= 0 && context <= 1000 || raise(E_INVARG, "Invalid source range.");
     set_task_perms(actor);
     const metadata = $llm_verb_source:metadata(actor, spec, name);
     const source = verb_code(metadata.definer, name, false, true);
@@ -62,29 +60,25 @@ object LLM_VERB_SOURCE [
 
   method metadata_text owner: ARCH_WIZARD
     "Render captured verb metadata for an LLM inspection result.";
-    return {"Verb: " + this:signature(), "Owner: " + tostr(this.owner), "Flags: " + this.flags,
-      "Args: " + this.argspec:join(" "), "Defined on: " + tostr(this.definer)}:join("\n");
+    return {"Verb: " + this:signature(), "Owner: " + tostr(this.owner), "Flags: " + this.flags, "Args: " + this.argspec:join(" "), "Defined on: " + tostr(this.definer)}:join("\n");
   endmethod
 
   method text owner: ARCH_WIZARD
     "Render captured source and metadata for an LLM inspection result.";
-    return {"Verb: " + this:signature(), "Flags: " + this.flags + "  Argspec: " + this.argspec:join(" "),
-      "Code (" + tostr(this.total) + " lines):", "---", this.lines:join("\n"), "---"}:join("\n");
+    return {"Verb: " + this:signature(), "Flags: " + this.flags + "  Argspec: " + this.argspec:join(" "), "Code (" + tostr(this.total) + " lines):", "---", this.lines:join("\n"), "---"}:join("\n");
   endmethod
 
   method numbered_text owner: ARCH_WIZARD
     "Render a selected source range with its original line numbers.";
-    return {tostr(this.first + i - 1) + ": " + this.lines[i] for i in [1..length(this.lines)]}:join("\n");
+    return { tostr(this.first + i - 1) + ": " + this.lines[i] for i in [1..length(this.lines)] }:join("\n");
   endmethod
 
   method document owner: ARCH_WIZARD
     "Build structured metadata and opaque source; renderers supply the optional number gutter.";
     const {?show_line_numbers = true} = args;
     typeof(show_line_numbers) == TYPE_BOOL || raise(E_TYPE);
-    const range = this.total == 0 ? "0 lines"
-      | "Lines " + tostr(this.first) + "-" + tostr(this.last) + " of " + tostr(this.total);
-    const table = $format.table:mk({"Verb", "Args", "Owner", "Flags", "Range"},
-      {{this:signature(), this.argspec:join(" "), tostr(this.owner), this.flags, range}});
+    const range = this.total == 0 ? "0 lines" | "Lines " + tostr(this.first) + "-" + tostr(this.last) + " of " + tostr(this.total);
+    const table = $format.table:mk({"Verb", "Args", "Owner", "Flags", "Range"}, {{this:signature(), this.argspec:join(" "), tostr(this.owner), this.flags, range}});
     return $format.block:mk(table, $format.code:mk(this.lines, 'moo, show_line_numbers ? this.first | false));
   endmethod
 endobject

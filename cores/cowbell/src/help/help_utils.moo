@@ -16,8 +16,7 @@ object HELP_UTILS [
     set_task_perms(caller_perms());
     $document:validate($document:mk(blocks));
     valid(viewer) || return $format.block:mk(@blocks);
-    const environment = {@viewer:command_environment(), @viewer.contents,
-      @`viewer.location.contents ! E_INVIND => {}'};
+    const environment = {@viewer:command_environment(), @viewer.contents, @`viewer.location.contents ! E_INVIND => {}'};
     let annotated = {};
     let resolved = [];
     for block in (blocks)
@@ -82,7 +81,7 @@ object HELP_UTILS [
     let {code, viewer, environment, resolved} = args;
     set_task_perms(caller_perms());
     const label = code.text;
-    (index(label, "\n") || index(label, "`")) && return {code, resolved};
+    index(label, "\n") || index(label, "`") && return {code, resolved};
     const words = label:words_list();
     const name = length(words) ? words[1] | "";
     if (!maphaskey(resolved, name))
@@ -231,8 +230,7 @@ object HELP_UTILS [
     if (typeof(doc_text) == TYPE_LIST)
       doc_text = doc_text:join("\n");
     endif
-    if ((typeof(doc_text) == TYPE_STR && !length(doc_text))
-        || (typeof(doc_text) == TYPE_BOOL && !doc_text))
+    if (typeof(doc_text) == TYPE_STR && !length(doc_text) || (typeof(doc_text) == TYPE_BOOL && !doc_text))
       doc_text = "(No documentation available)";
     endif
     return $format.block:mk($format.title:mk(title), doc_text);
@@ -329,8 +327,7 @@ object HELP_UTILS [
     if (dash_pos > 0)
       usage = hint_content[1..dash_pos - 1]:trim();
       description = hint_content[dash_pos + 4..$]:trim();
-      content = $format.paragraph:mk("Usage: ",
-        this:command_usage(verb_name + " " + usage, player, verb_args(definer, verb_name)));
+      content = $format.paragraph:mk("Usage: ", this:command_usage(verb_name + " " + usage, player, verb_args(definer, verb_name)));
     else
       description = hint_content;
       content = "";

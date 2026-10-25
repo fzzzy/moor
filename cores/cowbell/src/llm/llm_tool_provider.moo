@@ -86,16 +86,14 @@ object LLM_TOOL_PROVIDER [
     this.session_bound || return true;
     const session = this.bound_session;
     const snapshot = this:_snapshot(actor, target, kind, member);
-    if (typeof(preview) == TYPE_LIST
-        && (preview != snapshot || strcmp(toliteral(preview), toliteral(snapshot)) != 0))
+    if (typeof(preview) == TYPE_LIST && (preview != snapshot || strcmp(toliteral(preview), toliteral(snapshot)) != 0))
       session:forget_approval(actor, effect, target);
       return $llm_tool_result:mk('waiting, "Target changed before its preview.", "stale_confirmation");
     endif
     const proposal = effect in {'program_verb, 'eval} ? request["code"] | toliteral(request);
     const title = tostr(effect) + " on " + tostr(target);
     const rationale = `request["rationale"] ! E_RANGE => ""';
-    const content = $format.block:mk($format.title:mk(title), rationale,
-      $format.code:mk(proposal, 'moo));
+    const content = $format.block:mk($format.title:mk(title), rationale, $format.code:mk(proposal, 'moo));
     session:emit(actor, $event:mk_info(actor, content):as_inset():with_group('llm, session.host));
     const displayed = this:_snapshot(actor, target, kind, member);
     if (snapshot != displayed || strcmp(toliteral(snapshot), toliteral(displayed)) != 0)

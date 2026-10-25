@@ -11,28 +11,28 @@ object THING [
 
   property drop_denied_msg (owner: HACKER, flags: "rc") = {"You can't drop that."};
   property drop_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " dropped ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property drop_rule (owner: HACKER, flags: "rc") = 0;
   property get_denied_msg (owner: HACKER, flags: "rc") = {"You can't pick that up."};
   property get_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " picked up ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property get_rule (owner: HACKER, flags: "rc") = 0;
-  override noun_kind = 'count;
-  property listing_form (owner: HACKER, flags: "rc") = 'indefinite;
   property integrated_description (owner: HACKER, flags: "rc") = "";
+  property listing_form (owner: HACKER, flags: "rc") = 'indefinite;
   property portable (owner: HACKER, flags: "rc") = true;
   property pronouns (owner: HACKER, flags: "rc") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "it/its", .ps = "it", .po = "it", .pp = "its", .pq = "its", .pr = "itself">;
   property unlocks (owner: HACKER, flags: "rc") = #-1;
 
   override description (owner: HACKER, flags: "rc") = "Generic thing prototype that is the basis for most items in the world.";
+  override noun_kind (owner: HACKER, flags: "rc") = 'count;
   override object_documentation (owner: HACKER, flags: "rc") = {
     "# Generic Things",
     "",
@@ -127,16 +127,13 @@ object THING [
     const {property} = args;
     if (tostr(property) in {"get_msg", "drop_msg"})
       let bindings = $sub_utils:standard_bindings("The person moving the item.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The item being picked up or dropped.",
-        'example -> 'host];
-      bindings['iobj] = ['kind -> 'object, 'description -> "The same person moving the item.",
-        'example -> 'actor];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The item being picked up or dropped.", 'example -> 'host];
+      bindings['iobj] = ['kind -> 'object, 'description -> "The same person moving the item.", 'example -> 'actor];
       return bindings;
     endif
     if (tostr(property) in {"get_denied_msg", "drop_denied_msg"})
       let bindings = $sub_utils:standard_bindings("The person trying to move the item.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The item being picked up or dropped.",
-        'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The item being picked up or dropped.", 'example -> 'host];
       return bindings;
     endif
     return pass(@args);
@@ -234,24 +231,18 @@ object THING [
     else
       source == who || return denied({"You are no longer carrying that item."});
     endif
-    const before = {item.owner, item.location, item.portable, item.get_rule, item.drop_rule,
-      who.owner, who.location, who.wearing, destination.owner};
+    const before = {item.owner, item.location, item.portable, item.get_rule, item.drop_rule, who.owner, who.location, who.wearing, destination.owner};
     const reason = $thing:_check_transfer(item, operation, who, destination, principal);
     length(reason) == 0 || return denied(reason);
     $root:check_actor(who, principal);
-    equal(before, {item.owner, item.location, item.portable, item.get_rule, item.drop_rule,
-      who.owner, who.location, who.wearing, destination.owner})
-      || return denied({"The item or its rules changed. Try again."});
+    equal(before, {item.owner, item.location, item.portable, item.get_rule, item.drop_rule, who.owner, who.location, who.wearing, destination.owner}) || return denied({"The item or its rules changed. Try again."});
     const location = who.location;
     move(item, destination);
     item.location == destination || raise(E_INVARG, "The item did not reach its destination.");
-    $reaction:_dispatch(item, tosym("on_" + tostr(operation)),
-      ['Actor -> who, 'Item -> item, 'Location -> location,
-        '_reaction_chain -> `reaction_context['_reaction_chain] ! E_RANGE => {}']);
+    $reaction:_dispatch(item, tosym("on_" + tostr(operation)), ['Actor -> who, 'Item -> item, 'Location -> location, '_reaction_chain -> `reaction_context['_reaction_chain] ! E_RANGE => {}']);
     set_task_perms(principal);
     if (!silent && valid(location))
-      const event = $event:mk_moved(who, @item.(tostr(operation) + "_msg"))
-        :with_dobj(item):with_iobj(who);
+      const event = $event:mk_moved(who, @item.(tostr(operation) + "_msg")):with_dobj(item):with_iobj(who);
       location:announce(event);
     endif
     return ['status -> 'applied, 'reason -> {}];
@@ -280,8 +271,7 @@ object THING [
   verb get (this none none) owner: ARCH_WIZARD flags: "rxd" [ ui -> ["label" -> "Take"] ]
     "Get an item through the same checks and completed events as an action.";
     const principal = caller_perms();
-    ((principal == #-1 && caller == player) || principal == player || principal.wizard)
-      || raise(E_PERM);
+    principal == #-1 && caller == player || principal == player || principal.wizard || raise(E_PERM);
     set_task_perms(principal == #-1 ? player | principal);
     const result = $thing:transfer(this, 'get, player);
     if (result['status] == 'denied)
@@ -293,8 +283,7 @@ object THING [
   verb drop (this none none) owner: ARCH_WIZARD flags: "rxd"
     "Drop an item through the same checks and completed events as an action.";
     const principal = caller_perms();
-    ((principal == #-1 && caller == player) || principal == player || principal.wizard)
-      || raise(E_PERM);
+    principal == #-1 && caller == player || principal == player || principal.wizard || raise(E_PERM);
     set_task_perms(principal == #-1 ? player | principal);
     const result = $thing:transfer(this, 'drop, player);
     if (result['status] == 'denied)
@@ -374,8 +363,7 @@ object THING [
     thing = this:create(true);
     thing.name = "test pebble";
     $test_utils:assert_eq(thing:pronouns(), this.pronouns, "things should inherit default pronouns");
-    $test_utils:assert_eq(thing:noun_grammar(player),
-      ['kind -> 'count, 'number -> 'singular, 'article -> ""], "Singular count noun");
+    $test_utils:assert_eq(thing:noun_grammar(player), ['kind -> 'count, 'number -> 'singular, 'article -> ""], "Singular count noun");
     $test_utils:assert_eq(thing:pronoun_subject(), "it", "default subject pronoun");
     $test_utils:assert_eq(thing:pronoun_object(), "it", "default object pronoun");
     $test_utils:assert_eq(thing:pronoun_possessive('adj), "its", "default possessive adjective");

@@ -17,20 +17,8 @@ object LLM_BEHAVIOR_TOOLS [
     tools = {@tools, $llm_agent_tool:mk("set_rule", "Set an access control rule on an object property. Rules are logical expressions like 'input.Key == #123' or 'NOT is_locked(object: input.This)'.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object reference"], "property" -> ["type" -> "string", "description" -> "Rule property name (must end with _rule, e.g., 'lock_rule')"], "expression" -> ["type" -> "string", "description" -> "Condition using AND, OR, NOT, comparisons, and named predicate arguments"]], "required" -> {"object", "property", "expression"}], target_obj, "set_rule", 'mutation)};
     tools = {@tools, $llm_agent_tool:mk("show_rule", "Display the current expression for a specific rule property.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object reference"], "property" -> ["type" -> "string", "description" -> "Rule property name (must end with _rule)"]], "required" -> {"object", "property"}], target_obj, "show_rule", 'inspection)};
     tools = {@tools, $llm_agent_tool:mk("test_rule", "Test a rule expression with specific variable bindings to see if it evaluates successfully.", ["type" -> "object", "properties" -> ["expression" -> ["type" -> "string", "description" -> "Rule expression to test (e.g., 'input.Key == #123')"], "bindings" -> ["type" -> "object", "description" -> "Variable bindings as key-value pairs (e.g., {\"This\": \"#123\", \"Accessor\": \"#5\", \"Key\": \"#456\"})"]], "required" -> {"expression", "bindings"}], target_obj, "tool_test_rule", 'inspection)};
-    tools = {@tools, $llm_agent_tool:mk("evaluate_rule",
-      "Evaluate a readable stored rule. Optional bindings use JSON values and explicit object references such as #123.",
-      ["type" -> "object", "properties" -> [
-        "object" -> ["type" -> "string", "description" -> "Object containing the rule"],
-        "property" -> ["type" -> "string", "description" -> "Property ending in _rule"],
-        "bindings" -> ["type" -> "object", "description" -> "Rule inputs; omitted bindings are empty"]],
-        "required" -> {"object", "property"}], target_obj, "evaluate_rule", 'inspection)};
-    tools = {@tools, $llm_agent_tool:mk("author_reaction",
-      "Use the same reaction, state, and rule commands as a builder. Call with command=reaction and text=help first. "
-        + "The help is generated from current definitions. New reactions start disabled. Inspect and preview before enabling.",
-      ["type" -> "object", "properties" -> [
-        "command" -> ["type" -> "string", "enum" -> {"reaction", "state", "rule", "facts"}],
-        "text" -> ["type" -> "string", "description" -> "Arguments after @reaction, @state, @rule, or @facts. Do not include the command name."]],
-        "required" -> {"command", "text"}], target_obj, "author_reaction", 'mutation)};
+    tools = {@tools, $llm_agent_tool:mk("evaluate_rule", "Evaluate a readable stored rule. Optional bindings use JSON values and explicit object references such as #123.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object containing the rule"], "property" -> ["type" -> "string", "description" -> "Property ending in _rule"], "bindings" -> ["type" -> "object", "description" -> "Rule inputs; omitted bindings are empty"]], "required" -> {"object", "property"}], target_obj, "evaluate_rule", 'inspection)};
+    tools = {@tools, $llm_agent_tool:mk("author_reaction", "Use the same reaction, state, and rule commands as a builder. Call with command=reaction and text=help first. " + "The help is generated from current definitions. New reactions start disabled. Inspect and preview before enabling.", ["type" -> "object", "properties" -> ["command" -> ["type" -> "string", "enum" -> {"reaction", "state", "rule", "facts"}], "text" -> ["type" -> "string", "description" -> "Arguments after @reaction, @state, @rule, or @facts. Do not include the command name."]], "required" -> {"command", "text"}], target_obj, "author_reaction", 'mutation)};
     tools = {@tools, $llm_agent_tool:mk("list_reactions", "List all reactions on an object with detailed information including triggers, conditions, effects, and enabled status.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object to inspect (e.g., '#12', 'here', 'cupboard')"]], "required" -> {"object"}], target_obj, "list_reactions", 'inspection)};
     tools = {@tools, $llm_agent_tool:mk("list_messages", "List message template properties (*_msg) and message bags (*_msg_bag/_msgs) on an object.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object to inspect (e.g., '#62', '$room', 'here')"]], "required" -> {"object"}], target_obj, "list_messages", 'inspection)};
     tools = {@tools, $llm_agent_tool:mk("get_message_template", "Show a single message template or list the entries of a message bag.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "Object reference"], "property" -> ["type" -> "string", "description" -> "Property name (must end with _msg, _msgs, or _msg_bag)"]], "required" -> {"object", "property"}], target_obj, "get_message_template", 'inspection)};
@@ -54,8 +42,7 @@ object LLM_BEHAVIOR_TOOLS [
       fields["rationale"] = ["type" -> "string", "maxLength" -> 4096];
       schema["properties"] = fields;
       schema["additionalProperties"] = false;
-      bounded = {@bounded, $llm_agent_tool:mk(tool.name, tool.description, schema,
-        this, tool.target_verb, tool.effect)};
+      bounded = {@bounded, $llm_agent_tool:mk(tool.name, tool.description, schema, this, tool.target_verb, tool.effect)};
     endfor
     return bounded;
   endmethod
@@ -70,8 +57,7 @@ object LLM_BEHAVIOR_TOOLS [
       let state = {target, target.owner, parent(target), member, false};
       try
         const value = target.(member);
-        state = {target, target.owner, parent(target), member, true,
-          property_info(target, member), value};
+        state = {target, target.owner, parent(target), member, true, property_info(target, member), value};
         if (kind == 'message && typeof(value) == TYPE_OBJ && isa(value, $msg_bag))
           state = {@state, value.owner, property_info(value, "entries"), value.entries};
         endif
@@ -88,15 +74,12 @@ object LLM_BEHAVIOR_TOOLS [
           visited = visited + 1;
           visited <= 1024 || raise(E_QUOTA, "Too many properties for an authoring preview.");
           const name = tostr(property);
-          if (name:ends_with("_reaction") || name:ends_with("_rule")
-              || name in {"reaction_state_fields", "fact_schema", "set_version"}
-              || name:starts_with("tuple_") || maphaskey(fields, tosym(name)))
+          if (name:ends_with("_reaction") || name:ends_with("_rule") || name in {"reaction_state_fields", "fact_schema", "set_version"} || name:starts_with("tuple_") || maphaskey(fields, tosym(name)))
             state[property] = {property_info(target, property), target.(property)};
           endif
         endfor
       endfor
-      const destination = typeof(member) == TYPE_OBJ
-        ? this:_snapshot(actor, member, 'author, false) | {};
+      const destination = typeof(member) == TYPE_OBJ ? this:_snapshot(actor, member, 'author, false) | {};
       const snapshot = {target, target.owner, parent(target), state, destination};
       length(toliteral(snapshot)) <= 1048576 || raise(E_QUOTA, "Authoring preview is too large.");
       return snapshot;
@@ -155,8 +138,7 @@ object LLM_BEHAVIOR_TOOLS [
     const compiled = $rule_engine:parse_expression(expression, prop_name, $rule_engine:policy_scope(prop_name));
     const validation = $rule_engine:validate_rule(compiled);
     !validation['valid] && raise(E_INVARG, "Rule validation failed: " + validation['warnings]:join("; "));
-    const approval = this:_approve(actor, 'set_rule, target_obj, 'optional_property,
-      prop_exists ? prop_key | prop_name, args_map, preview);
+    const approval = this:_approve(actor, 'set_rule, target_obj, 'optional_property, prop_exists ? prop_key | prop_name, args_map, preview);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     if (prop_exists)
       target_obj.(prop_key) = compiled;
@@ -204,8 +186,7 @@ object LLM_BEHAVIOR_TOOLS [
     for name in (mapkeys(inputs))
       input_types[name] = $behavior_schema:type_of(inputs[name]);
     endfor
-    const compiled = $rule_engine:parse_expression(expression, 'test_rule,
-      $rule_engine:scope(input_types));
+    const compiled = $rule_engine:parse_expression(expression, 'test_rule, $rule_engine:scope(input_types));
     const result = $rule_engine:evaluate(compiled, inputs);
     if (result['success])
       return "Condition matched. Selected values: " + toliteral(result['bindings]);
@@ -245,9 +226,7 @@ object LLM_BEHAVIOR_TOOLS [
     rule == 0 && return tostr(target) + "." + name + " = (not set) - cannot evaluate";
     const inputs = $llm_behavior_tools:_rule_inputs(`request["bindings"] ! E_RANGE => []');
     const result = $rule_engine:evaluate(rule, inputs);
-    let lines = {"Evaluation of " + tostr(target) + "." + name + ":",
-      "Expression: " + $rule_engine:decompile_rule(rule), "Initial bindings: " + toliteral(inputs),
-      "Success: " + tostr(result['success])};
+    let lines = {"Evaluation of " + tostr(target) + "." + name + ":", "Expression: " + $rule_engine:decompile_rule(rule), "Initial bindings: " + toliteral(inputs), "Success: " + tostr(result['success])};
     if (result['success])
       lines = {@lines, "Result bindings: " + toliteral(result['bindings])};
     endif
@@ -267,11 +246,10 @@ object LLM_BEHAVIOR_TOOLS [
     $llm_tool_provider:check(this, actor, caller_perms());
     set_task_perms(actor);
     const host = $builder_features:_author_object(toliteral(request["object"]), actor);
-    (host.owner == actor || actor.wizard) || raise(E_PERM);
+    host.owner == actor || actor.wizard || raise(E_PERM);
     let lines = {};
     for entry in ($obj_utils:reaction_properties(host, actor))
-      lines = {@lines, @$builder_features:_author_inspect(host, tostr(entry[1])[1..$ - 9],
-        $reaction:_definition(entry[2]))};
+      lines = {@lines, @$builder_features:_author_inspect(host, tostr(entry[1])[1..$ - 9], $reaction:_definition(entry[2]))};
     endfor
     return length(lines) == 0 ? "No reactions." | lines:join("\n");
   endmethod
@@ -481,18 +459,16 @@ object LLM_BEHAVIOR_TOOLS [
     const {command, words} = args;
     if (command == 'reaction)
       const operation = length(words) < 3 ? "show" | words[3];
-      if (operation in {"show", "check", "preview", "preview-message"}
-          || (operation == "trace" && length(words) == 3))
+      if (operation in {"show", "check", "preview", "preview-message"} || (operation == "trace" && length(words) == 3))
         return 'inspection;
       endif
-      operation in {"trace", "after", "when", "if", "then", "step", "remove-step", "with",
-        "select", "enable", "disable", "remove", "copy"} || raise(E_INVARG, "Unknown reaction operation.");
+      operation in {"trace", "after", "when", "if", "then", "step", "remove-step", "with", "select", "enable", "disable", "remove", "copy"} || raise(E_INVARG, "Unknown reaction operation.");
       return tosym("reaction_" + operation);
     elseif (command == 'state)
       length(words) == 1 && return 'inspection;
       return length(words) > 2 && words[3] == "set" ? 'state_set | 'state_declare;
     elseif (command == 'facts)
-      (length(words) == 1 || words == {words[1], "show"}) && return 'inspection;
+      length(words) == 1 || words == {words[1], "show"} && return 'inspection;
       words[2] in {"define", "add", "remove"} || raise(E_INVARG, "Unknown fact operation.");
       return tosym("facts_" + words[2]);
     endif
@@ -647,5 +623,4 @@ object LLM_BEHAVIOR_TOOLS [
     endtry
     return true;
   endmethod
-
 endobject

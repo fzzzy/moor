@@ -10,10 +10,8 @@ object LLM_OBSERVER_POLICY [
     "Check the observer's selected client without invoking client code with owner authority.";
     const principal = caller_perms();
     const {observer} = args;
-    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer)
-      || raise(E_TYPE);
-    valid(principal) && (principal == observer || principal == observer.owner || principal.wizard)
-      || raise(E_PERM);
+    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer) || raise(E_TYPE);
+    valid(principal) && (principal == observer || principal == observer.owner || principal.wizard) || raise(E_PERM);
     observer.enabled || return false;
     let client = $llm_client;
     if (!is_clear_property(observer, "agent") && valid(observer.agent))
@@ -31,8 +29,7 @@ object LLM_OBSERVER_POLICY [
     "Ask the observer's provider for an explicit decision; stale, invalid, and reasoning-only replies decline.";
     const principal = caller_perms();
     const {observer} = args;
-    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer)
-      || raise(E_TYPE);
+    typeof(observer) == TYPE_OBJ && valid(observer) && isa(observer, $llm_room_observer) || raise(E_TYPE);
     valid(principal) && (principal == observer.owner || principal.wizard) || raise(E_PERM);
     observer.enabled || return false;
     const owner = observer.owner;
@@ -44,9 +41,7 @@ object LLM_OBSERVER_POLICY [
     const context = agent:get_context();
     let recent = {};
     for message in (context)
-      if (message["role"] == "user" && maphaskey(message, "content")
-          && typeof(message["content"]) == TYPE_STR
-          && message["content"]:starts_with("OBSERVATION:"))
+      if (message["role"] == "user" && maphaskey(message, "content") && typeof(message["content"]) == TYPE_STR && message["content"]:starts_with("OBSERVATION:"))
         recent = {@recent, message["content"]};
         length(recent) > 6 && (recent = listdelete(recent, 1));
       endif
@@ -63,11 +58,8 @@ object LLM_OBSERVER_POLICY [
     const maximum = observer.triage_max_tokens;
     typeof(maximum) == TYPE_INT && maximum >= 1 && maximum <= 4096 || raise(E_INVARG);
     const opts = $llm_chat_opts:mk():with_max_tokens(maximum):with_temperature(0):with_tool_choice('none);
-    const response = $llm_provider:chat_as(client, observer, 'triage,
-      {["role" -> "user", "content" -> prompt]}, opts, model, false, false);
-    if (!valid(observer) || observer.owner != owner || !observer.enabled
-        || observer.agent != agent || observer.location != destination || !valid(agent)
-        || agent.owner != owner || agent.client != client)
+    const response = $llm_provider:chat_as(client, observer, 'triage, {["role" -> "user", "content" -> prompt]}, opts, model, false, false);
+    if (!valid(observer) || observer.owner != owner || !observer.enabled || observer.agent != agent || observer.location != destination || !valid(agent) || agent.owner != owner || agent.client != client)
       return false;
     endif
     strcmp(toliteral(agent:get_context()), toliteral(context)) == 0 || return false;

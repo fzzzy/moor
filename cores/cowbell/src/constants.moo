@@ -10,16 +10,18 @@ define SERVER_OPTIONS = #52;
 define EXAMINATION = #56;
 define PLAYER_ACTIVITY = #113;
 define CHANGE_MANAGER = #2000;
-define CHANGE_TOOLS = #2001;
-
-// LLM frontends
-define LLM_RUNNER = #124;
-define LLM_PROMPT_OBSERVER = #125;
-define LLM_CODING_ROOM = #126;
 
 // auth
 define PASSWORD = #16;
 define LOGIN = #17;
+
+// document
+define DOCUMENT = #3000;
+define DOCUMENT_NODE = #3001;
+define DOCUMENT_SCHEMA = #3002;
+define DOCUMENT_RENDERER = #3003;
+define DOCUMENT_RESOLVER = #3004;
+define DOCUMENT_TEMPLATE = #3005;
 
 // events
 define EVENT_RECEIVER = #4;
@@ -50,14 +52,6 @@ define FORMAT_ANNOTATION = #134;
 define FORMAT_TEXT = #139;
 define FORMAT_DJOT = #3006;
 
-// documents
-define DOCUMENT = #3000;
-define DOCUMENT_NODE = #3001;
-define DOCUMENT_SCHEMA = #3002;
-define DOCUMENT_RENDERER = #3003;
-define DOCUMENT_RESOLVER = #3004;
-define DOCUMENT_TEMPLATE = #3005;
-
 // git
 define GIT = #135;
 define GIT_REPOSITORY = #136;
@@ -85,6 +79,21 @@ define HOUSEKEEPING_SWEEP_MSGS = #80;
 define MAIL_ROOM = #112;
 define ARCH_WIZARD_MAILBOX = #115;
 
+// initial/travel
+define TRAVEL_EXAMPLES = #3100;
+define EXAMPLE_GALLERY = #3101;
+define EXAMPLE_COURTYARD = #3102;
+define EXAMPLE_LANDING = #3103;
+define EXAMPLE_WORKSHOP = #3104;
+define EXAMPLE_HILLS = #3105;
+define EXAMPLE_OVERLOOK = #3106;
+define EXAMPLE_KEY = #3107;
+define EXAMPLE_LIFT_BUTTON = #3108;
+
+// integrations
+define DISCORD_BRIDGE = #5000;
+define DISCORD_SPEAKER = #5001;
+
 // items
 define THING = #8;
 define WEARABLE = #9;
@@ -96,15 +105,6 @@ define FOOD = #94;
 define DRINK = #95;
 
 // llm
-define LLM_INSPECTION_TOOLS = #2004;
-define LLM_PROGRAMMING_TOOLS = #2005;
-define LLM_BUILDING_TOOLS = #2006;
-define LLM_BEHAVIOR_TOOLS = #2007;
-define LLM_TOOL_PROVIDER = #2008;
-define LLM_HELP_TOOLS = #2009;
-define LLM_TOOL_CATALOG = #2010;
-define LLM_JOB = #2002;
-define LLM_TOOL_RESULT = #2003;
 define LLM_CLIENT = #40;
 define LLM_AGENT = #41;
 define LLM_AGENT_TOOL = #42;
@@ -118,6 +118,47 @@ define LLM_CHAT_OPTS = #68;
 define AGENT_BUILDING_TOOLS = #81;
 define AGENT_ROOM = #86;
 define LLM_RESPONSE = #99;
+define LLM_RUNNER = #124;
+define LLM_PROMPT_OBSERVER = #125;
+define LLM_CODING_ROOM = #126;
+define CHANGE_TOOLS = #2001;
+define LLM_JOB = #2002;
+define LLM_TOOL_RESULT = #2003;
+define LLM_INSPECTION_TOOLS = #2004;
+define LLM_PROGRAMMING_TOOLS = #2005;
+define LLM_BUILDING_TOOLS = #2006;
+define LLM_BEHAVIOR_TOOLS = #2007;
+define LLM_TOOL_PROVIDER = #2008;
+define LLM_HELP_TOOLS = #2009;
+define LLM_TOOL_CATALOG = #2010;
+define LLM_ROOM_VIEW = #2011;
+define LLM_TOOL_SCHEMA = #2012;
+define LLM_ACCOUNT = #2013;
+define LLM_PROVIDER = #2014;
+define LLM_PRESENTER = #2015;
+define LLM_ROOM_RUNTIME = #2016;
+define LLM_MEMORY = #2017;
+define LLM_CONVERSATION = #2018;
+define LLM_WEARABLE_SESSION = #2019;
+define LLM_OBSERVER_POLICY = #2020;
+define LLM_OBSERVER_SPEECH = #2021;
+define LLM_OBSERVER_RUNTIME = #2022;
+define LLM_OBSERVER_JOB = #2023;
+define LLM_SOCIAL_TOOLS = #2024;
+define LLM_SUGGESTION = #2025;
+define LLM_DOC_SUGGESTION = #2026;
+define LLM_HELP_SUGGESTION = #2027;
+define LLM_ASSIST_CONTEXT = #2028;
+define LLM_COMMAND_CONTEXT = #2029;
+define LLM_COMMAND_SUGGESTION = #2030;
+define LLM_PROJECT = #2031;
+define LLM_VALUE = #2032;
+define LLM_OBSERVATION = #2033;
+define LLM_PROJECT_TOOLS = #2034;
+define LLM_PROMPTS = #2035;
+define LLM_VERB_SOURCE = #2036;
+define LLM_CODE_SEARCH = #2037;
+define LLM_TOOL_PROGRESS = #2038;
 
 // messaging
 define MAILBOX = #73;
@@ -156,50 +197,3 @@ define TEST_UTILS = #127;
 define ROOM = #7;
 define AREA = #11;
 define PASSAGE = #12;
-
-// travel examples
-define TRAVEL_EXAMPLES = #3100;
-define EXAMPLE_GALLERY = #3101;
-define EXAMPLE_COURTYARD = #3102;
-define EXAMPLE_LANDING = #3103;
-define EXAMPLE_WORKSHOP = #3104;
-define EXAMPLE_HILLS = #3105;
-define EXAMPLE_OVERLOOK = #3106;
-define EXAMPLE_KEY = #3107;
-define EXAMPLE_LIFT_BUTTON = #3108;
-
-define LLM_ROOM_VIEW = #2011;
-define LLM_TOOL_SCHEMA = #2012;
-define LLM_ACCOUNT = #2013;
-define LLM_PROVIDER = #2014;
-define LLM_PRESENTER = #2015;
-define LLM_ROOM_RUNTIME = #2016;
-define LLM_MEMORY = #2017;
-define LLM_CONVERSATION = #2018;
-define LLM_WEARABLE_SESSION = #2019;
-
-define LLM_OBSERVER_POLICY = #2020;
-define LLM_OBSERVER_SPEECH = #2021;
-
-define LLM_OBSERVER_RUNTIME = #2022;
-define LLM_OBSERVER_JOB = #2023;
-define LLM_SOCIAL_TOOLS = #2024;
-
-define LLM_SUGGESTION = #2025;
-define LLM_DOC_SUGGESTION = #2026;
-define LLM_HELP_SUGGESTION = #2027;
-define LLM_ASSIST_CONTEXT = #2028;
-define LLM_COMMAND_CONTEXT = #2029;
-define LLM_COMMAND_SUGGESTION = #2030;
-define LLM_PROJECT = #2031;
-define LLM_VALUE = #2032;
-define LLM_OBSERVATION = #2033;
-define LLM_PROJECT_TOOLS = #2034;
-define LLM_PROMPTS = #2035;
-define LLM_VERB_SOURCE = #2036;
-define LLM_CODE_SEARCH = #2037;
-define LLM_TOOL_PROGRESS = #2038;
-
-// Integrations with outside services; a separate range, clear of the core ids.
-define DISCORD_BRIDGE = #5000;
-define DISCORD_SPEAKER = #5001;

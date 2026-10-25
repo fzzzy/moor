@@ -63,8 +63,7 @@ object LLM_RESPONSE [
       for call in (source["tool_calls"])
         const function = call["function"];
         const parameters = function["arguments"];
-        calls = {@calls, ["id" -> call["id"], "type" -> "function", "function" -> [
-          "name" -> function["name"], "arguments" -> typeof(parameters) == TYPE_STR ? parameters | generate_json(parameters)]]};
+        calls = {@calls, ["id" -> call["id"], "type" -> "function", "function" -> ["name" -> function["name"], "arguments" -> typeof(parameters) == TYPE_STR ? parameters | generate_json(parameters)]]};
       endfor
       message["tool_calls"] = calls;
     endif

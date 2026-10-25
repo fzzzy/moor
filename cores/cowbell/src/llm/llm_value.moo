@@ -21,9 +21,7 @@ object LLM_VALUE [
         $llm_value:validate_json(item, depth + 1);
       endfor
     else
-      kind in {TYPE_STR, TYPE_INT, TYPE_FLOAT, TYPE_BOOL} || (kind == TYPE_OBJ && value == #-1)
-        || raise(E_TYPE, "LLM values must be JSON data");
+      kind in {TYPE_STR, TYPE_INT, TYPE_FLOAT, TYPE_BOOL} || (kind == TYPE_OBJ && value == #-1) || raise(E_TYPE, "LLM values must be JSON data");
     endif
   endmethod
-
 endobject

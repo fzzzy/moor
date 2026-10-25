@@ -96,8 +96,7 @@ object LLM_HELP_TOOLS [
     if (!is_player(actor))
       const room = actor.location;
       valid(room) || raise(E_INVARG, "Actor is not in a room.");
-      return $llm_help_tools:lookup_environment(topic, actor,
-        {$help_topics, $social_features, $builder_features, $prog_features, room, @room.contents});
+      return $llm_help_tools:lookup_environment(topic, actor, {$help_topics, $social_features, $builder_features, $prog_features, room, @room.contents});
     endif
     "If empty topic, list available topics";
     if (topic == "")
@@ -141,9 +140,7 @@ object LLM_HELP_TOOLS [
         const name = topic.name;
         const summary = topic.summary;
         const aliases = topic.aliases;
-        typeof(name) == TYPE_STR && length(name) > 0 && length(name) <= 256
-          && typeof(summary) == TYPE_STR && length(summary) <= 2048
-          && typeof(aliases) == TYPE_LIST && length(aliases) <= 16 || raise(E_INVARG, "Invalid help metadata.");
+        typeof(name) == TYPE_STR && length(name) > 0 && length(name) <= 256 && typeof(summary) == TYPE_STR && length(summary) <= 2048 && typeof(aliases) == TYPE_LIST && length(aliases) <= 16 || raise(E_INVARG, "Invalid help metadata.");
         for alias in (aliases)
           typeof(alias) == TYPE_STR && length(alias) <= 256 || raise(E_INVARG, "Invalid help alias.");
         endfor
@@ -165,7 +162,7 @@ object LLM_HELP_TOOLS [
     length(environment) <= 128 || raise(E_QUOTA, "Too many help providers.");
     if (topic == "")
       const catalog = $llm_help_tools:catalog(actor, environment);
-      return {"Available help topics:", @{entry['name] + " - " + entry['summary] for entry in (catalog)}}:join("\n");
+      return {"Available help topics:", @{ entry['name] + " - " + entry['summary] for entry in (catalog) }}:join("\n");
     endif
     let seen = [];
     for source in (environment)
@@ -178,8 +175,7 @@ object LLM_HELP_TOOLS [
       endif
       const found = source:help_topics(actor, topic);
       if (typeof(found) == TYPE_FLYWEIGHT && found.delegate == $help)
-        const text = "Topic: " + found.name + "\n\n" + found.summary + "\n\n" + found.content
-          + (found.see_also ? "\n\nSee also: " + found.see_also:join(", ") | "");
+        const text = "Topic: " + found.name + "\n\n" + found.summary + "\n\n" + found.content + (found.see_also ? "\n\nSee also: " + found.see_also:join(", ") | "");
         value_bytes(text) <= 65536 || raise(E_QUOTA, "Help topic is too large.");
         return text;
       endif
@@ -196,5 +192,4 @@ object LLM_HELP_TOOLS [
     endfor
     return true;
   endmethod
-
 endobject

@@ -448,8 +448,7 @@ object PROG_UTILS [
     set_task_perms(caller_perms());
     const {source, ?selected_value = 0} = args;
     const programmer = caller_perms();
-    (valid(programmer) && programmer.programmer) || raise(E_PERM,
-      "Expression evaluation requires programmer privileges.");
+    valid(programmer) && programmer.programmer || raise(E_PERM, "Expression evaluation requires programmer privileges.");
     const code = length(args) > 1 ? strsub(source, "%#", toliteral(selected_value)) | source;
     try
       return fromliteral(code);
@@ -466,16 +465,11 @@ object PROG_UTILS [
     $test_utils:assert_eq(this:eval_expression("{1, 2}"), {1, 2}, "Parse literal data");
     $test_utils:assert_eq(this:eval_expression("3 * 4"), 12, "Evaluate computed values");
     $test_utils:assert_eq(this:eval_expression("%# + 1", 12), 13, "Use the selected value");
-    $test_utils:assert_eq(this:eval_expression("length(%#)", "a\"b"), 3,
-      "Quote selected strings as MOO literals");
-    $test_utils:assert_eq(this:eval_expression("\"%#\""), "%#",
-      "Without a selection, leave %# alone");
-    $test_utils:assert_eq(this:eval_expression("task_perms()[1]"), task_perms()[1],
-      "Evaluation must retain the caller's authority");
-    $test_utils:assert_eq(`this:eval_expression("1 +") ! E_INVARG => E_INVARG', E_INVARG,
-      "Report invalid expressions");
-    $test_utils:assert_eq(`this:eval_expression("raise(E_RANGE)") ! E_RANGE => E_RANGE', E_RANGE,
-      "Propagate execution errors");
+    $test_utils:assert_eq(this:eval_expression("length(%#)", "a\"b"), 3, "Quote selected strings as MOO literals");
+    $test_utils:assert_eq(this:eval_expression("\"%#\""), "%#", "Without a selection, leave %# alone");
+    $test_utils:assert_eq(this:eval_expression("task_perms()[1]"), task_perms()[1], "Evaluation must retain the caller's authority");
+    $test_utils:assert_eq(`this:eval_expression("1 +") ! E_INVARG => E_INVARG', E_INVARG, "Report invalid expressions");
+    $test_utils:assert_eq(`this:eval_expression("raise(E_RANGE)") ! E_RANGE => E_RANGE', E_RANGE, "Propagate execution errors");
     return true;
   endmethod
 

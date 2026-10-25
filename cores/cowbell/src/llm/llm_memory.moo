@@ -6,8 +6,8 @@ object LLM_MEMORY [
   parent: LLM_TOOL_PROVIDER
   owner: ARCH_WIZARD
 
-  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
   property facts (owner: ARCH_WIZARD, flags: "") = #-1;
+  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
 
   method new owner: ARCH_WIZARD
     "Create anonymous bounded memory for an object under its current owner's authority.";
@@ -60,8 +60,7 @@ object LLM_MEMORY [
       endif
     endfor
     const added = {subject, fact, time()};
-    length(snapshot) < 256 && value_bytes({@snapshot, added}) <= 65536
-      || raise(E_QUOTA, "Memory is full; compact or forget facts before adding more");
+    length(snapshot) < 256 && value_bytes({@snapshot, added}) <= 65536 || raise(E_QUOTA, "Memory is full; compact or forget facts before adding more");
     $relation:assert(added, this.facts);
     return true;
   endmethod
@@ -72,8 +71,7 @@ object LLM_MEMORY [
     const {subject, fact} = args;
     $llm_memory:_validate_text(subject, fact);
     const snapshot = $relation:tuples(this.facts);
-    const retained = {tuple for tuple in (snapshot)
-      if (strcmp(tuple[1], subject) != 0 || strcmp(tuple[2], fact) != 0)};
+    const retained = { tuple for tuple in (snapshot) if strcmp(tuple[1], subject) != 0 || strcmp(tuple[2], fact) != 0 };
     length(retained) == length(snapshot) && return false;
     return $relation:replace_snapshot(this.facts, snapshot, retained);
   endmethod
@@ -83,7 +81,7 @@ object LLM_MEMORY [
     $llm_memory:check(this, caller_perms());
     const {subject} = args;
     typeof(subject) == TYPE_STR || raise(E_TYPE);
-    return {tuple for tuple in ($relation:tuples(this.facts)) if (strcmp(tuple[1], subject) == 0)};
+    return { tuple for tuple in ($relation:tuples(this.facts)) if strcmp(tuple[1], subject) == 0 };
   endmethod
 
   method summary owner: ARCH_WIZARD
@@ -91,7 +89,7 @@ object LLM_MEMORY [
     $llm_memory:check(this, caller_perms());
     const tuples = $relation:tuples(this.facts);
     length(tuples) == 0 && return "";
-    return "REMEMBERED FACTS:\n" + {tuple[1] + ": " + tuple[2] for tuple in (tuples)}:join("\n");
+    return "REMEMBERED FACTS:\n" + { tuple[1] + ": " + tuple[2] for tuple in (tuples) }:join("\n");
   endmethod
 
   method age owner: ARCH_WIZARD
@@ -117,18 +115,15 @@ object LLM_MEMORY [
     let covered = {};
     for fact in (proposed)
       typeof(fact) == TYPE_MAP || raise(E_TYPE, "Each fact must be an object");
-      maphaskey(fact, "subject") && maphaskey(fact, "fact") && maphaskey(fact, "sources")
-        || raise(E_INVARG, "Each fact needs subject, fact, and sources");
+      maphaskey(fact, "subject") && maphaskey(fact, "fact") && maphaskey(fact, "sources") || raise(E_INVARG, "Each fact needs subject, fact, and sources");
       $llm_memory:_validate_text(fact["subject"], fact["fact"]);
       const sources = fact["sources"];
       typeof(sources) == TYPE_LIST && length(sources) > 0 || raise(E_TYPE, "Missing fact sources");
       let timestamp = false;
       for index in (sources)
-        typeof(index) == TYPE_INT && index >= 1 && index <= length(snapshot)
-          || raise(E_INVARG, "Invalid fact source index");
+        typeof(index) == TYPE_INT && index >= 1 && index <= length(snapshot) || raise(E_INVARG, "Invalid fact source index");
         const source = snapshot[index];
-        typeof(source) == TYPE_LIST && length(source) == 3 && typeof(source[3]) == TYPE_INT
-          || raise(E_TYPE, "Invalid source timestamp");
+        typeof(source) == TYPE_LIST && length(source) == 3 && typeof(source[3]) == TYPE_INT || raise(E_TYPE, "Invalid source timestamp");
         timestamp = typeof(timestamp) == TYPE_INT ? min(timestamp, source[3]) | source[3];
         covered = setadd(covered, index);
       endfor
@@ -146,14 +141,9 @@ object LLM_MEMORY [
     const {client} = args;
     const snapshot = $relation:tuples(this.facts);
     length(snapshot) >= 2 || raise(E_INVARG, "Need at least two facts");
-    const prompt = "Consolidate these facts without inventing information. Keep conflicting claims explicit. "
-      + "Return only a JSON array of objects with subject, fact, and sources fields. "
-      + "Use one-based source indices. Include every source in at least one result. "
-      + "Subjects have at most 128 characters; facts have at most 1024. "
-      + "Tuples contain subject, fact, and original timestamp: " + toliteral(snapshot);
+    const prompt = "Consolidate these facts without inventing information. Keep conflicting claims explicit. " + "Return only a JSON array of objects with subject, fact, and sources fields. " + "Use one-based source indices. Include every source in at least one result. " + "Subjects have at most 128 characters; facts have at most 1024. " + "Tuples contain subject, fact, and original timestamp: " + toliteral(snapshot);
     const opts = $llm_chat_opts:mk():with_temperature(0.2);
-    const response = $llm_response:mk($llm_provider:chat_as(client, principal, 'facts,
-      {["role" -> "user", "content" -> prompt]}, opts, false, false, false));
+    const response = $llm_response:mk($llm_provider:chat_as(client, principal, 'facts, {["role" -> "user", "content" -> prompt]}, opts, false, false, false));
     response:is_valid() || raise(E_INVARG, "Invalid compaction response");
     const proposed = parse_json(response:content());
     set_task_perms(principal);
@@ -165,18 +155,8 @@ object LLM_MEMORY [
     $llm_memory:check(this, caller_perms());
     const subject = ["type" -> "string", "minLength" -> 2, "maxLength" -> 128];
     const fact = ["type" -> "string", "minLength" -> 3, "maxLength" -> 1024];
-    const pair = ["type" -> "object", "properties" -> ["subject" -> subject, "fact" -> fact],
-      "required" -> {"subject", "fact"}, "additionalProperties" -> false];
-    return {
-      $llm_agent_tool:mk("remember_fact", "Remember a fact about a person, place, or topic.", pair, this, "remember_fact", 'mutation),
-      $llm_agent_tool:mk("forget_fact", "Forget one exact fact, for example before correcting it.", pair, this, "forget_fact", 'mutation),
-      $llm_agent_tool:mk("recall_facts", "Recall facts about an exact subject with their recorded ages.",
-        ["type" -> "object", "properties" -> ["subject" -> subject], "required" -> {"subject"},
-          "additionalProperties" -> false], this, "recall_facts", 'inspection),
-      $llm_agent_tool:mk("current_time", "Get the current date and time.",
-        ["type" -> "object", "properties" -> [], "required" -> {}, "additionalProperties" -> false],
-        this, "current_time", 'inspection)
-    };
+    const pair = ["type" -> "object", "properties" -> ["subject" -> subject, "fact" -> fact], "required" -> {"subject", "fact"}, "additionalProperties" -> false];
+    return {$llm_agent_tool:mk("remember_fact", "Remember a fact about a person, place, or topic.", pair, this, "remember_fact", 'mutation), $llm_agent_tool:mk("forget_fact", "Forget one exact fact, for example before correcting it.", pair, this, "forget_fact", 'mutation), $llm_agent_tool:mk("recall_facts", "Recall facts about an exact subject with their recorded ages.", ["type" -> "object", "properties" -> ["subject" -> subject], "required" -> {"subject"}, "additionalProperties" -> false], this, "recall_facts", 'inspection), $llm_agent_tool:mk("current_time", "Get the current date and time.", ["type" -> "object", "properties" -> [], "required" -> {}, "additionalProperties" -> false], this, "current_time", 'inspection)};
   endmethod
 
   method remember_fact owner: ARCH_WIZARD
@@ -204,8 +184,7 @@ object LLM_MEMORY [
     const subject = parameters["subject"];
     const tuples = this:recall(subject);
     length(tuples) == 0 && return "No facts remembered about " + subject + ".";
-    return "Facts about " + subject + ":\n" + {" - " + tuple[2] + " (" + $llm_memory:age(tuple[3]) + ")"
-      for tuple in (tuples)}:join("\n");
+    return "Facts about " + subject + ":\n" + { " - " + tuple[2] + " (" + $llm_memory:age(tuple[3]) + ")" for tuple in (tuples) }:join("\n");
   endmethod
 
   method current_time owner: ARCH_WIZARD

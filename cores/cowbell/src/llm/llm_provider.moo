@@ -33,17 +33,15 @@ object LLM_PROVIDER [
     let result = ["max_tokens" -> 2048];
     for key in (mapkeys(flyslots(options)))
       const name = tostr(key);
-      name in {"temperature", "max_tokens", "tool_choice", "top_p", "frequency_penalty", "presence_penalty", "stop", "response_format"}
-        || raise(E_INVARG, "Unsupported chat option.");
+      name in {"temperature", "max_tokens", "tool_choice", "top_p", "frequency_penalty", "presence_penalty", "stop", "response_format"} || raise(E_INVARG, "Unsupported chat option.");
       let value = flyslots(options)[key];
       if (name == "tool_choice" && typeof(value) == TYPE_SYM)
         value = tostr(value);
       endif
       result[name] = value;
     endfor
-    typeof(result["max_tokens"]) == TYPE_INT && result["max_tokens"] >= 1 && result["max_tokens"] <= 16384
-      || raise(E_INVARG, "Output token limit must be 1 to 16384.");
-    for entry in ({ {"temperature", 0, 2}, {"top_p", 0, 1}, {"frequency_penalty", -2, 2}, {"presence_penalty", -2, 2} })
+    typeof(result["max_tokens"]) == TYPE_INT && result["max_tokens"] >= 1 && result["max_tokens"] <= 16384 || raise(E_INVARG, "Output token limit must be 1 to 16384.");
+    for entry in ({{"temperature", 0, 2}, {"top_p", 0, 1}, {"frequency_penalty", -2, 2}, {"presence_penalty", -2, 2}})
       const {name, low, high} = entry;
       if (maphaskey(result, name))
         const value = result[name];
@@ -61,16 +59,13 @@ object LLM_PROVIDER [
       const choice = result["tool_choice"];
       if (typeof(choice) == TYPE_MAP)
         const function = `choice["function"] ! E_RANGE => []';
-        length(choice) == 2 && `choice["type"] ! E_RANGE => ""' == "function" && typeof(function) == TYPE_MAP
-          && length(function) == 1 && maphaskey(function, "name") && typeof(function["name"]) == TYPE_STR
-          && length(function["name"]) > 0 && length(function["name"]) <= 64 || raise(E_INVARG, "Invalid named tool choice.");
+        length(choice) == 2 && `choice["type"] ! E_RANGE => ""' == "function" && typeof(function) == TYPE_MAP && length(function) == 1 && maphaskey(function, "name") && typeof(function["name"]) == TYPE_STR && length(function["name"]) > 0 && length(function["name"]) <= 64 || raise(E_INVARG, "Invalid named tool choice.");
       else
         choice in {"auto", "none", "required"} || raise(E_INVARG, "Unsupported tool choice.");
       endif
     endif
     if (maphaskey(result, "response_format"))
-      strcmp(toliteral(result["response_format"]), toliteral(["type" -> "json_object"])) == 0
-        || raise(E_INVARG, "Unsupported response format.");
+      strcmp(toliteral(result["response_format"]), toliteral(["type" -> "json_object"])) == 0 || raise(E_INVARG, "Unsupported response format.");
     endif
     return result;
   endmethod
@@ -81,15 +76,12 @@ object LLM_PROVIDER [
     const {client, actor} = args;
     typeof(client) == TYPE_OBJ && valid(client) && isa(client, $llm_client) || raise(E_TYPE);
     typeof(actor) == TYPE_OBJ && valid(actor) || raise(E_PERM);
-    actor == client.owner || actor.wizard || client.shared || actor in client.allowed_users
-      || raise(E_PERM, "This LLM client has not been shared with you.");
+    actor == client.owner || actor.wizard || client.shared || actor in client.allowed_users || raise(E_PERM, "This LLM client has not been shared with you.");
     !is_clear_property(client, "api_key") || raise(E_PERM, "Configure a key on this client; inherited keys cannot be used.");
     const key = client.api_key;
     typeof(key) == TYPE_STR && length(key) > 0 || raise(E_PERM, "LLM API key not configured.");
     const endpoint = client.api_endpoint;
-    typeof(endpoint) == TYPE_STR && length(endpoint) <= 4096
-      && (endpoint:starts_with("https://") || endpoint:starts_with("http://"))
-      || raise(E_INVARG, "Invalid LLM endpoint.");
+    typeof(endpoint) == TYPE_STR && length(endpoint) <= 4096 && (endpoint:starts_with("https://") || endpoint:starts_with("http://")) || raise(E_INVARG, "Invalid LLM endpoint.");
     return ['client -> client, 'endpoint -> endpoint, 'key -> key, 'model -> client.model];
   endmethod
 
@@ -151,15 +143,13 @@ object LLM_PROVIDER [
     const headers = {{"Content-Type", "application/json"}, {"Authorization", "Bearer " + config['key]}};
     for attempt in [1..3]
       const current = $llm_provider:_configuration(config['client], actor);
-      strcmp(current['key], config['key]) == 0 && strcmp(current['endpoint], config['endpoint]) == 0
-        || raise(E_PERM, "LLM configuration changed during the request.");
+      strcmp(current['key], config['key]) == 0 && strcmp(current['endpoint], config['endpoint]) == 0 || raise(E_PERM, "LLM configuration changed during the request.");
       const remaining = deadline - time();
       remaining > 0 || raise(E_QUOTA, "LLM request deadline exceeded.");
       const id = $llm_account:reserve(actor, reservation, deadline + 5, purpose, model);
       let response = {};
       try
-        response = worker_request('curl, {method, endpoint, payload, headers,
-          ["max_bytes" -> 1048576, "strict_utf8" -> true]}, ["timeout_seconds" -> tofloat(min(30, remaining))]);
+        response = worker_request('curl, {method, endpoint, payload, headers, ["max_bytes" -> 1048576, "strict_utf8" -> true]}, ["timeout_seconds" -> tofloat(min(30, remaining))]);
       except (ANY)
         $llm_account:finish(actor, id, false, 'transport_error);
         raise(E_INVARG, "LLM transport failed; provider usage is unknown.");

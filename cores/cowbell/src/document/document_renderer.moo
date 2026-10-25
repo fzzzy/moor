@@ -31,22 +31,19 @@ object DOCUMENT_RENDERER [
       endif
       results = {@results, cache[key]};
     endfor
-    return ['document -> checked['encoded], 'results -> results,
-      'diagnostics -> checked['diagnostics]];
+    return ['document -> checked['encoded], 'results -> results, 'diagnostics -> checked['diagnostics]];
   endmethod
 
   method _settings owner: HACKER
     "Validate and normalize format options before calculating a cache key.";
     const {format, options} = args;
-    (typeof(format) == TYPE_SYM && format in {'text_html, 'text_djot, 'text_plain})
-      || raise(E_INVARG, "render.content_type: unsupported content type");
+    typeof(format) == TYPE_SYM && format in {'text_html, 'text_djot, 'text_plain} || raise(E_INVARG, "render.content_type: unsupported content type");
     typeof(options) == TYPE_MAP || raise(E_INVARG, "render.options: expected map");
     for key in (mapkeys(options))
       key in {'width, 'code_line_numbers} || raise(E_INVARG, "render.options: unknown option");
     endfor
     const width = maphaskey(options, 'width) ? options['width] | 80;
-    (typeof(width) == TYPE_INT && width >= 1 && width <= 1024)
-      || raise(E_INVARG, "render.options.width: expected integer from 1 through 1024");
+    typeof(width) == TYPE_INT && width >= 1 && width <= 1024 || raise(E_INVARG, "render.options.width: expected integer from 1 through 1024");
     const numbered = maphaskey(options, 'code_line_numbers) ? options['code_line_numbers] | true;
     typeof(numbered) == TYPE_BOOL || raise(E_INVARG, "render.options.code_line_numbers: expected boolean");
     return ['width -> width, 'code_line_numbers -> numbered];
@@ -58,8 +55,7 @@ object DOCUMENT_RENDERER [
     const {checked, format, settings} = args;
     const state = ['annotations -> [], 'next_anchor -> 1];
     try
-      const {body, finished} = $document_renderer:_walk(
-        checked, 'document, format, settings, state, "document", true);
+      const {body, finished} = $document_renderer:_walk(checked, 'document, format, settings, state, "document", true);
       return ['content_type -> format, 'body -> body, 'annotations -> finished['annotations]];
     except error (ANY)
       raise(error[1], tostr(format) + " " + error[2]);
@@ -91,15 +87,13 @@ object DOCUMENT_RENDERER [
         if (cardinality == 'matrix_optional)
           let line = {};
           for j in [1..length(value)]
-            const {body, next_state} = $document_renderer:_walk(value[j], child_kind,
-              format, options, state, entry_path + "[" + tostr(j - 1) + "]", interactions);
+            const {body, next_state} = $document_renderer:_walk(value[j], child_kind, format, options, state, entry_path + "[" + tostr(j - 1) + "]", interactions);
             state = next_state;
             line = {@line, body};
           endfor
           parts = {@parts, line};
         else
-          const {body, next_state} = $document_renderer:_walk(
-            value, child_kind, format, options, state, entry_path, interactions);
+          const {body, next_state} = $document_renderer:_walk(value, child_kind, format, options, state, entry_path, interactions);
           state = next_state;
           parts = {@parts, body};
         endif
@@ -110,8 +104,7 @@ object DOCUMENT_RENDERER [
       return {rendered, state};
     endif
     const body = $document_renderer:_finish(kind, node, rendered, format, options, path, interactions);
-    length(binary_from_str(body)) <= 524288
-      || raise(E_QUOTA, tostr(format) + " " + path + ": rendered body exceeds 512 KiB");
+    length(binary_from_str(body)) <= 524288 || raise(E_QUOTA, tostr(format) + " " + path + ": rendered body exceeds 512 KiB");
     return {body, state};
   endmethod
 
@@ -127,17 +120,15 @@ object DOCUMENT_RENDERER [
     elseif (kind == 'soft_break)
       return " ";
     elseif (kind == 'hard_break)
-      return html ? "<br>\n" | (djot ? "\\\n" | "\n");
+      return html ? "<br>\n" | djot ? "\\\n" | "\n";
     elseif (kind == 'inline_code)
       return $document_renderer:_inline_code(node["text"], format);
     elseif (kind == 'image)
       const alt = $document_renderer:_escape(node["alt"], format);
       if (html)
-        return "<img src=\"" + $document_renderer:_escape(node["src"], format)
-          + "\" alt=\"" + alt + "\"" + $document_renderer:_title(node, format) + ">";
+        return "<img src=\"" + $document_renderer:_escape(node["src"], format) + "\" alt=\"" + alt + "\"" + $document_renderer:_title(node, format) + ">";
       elseif (djot)
-        return "![" + alt + "](" + $document_renderer:_destination(node["src"])
-          + ")" + $document_renderer:_title(node, format);
+        return "![" + alt + "](" + $document_renderer:_destination(node["src"]) + ")" + $document_renderer:_title(node, format);
       endif
       return (length(alt) ? alt + " " | "") + "<" + node["src"] + ">";
     elseif (kind == 'code_block)
@@ -151,8 +142,7 @@ object DOCUMENT_RENDERER [
     elseif (kind == 'table)
       return $document_renderer:_table(source, node, format, options, path);
     endif
-    const body = $document_renderer:_join(node["children"],
-      kind == 'block_quote ? (html ? "\n" | "\n\n") | "", format, path);
+    const body = $document_renderer:_join(node["children"], kind == 'block_quote ? html ? "\n" | "\n\n" | "", format, path);
     if (kind == 'paragraph)
       return html ? "<p>" + body + "</p>" | body;
     elseif (kind == 'heading)
@@ -162,8 +152,7 @@ object DOCUMENT_RENDERER [
       endif
       return djot ? $document_renderer:_repeat("#", node["level"]) + " " + body | body;
     elseif (kind == 'block_quote)
-      return html ? "<blockquote>" + body + "</blockquote>"
-        | $document_renderer:_prefix(body, "> ", "> ");
+      return html ? "<blockquote>" + body + "</blockquote>" | $document_renderer:_prefix(body, "> ", "> ");
     elseif (kind in {'emphasis, 'strong, 'strike})
       if (html)
         const tag = ['emphasis -> "em", 'strong -> "strong", 'strike -> "del"][kind];
@@ -183,11 +172,9 @@ object DOCUMENT_RENDERER [
     elseif (kind == 'link)
       interactions || return body;
       if (html)
-        return "<a href=\"" + $document_renderer:_escape(node["url"], format) + "\""
-          + $document_renderer:_title(node, format) + ">" + body + "</a>";
+        return "<a href=\"" + $document_renderer:_escape(node["url"], format) + "\"" + $document_renderer:_title(node, format) + ">" + body + "</a>";
       elseif (djot)
-        return "[" + body + "](" + $document_renderer:_destination(node["url"])
-          + ")" + $document_renderer:_title(node, format);
+        return "[" + body + "](" + $document_renderer:_destination(node["url"]) + ")" + $document_renderer:_title(node, format);
       endif
       return strcmp(body, node["url"]) == 0 ? body | body + " <" + node["url"] + ">";
     endif
@@ -200,8 +187,7 @@ object DOCUMENT_RENDERER [
     let body = "";
     for i in [1..length(parts)]
       body = body + (i > 1 ? separator | "") + parts[i];
-      length(binary_from_str(body)) <= 524288
-        || raise(E_QUOTA, tostr(format) + " " + path + ": rendered body exceeds 512 KiB");
+      length(binary_from_str(body)) <= 524288 || raise(E_QUOTA, tostr(format) + " " + path + ": rendered body exceeds 512 KiB");
     endfor
     return body;
   endmethod
@@ -296,10 +282,8 @@ object DOCUMENT_RENDERER [
   method _repeat owner: HACKER
     "Repeat a bounded string for indentation, fences, or padding.";
     let {text, count} = args;
-    (typeof(text) == TYPE_STR && typeof(count) == TYPE_INT && count >= 0)
-      || raise(E_INVARG, "render.repeat: invalid text or count");
-    (count <= 524288 && length(binary_from_str(text)) * count <= 524288)
-      || raise(E_QUOTA, "render.repeat: output exceeds 512 KiB");
+    typeof(text) == TYPE_STR && typeof(count) == TYPE_INT && count >= 0 || raise(E_INVARG, "render.repeat: invalid text or count");
+    count <= 524288 && length(binary_from_str(text)) * count <= 524288 || raise(E_QUOTA, "render.repeat: output exceeds 512 KiB");
     let result = "";
     while (count > 0)
       count % 2 == 1 && (result = result + text);
@@ -337,8 +321,7 @@ object DOCUMENT_RENDERER [
     text = $document_renderer:_escape(text, 'text_plain);
     length(text) || return "";
     const fence = $document_renderer:_fence(text, 1);
-    return fence + (text[1] == "`" ? " " | "") + text
-      + (text[$] == "`" ? " " | "") + fence;
+    return fence + (text[1] == "`" ? " " | "") + text + (text[$] == "`" ? " " | "") + fence;
   endmethod
 
   method _prefix owner: HACKER
@@ -373,11 +356,9 @@ object DOCUMENT_RENDERER [
       if (maphaskey(node, "language") && length(node["language"]))
         attribute = " class=\"language-" + $document_renderer:_escape(node["language"], format) + "\"";
       endif
-      const code = "<pre><code" + attribute + ">"
-        + $document_renderer:_escape(text, format) + "</code></pre>";
+      const code = "<pre><code" + attribute + ">" + $document_renderer:_escape(text, format) + "</code></pre>";
       if (numbered && length(numbers))
-        return "<table><tbody><tr><td aria-hidden=\"true\" style=\"user-select:none\"><pre>"
-          + $list_proto:join(numbers, "\n") + "</pre></td><td>" + code + "</td></tr></tbody></table>";
+        return "<table><tbody><tr><td aria-hidden=\"true\" style=\"user-select:none\"><pre>" + $list_proto:join(numbers, "\n") + "</pre></td><td>" + code + "</td></tr></tbody></table>";
       endif
       return code;
     elseif (format == 'text_plain)
@@ -389,6 +370,7 @@ object DOCUMENT_RENDERER [
     const final_break = length(listing) && listing[$] == "\n" ? "" | "\n";
     return fence + language + "\n" + listing + final_break + fence;
   endmethod
+
   method _list owner: HACKER
     "Render list items with block separation, nesting, numbering, and read-only task state.";
     const {source, node, format, path} = args;
@@ -405,9 +387,7 @@ object DOCUMENT_RENDERER [
           const check = item["checked"] ? "[x] " | "[ ] ";
           blocks = length(blocks) ? {check + blocks[1], @blocks[2..$]} | {check};
         endif
-        definitions = {@definitions, ["term" -> {
-          $document_renderer:_escape(tostr(start + ordinal - 1) + ".", format)
-        }, "definition" -> blocks]};
+        definitions = {@definitions, ["term" -> {$document_renderer:_escape(tostr(start + ordinal - 1) + ".", format)}, "definition" -> blocks]};
       endfor
       return $document_renderer:_definitions(definitions, format, path);
     endif
@@ -427,8 +407,7 @@ object DOCUMENT_RENDERER [
         items = {@items, "<li>" + checkbox + body + "</li>"};
       else
         const marker = numbered ? tostr(start + i - 1) + ". " | "- ";
-        items = {@items, $document_renderer:_prefix(checkbox + body, marker,
-          $document_renderer:_repeat(" ", length(marker)))};
+        items = {@items, $document_renderer:_prefix(checkbox + body, marker, $document_renderer:_repeat(" ", length(marker)))};
       endif
     endfor
     const body = $document_renderer:_join(items, html ? "\n" | "\n\n", format, path);
@@ -472,13 +451,11 @@ object DOCUMENT_RENDERER [
     let parts = {};
     for definition in (definitions)
       const term = $document_renderer:_join(definition["term"], "", format, path);
-      const body = $document_renderer:_join(definition["definition"],
-        format == 'text_html ? "\n" | "\n\n", format, path);
+      const body = $document_renderer:_join(definition["definition"], format == 'text_html ? "\n" | "\n\n", format, path);
       if (format == 'text_html)
         parts = {@parts, "<dt>" + term + "</dt><dd>" + body + "</dd>"};
       elseif (format == 'text_djot)
-        parts = {@parts, $document_renderer:_prefix(term, ": ", "  ") + "\n\n"
-          + $document_renderer:_prefix(body, "  ", "  ")};
+        parts = {@parts, $document_renderer:_prefix(term, ": ", "  ") + "\n\n" + $document_renderer:_prefix(body, "  ", "  ")};
       elseif (index(body, "\n"))
         parts = {@parts, term + ":\n" + $document_renderer:_prefix(body, "  ", "  ")};
       else
@@ -499,7 +476,7 @@ object DOCUMENT_RENDERER [
       node["kind"] in {"soft_break", "hard_break"} && return false;
       for key in ({"text", "alt", "title"})
         if (maphaskey(node, key))
-          (index(node[key], "\n") || index(node[key], "\r") || index(node[key], "\t")) && return false;
+          index(node[key], "\n") || index(node[key], "\r") || index(node[key], "\t") && return false;
         endif
       endfor
       if (maphaskey(node, "children"))
@@ -540,7 +517,7 @@ object DOCUMENT_RENDERER [
     const simple = $document_renderer:_simple_table(source);
     if (simple)
       for row in (table["rows"])
-        rows = {@rows, {cell["blocks"][1] for cell in (row["cells"])}};
+        rows = {@rows, { cell["blocks"][1] for cell in (row["cells"]) }};
       endfor
       const caption = $document_renderer:_join(table["caption"], "", format, path);
       if (format == 'text_djot)
@@ -549,8 +526,7 @@ object DOCUMENT_RENDERER [
           lines = {@lines, "| " + $list_proto:join(rows[i], " | ") + " |"};
           if (has_header && i == 1)
             const alignments = ["start" -> ":---", "center" -> ":---:", "end" -> "---:"];
-            lines = {@lines, "|" + $list_proto:join(
-              {alignments[column["align"]] for column in (table["columns"])}, "|") + "|"};
+            lines = {@lines, "|" + $list_proto:join({ alignments[column["align"]] for column in (table["columns"]) }, "|") + "|"};
           endif
         endfor
         const body = $document_renderer:_join(lines, "\n", format, path);
@@ -574,8 +550,7 @@ object DOCUMENT_RENDERER [
       let headers = {};
       for i in [1..length(table["columns"])]
         const label = $document_renderer:_join(table["header"][i], "", 'text_html, path);
-        headers = {@headers, "<th scope=\"col\" align=\"" + alignments[table["columns"][i]["align"]]
-          + "\">" + label + "</th>"};
+        headers = {@headers, "<th scope=\"col\" align=\"" + alignments[table["columns"][i]["align"]] + "\">" + label + "</th>"};
       endfor
       parts = {@parts, "<thead><tr>" + $list_proto:join(headers, "") + "</tr></thead>"};
     endif
@@ -595,12 +570,12 @@ object DOCUMENT_RENDERER [
   method _plain_table owner: HACKER
     "Align ASCII cells that fit the requested width. Return false when labeled rows are needed.";
     const {rows, columns, width, path} = args;
-    let widths = {0 for column in (columns)};
+    let widths = { 0 for column in (columns) };
     for row in (rows)
       for i in [1..length(row)]
         const cell = row[i];
         length(binary_from_str(cell)) == length(cell) || return false;
-        (index(cell, "\n") || index(cell, "\r") || index(cell, "\t")) && return false;
+        index(cell, "\n") || index(cell, "\r") || index(cell, "\t") && return false;
         widths[i] = max(widths[i], length(cell));
       endfor
     endfor
@@ -615,9 +590,8 @@ object DOCUMENT_RENDERER [
       for i in [1..length(row)]
         const padding = widths[i] - length(row[i]);
         const alignment = columns[i]["align"];
-        const left = alignment == "end" ? padding | (alignment == "center" ? padding / 2 | 0);
-        cells = {@cells, $document_renderer:_repeat(" ", left) + row[i]
-          + $document_renderer:_repeat(" ", padding - left)};
+        const left = alignment == "end" ? padding | alignment == "center" ? padding / 2 | 0;
+        cells = {@cells, $document_renderer:_repeat(" ", left) + row[i] + $document_renderer:_repeat(" ", padding - left)};
       endfor
       lines = {@lines, $list_proto:join(cells, "  ")};
     endfor
@@ -637,8 +611,7 @@ object DOCUMENT_RENDERER [
       for i in [1..length(source["header"])]
         let label_parts = {};
         for inline in (source["header"][i])
-          const {label, ignored} = $document_renderer:_walk(inline, 'inline, format, options,
-            ['annotations -> [], 'next_anchor -> 1], path + ".header", false);
+          const {label, ignored} = $document_renderer:_walk(inline, 'inline, format, options, ['annotations -> [], 'next_anchor -> 1], path + ".header", false);
           label_parts = {@label_parts, label};
         endfor
         const label = $document_renderer:_join(label_parts, "", format, path);
@@ -651,13 +624,12 @@ object DOCUMENT_RENDERER [
         parts = {@parts, "Columns: " + $list_proto:join(headings, ", ")};
       endif
     else
-      labels = {"Column " + tostr(i) for i in [1..length(table["columns"]) ]};
+      labels = { "Column " + tostr(i) for i in [1..length(table["columns"])] };
     endif
     for i in [1..length(table["rows"])]
       let definitions = {};
       for j in [1..length(labels)]
-        definitions = {@definitions, ["term" -> {labels[j]},
-          "definition" -> table["rows"][i]["cells"][j]["blocks"]]};
+        definitions = {@definitions, ["term" -> {labels[j]}, "definition" -> table["rows"][i]["cells"][j]["blocks"]]};
       endfor
       parts = {@parts, "Row " + tostr(i), $document_renderer:_definitions(definitions, format, path)};
     endfor

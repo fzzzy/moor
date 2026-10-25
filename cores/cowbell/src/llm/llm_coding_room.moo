@@ -8,11 +8,10 @@ object LLM_CODING_ROOM [
   owner: ARCH_WIZARD
   readable: true
 
+  override description (owner: ARCH_WIZARD, flags: "rc") = "Room-based coding agent that uses $llm_agent for task execution and tool orchestration.";
   override max_iterations (owner: ARCH_WIZARD, flags: "rc") = 30;
   override system_prompt (owner: ARCH_WIZARD, flags: "rc") = "You are a room-based coding agent for MOO development. Use tools to inspect code, propose targeted changes, and program verbs safely. Prefer showing concise reports and code snippets.";
   override task_timeout_seconds (owner: ARCH_WIZARD, flags: "rc") = 180;
-
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Room-based coding agent that uses $llm_agent for task execution and tool orchestration.";
 
   method _ensure_room_client owner: ARCH_WIZARD
     "Ensure this room has a dedicated client object (not global $llm_client).";

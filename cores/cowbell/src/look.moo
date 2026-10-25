@@ -14,8 +14,7 @@ object LOOK [
     "Collect an object's authored description and visible contents for later viewer capture.";
     set_task_perms(caller_perms());
     const {what, @contents} = args;
-    return <this, .what = what, .title = what:name(), .description = what:description(),
-      .exit_options = {}, .exit_revision = 0, .ambient_passages = {}, .actions = {}, contents>;
+    return <this, .what = what, .title = what:name(), .description = what:description(), .exit_options = {}, .exit_revision = 0, .ambient_passages = {}, .actions = {}, contents>;
   endmethod
 
   method actor_idle_status owner: HACKER
@@ -37,9 +36,7 @@ object LOOK [
     "The returned LookView has no deferred content callbacks. Layout methods use only its values.";
     set_task_perms(caller_perms());
     const {viewer} = args;
-    const event = $event:mk_look(viewer):with_dobj(this.what)
-      :with_presentation_hint('inset):with_group('look, this.what)
-      :with_metadata('collapse_title, this.title);
+    const event = $event:mk_look(viewer):with_dobj(this.what):with_presentation_hint('inset):with_group('look, this.what):with_metadata('collapse_title, this.title);
     let description = typeof(this.description) == TYPE_LIST ? this.description | {this.description};
     let actors = {};
     let things = {};
@@ -49,11 +46,9 @@ object LOOK [
         continue;
       endif
       const integrated = `item:integrate_description() ! E_VERBNF => false';
-      const has_integration = typeof(integrated) == TYPE_FLYWEIGHT
-        || (typeof(integrated) in {TYPE_STR, TYPE_LIST} && length(integrated));
+      const has_integration = typeof(integrated) == TYPE_FLYWEIGHT || (typeof(integrated) in {TYPE_STR, TYPE_LIST} && length(integrated));
       if (has_integration)
-        const content = typeof(integrated) == TYPE_STR && !integrated:ends_with(".")
-          ? integrated + "." | integrated;
+        const content = typeof(integrated) == TYPE_STR && !integrated:ends_with(".") ? integrated + "." | integrated;
         description = {@description, "  ", content};
       endif
       const actor = item:is_actor();
@@ -61,8 +56,7 @@ object LOOK [
       const {name, named} = $document_resolver:capture_subject(item, viewer, 'listing, subjects);
       subjects = named;
       const label = length(status) && status != "awake" ? name + " (" + status + ")" | name;
-      const descriptor = is_anonymous(item) ? [] | ["kind" -> "object",
-        "ref" -> $url_utils:to_curie_str(item), "objectKind" -> item:reference_kind()];
+      const descriptor = is_anonymous(item) ? [] | ["kind" -> "object", "ref" -> $url_utils:to_curie_str(item), "objectKind" -> item:reference_kind()];
       let entry = $look:_entry(label, descriptor);
       entry['object] = item;
       entry['status] = status;
@@ -90,8 +84,7 @@ object LOOK [
         const {phrase, named} = $look:_exit_phrase(option, this.what, viewer, subjects);
         subjects = named;
         entry['travel] = $look:_entry(phrase, descriptor);
-        entry['reason] = option['state] == 'unavailable
-          ? `option['reason] ! E_RANGE => option['caption]' | "";
+        entry['reason] = option['state] == 'unavailable ? `option['reason] ! E_RANGE => option['caption]' | "";
       endif
       exits = {@exits, entry};
     endfor
@@ -104,22 +97,16 @@ object LOOK [
       actions = {@actions, $look:_entry(label, ["kind" -> "command", "command" -> command])};
     endfor
     const thumbnail = this.what:thumbnail();
-    const title_descriptor = is_anonymous(this.what) ? [] | ["kind" -> "object",
-      "ref" -> $url_utils:to_curie_str(this.what), "objectKind" -> this.what:reference_kind()];
+    const title_descriptor = is_anonymous(this.what) ? [] | ["kind" -> "object", "ref" -> $url_utils:to_curie_str(this.what), "objectKind" -> this.what:reference_kind()];
     const title = $look:_entry(this.title, title_descriptor)['content];
-    return ['room_ref -> this.what, 'title -> title,
-      'title_text -> this.title, 'description -> resolved, 'exits -> exits,
-      'actors -> actors, 'things -> things, 'actions -> actions, 'event -> event,
-      'viewer -> viewer, 'thumbnail -> thumbnail,
-      'exit_revision -> `this.exit_revision ! E_PROPNF => 0'];
+    return ['room_ref -> this.what, 'title -> title, 'title_text -> this.title, 'description -> resolved, 'exits -> exits, 'actors -> actors, 'things -> things, 'actions -> actions, 'event -> event, 'viewer -> viewer, 'thumbnail -> thumbnail, 'exit_revision -> `this.exit_revision ! E_PROPNF => 0'];
   endmethod
 
   method _entry owner: HACKER
     "Pair a literal label with a captured interaction descriptor and canonical inline nodes.";
     const {label, descriptor} = args;
     const text = $format:literal_inline(label);
-    const content = length(descriptor) ? {$document_node:mk('reference, text,
-      ['descriptor -> $document_schema:_descriptor_from_wire(descriptor)])} | text;
+    const content = length(descriptor) ? {$document_node:mk('reference, text, ['descriptor -> $document_schema:_descriptor_from_wire(descriptor)])} | text;
     return ['label -> label, 'descriptor -> descriptor, 'content -> content];
   endmethod
 
@@ -153,19 +140,15 @@ object LOOK [
     let fragments = {};
     for passage in (passages)
       const {source, style, ?direction = "", ?destination = #-1, ?status = ""} = passage;
-      let context = event:with_this(event.dobj):with_location(event.dobj)
-        :with_object_binding('from_room, event.dobj):with_object_binding('to_room, destination)
-        :with_text_binding('direction, direction):with_text_binding('passage, direction);
+      let context = event:with_this(event.dobj):with_location(event.dobj):with_object_binding('from_room, event.dobj):with_object_binding('to_room, destination):with_text_binding('direction, direction):with_text_binding('passage, direction);
       const template = toflyweight($event, flyslots(context), $format:blocks({source}));
       const resolved = template:resolve(viewer);
       if (!length(flycontents(resolved)))
         continue;
       endif
       let content = flycontents(flycontents(resolved)[1]);
-      if (maphaskey(descriptors, direction) && length(descriptors[direction])
-          && !$look:_has_inline_link(content))
-        content = {$document_node:mk('reference, content,
-          ['descriptor -> $document_schema:_descriptor_from_wire(descriptors[direction])])};
+      if (maphaskey(descriptors, direction) && length(descriptors[direction]) && !$look:_has_inline_link(content))
+        content = {$document_node:mk('reference, content, ['descriptor -> $document_schema:_descriptor_from_wire(descriptors[direction])])};
       endif
       if (length(status))
         content = {@content, @$format:literal_inline(" (" + status + ")")};
@@ -178,8 +161,7 @@ object LOOK [
       endif
     endfor
     if (length(fragments))
-      sentences = {@sentences, @$format:literal_inline(length(sentences) ? " You see " | "You see "),
-        @$look:_join(fragments), @$format:literal_inline(".")};
+      sentences = {@sentences, @$format:literal_inline(length(sentences) ? " You see " | "You see "), @$look:_join(fragments), @$format:literal_inline(".")};
     endif
     return length(sentences) ? {$document_node:mk('paragraph, sentences)} | {};
   endmethod
@@ -226,13 +208,11 @@ object LOOK [
     const {view} = args;
     let lines = {};
     for sleeping in ({false, true})
-      const actors = {actor for actor in (view['actors]) if (
-        !actor['integrated] && ((actor['status] == "deeply asleep") == sleeping))};
+      const actors = { actor for actor in (view['actors]) if !actor['integrated] && actor['status] == "deeply asleep" == sleeping };
       if (length(actors))
-        const ending = ((length(actors) > 1 || actors[1]['plural]) ? " are" | " is")
-          + (sleeping ? " deeply asleep." | " here.");
+        const ending = (length(actors) > 1 || actors[1]['plural] ? " are" | " is") + (sleeping ? " deeply asleep." | " here.");
         "Sleeping is already expressed by the sentence, so omit the status suffix.";
-        let labels = sleeping ? {sleeping_actor['bare] for sleeping_actor in (actors)} | actors;
+        let labels = sleeping ? { sleeping_actor['bare] for sleeping_actor in (actors) } | actors;
         "A long list names the first few and counts the rest.";
         if (length(labels) > $look.actor_listing_limit)
           const shown = $look.actor_listing_shown;
@@ -252,14 +232,11 @@ object LOOK [
     "Assemble a narrative event from an inert LookView. No object labels or content are reread.";
     const {view} = args;
     let lines = {};
-    let blocks = {$document_node:mk('heading, view['title], ['level -> 3]),
-      @flycontents(view['description])};
-    const exits = {exit for exit in (view['exits]) if (!exit['ambient])};
-    const available = {option['travel] for option in (exits) if (option['state] == 'open)};
+    let blocks = {$document_node:mk('heading, view['title], ['level -> 3]), @flycontents(view['description])};
+    const exits = { exit for exit in (view['exits]) if !exit['ambient] };
+    const available = { option['travel] for option in (exits) if option['state] == 'open };
     if (length(available))
-      lines = {@lines, {
-        @$format:literal_inline("You can go "), @$look:_join(available, "or"),
-        @$format:literal_inline(".")}};
+      lines = {@lines, {@$format:literal_inline("You can go "), @$look:_join(available, "or"), @$format:literal_inline(".")}};
     endif
     for blocked in (exits)
       if (blocked['state] == 'open)
@@ -268,20 +245,16 @@ object LOOK [
       if (blocked['state] == 'unavailable)
         lines = {@lines, $format:literal_inline(blocked['reason])};
       else
-        lines = {@lines, {
-          @$format:literal_inline("The way "), @blocked['travel]['content],
-          @$format:literal_inline(" is " + tostr(blocked['state]) + ".")}};
+        lines = {@lines, {@$format:literal_inline("The way "), @blocked['travel]['content], @$format:literal_inline(" is " + tostr(blocked['state]) + ".")}};
       endif
     endfor
     if (length(view['actions]))
       blocks = {@blocks, @$look:_lines_block(lines), $look:_list(view['actions])};
       lines = {};
     endif
-    const things = {thing for thing in (view['things]) if (!thing['integrated])};
+    const things = { thing for thing in (view['things]) if !thing['integrated] };
     if (length(things))
-      lines = {@lines, {
-        @$format:literal_inline("You see "), @$look:_join(things),
-        @$format:literal_inline(" here.")}};
+      lines = {@lines, {@$format:literal_inline("You see "), @$look:_join(things), @$format:literal_inline(" here.")}};
     endif
     lines = {@lines, @$look:_actor_lines(view)};
     let event = toflyweight($event, flyslots(view['event]), {@blocks, @$look:_lines_block(lines)});
@@ -294,8 +267,7 @@ object LOOK [
   method _list owner: HACKER
     "Build a canonical reference list from captured entries.";
     const {entries} = args;
-    return $document_node:mk('list, {['blocks -> {
-      $document_node:mk('paragraph, entry['content])}] for entry in (entries)}, ['style -> 'bullet]);
+    return $document_node:mk('list, { ['blocks -> {$document_node:mk('paragraph, entry['content])}] for entry in (entries) }, ['style -> 'bullet]);
   endmethod
 
   method panel owner: HACKER
@@ -305,19 +277,15 @@ object LOOK [
     for section in ({{"Exits", view['exits]}, {"Things", {@view['actions], @view['things]}}})
       const {label, entries} = section;
       if (length(entries))
-        blocks = {@blocks, $document_node:mk('heading, $format:literal_inline(label),
-          ['level -> 4]), $look:_list(entries)};
+        blocks = {@blocks, $document_node:mk('heading, $format:literal_inline(label), ['level -> 4]), $look:_list(entries)};
       endif
     endfor
     "People read as the narrative does, so a crowd of sleepers is counted, not listed.";
     const people = $look:_actor_lines(view);
     if (length(people))
-      blocks = {@blocks, $document_node:mk('heading, $format:literal_inline("People"),
-        ['level -> 4]), @$look:_lines_block(people)};
+      blocks = {@blocks, $document_node:mk('heading, $format:literal_inline("People"), ['level -> 4]), @$look:_lines_block(people)};
     endif
     const result = $document:render($document:mk(blocks), format);
-    return ["room" -> view['room_ref], "title" -> view['title_text],
-      "content" -> result['body], "content_type" -> strsub(tostr(format), "_", "/", 1),
-      "annotations" -> result['annotations]];
+    return ["room" -> view['room_ref], "title" -> view['title_text], "content" -> result['body], "content_type" -> strsub(tostr(format), "_", "/", 1), "annotations" -> result['annotations]];
   endmethod
 endobject

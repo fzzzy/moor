@@ -11,8 +11,7 @@ object LLM_TOOL_PROGRESS [
     const {values, key, ?limit = 96} = args;
     !maphaskey(values, key) && return "";
     const value = values[key];
-    typeof(value) in {TYPE_STR, TYPE_INT, TYPE_FLOAT, TYPE_BOOL, TYPE_OBJ}
-      || raise(E_TYPE, "Progress fields must be scalar values.");
+    typeof(value) in {TYPE_STR, TYPE_INT, TYPE_FLOAT, TYPE_BOOL, TYPE_OBJ} || raise(E_TYPE, "Progress fields must be scalar values.");
     const text = tostr(value);
     return length(text) > limit ? text[1..limit] + "..." | text;
   endmethod
@@ -73,8 +72,7 @@ object LLM_TOOL_PROGRESS [
     endif
     let reason = $llm_tool_progress:_text(values, "reason", 128);
     reason == "" && (reason = $llm_tool_progress:_text(values, "rationale", 128));
-    const progress = <$llm_tool_progress, .label = label, .action = action, .kind = kind,
-      .detail = detail, .input = input, .reason = reason>;
+    const progress = <$llm_tool_progress, .label = label, .action = action, .kind = kind, .detail = detail, .input = input, .reason = reason>;
     value_bytes(progress) <= 8192 || raise(E_QUOTA, "Captured tool progress exceeds 8 KiB.");
     return progress;
   endmethod
@@ -86,19 +84,16 @@ object LLM_TOOL_PROGRESS [
     elseif (this.kind == 'explanation)
       return "[" + this.label + "] " + this.detail;
     endif
-    return "[" + this.label + "] " + this.action + (this.detail == "" ? "" | ": " + this.detail)
-      + (this.reason == "" ? "" | " (" + this.reason + ")");
+    return "[" + this.label + "] " + this.action + (this.detail == "" ? "" | ": " + this.detail) + (this.reason == "" ? "" | " (" + this.reason + ")");
   endmethod
 
   method speech owner: ARCH_WIZARD
     "Render the same captured progress without HUD brackets for speech clients.";
     if (this.kind == 'question)
-      return "Question: " + this.detail + (this.input == "" ? ""
-        | this.input == "options" ? " with options" | ", " + this.input + " input");
+      return "Question: " + this.detail + (this.input == "" ? "" | this.input == "options" ? " with options" | ", " + this.input + " input");
     elseif (this.kind == 'explanation)
       return this.label + ": " + this.detail;
     endif
-    return this.label + ": " + this.action + (this.detail == "" ? "" | ": " + this.detail)
-      + (this.reason == "" ? "" | ". " + this.reason);
+    return this.label + ": " + this.action + (this.detail == "" ? "" | ": " + this.detail) + (this.reason == "" ? "" | ". " + this.reason);
   endmethod
 endobject

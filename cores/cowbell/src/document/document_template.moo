@@ -10,8 +10,7 @@ object DOCUMENT_TEMPLATE [
   method mk owner: HACKER
     "Construct unresolved content. Its fields follow the node schema until resolution.";
     const {kind, ?contents = {}, ?fields = []} = args;
-    typeof(kind) == TYPE_SYM && typeof(contents) == TYPE_LIST
-      && typeof(fields) == TYPE_MAP || raise(E_TYPE);
+    typeof(kind) == TYPE_SYM && typeof(contents) == TYPE_LIST && typeof(fields) == TYPE_MAP || raise(E_TYPE);
     !maphaskey(fields, 'kind) || raise(E_INVARG, "kind is a separate argument");
     let slots = fields;
     slots['kind] = kind;

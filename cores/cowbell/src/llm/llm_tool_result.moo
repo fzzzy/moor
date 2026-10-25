@@ -11,8 +11,7 @@ object LLM_TOOL_RESULT [
     const {status, ?value = "", ?code = "", ?wire = false} = args;
     status in {'success, 'failure, 'cancelled, 'waiting, 'unknown} || raise(E_INVARG);
     typeof(code) == TYPE_STR || raise(E_TYPE);
-    typeof(wire) == TYPE_MAP || (typeof(wire) == TYPE_BOOL && !wire)
-      || raise(E_TYPE, "Tool wire data must be an object or false.");
+    typeof(wire) == TYPE_MAP || (typeof(wire) == TYPE_BOOL && !wire) || raise(E_TYPE, "Tool wire data must be an object or false.");
     value_bytes({value, code, wire}) <= 65536 || raise(E_QUOTA, "Tool outcome exceeds 64 KiB.");
     $llm_value:validate_json(value);
     $llm_value:validate_json(wire);
@@ -50,8 +49,7 @@ object LLM_TOOL_RESULT [
     if (this.status == 'success && typeof(this.value) == TYPE_STR)
       return this.value;
     endif
-    return generate_json(["ok" -> this.status == 'success, "status" -> tostr(this.status),
-      "result" -> this.value, "code" -> this.code]);
+    return generate_json(["ok" -> this.status == 'success, "status" -> tostr(this.status), "result" -> this.value, "code" -> this.code]);
   endmethod
 
   method message owner: ARCH_WIZARD

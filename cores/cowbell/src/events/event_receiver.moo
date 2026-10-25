@@ -141,8 +141,7 @@ object EVENT_RECEIVER [
         outputs = {@outputs, {connection, mime, rendered['body], rendered['annotations]}};
       endif
     endfor
-    return ['document -> batch['document], 'connections -> outputs,
-      'history -> history ? batch['results][1] | false];
+    return ['document -> batch['document], 'connections -> outputs, 'history -> history ? batch['results][1] | false];
   endmethod
 
   method _connection_entry owner: ARCH_WIZARD
@@ -304,8 +303,7 @@ object EVENT_RECEIVER [
       return false;
     endif
     const view = this:_capture_room(room);
-    const event = $look:narrative(view):with_metadata('look_kind, "room")
-      :with_metadata('look_room, room);
+    const event = $look:narrative(view):with_metadata('look_kind, "room"):with_metadata('look_room, room);
     this.location == room || return;
     this:emit_room_snapshot_state(this, room, view);
     "A move made by a background task, such as a schedule, has no initiating connection to answer.";

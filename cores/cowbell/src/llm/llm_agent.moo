@@ -15,24 +15,24 @@ object LLM_AGENT [
   property compaction_callback (owner: HACKER, flags: "rc") = #-1;
   property compaction_threshold (owner: ARCH_WIZARD, flags: "r") = 0.7;
   property consecutive_tool_failures (owner: HACKER, flags: "rc") = [];
-  property project_state (owner: ARCH_WIZARD, flags: "") = #-1;
   property conversation (owner: ARCH_WIZARD, flags: "") = #-1;
   property current_continuation (owner: HACKER, flags: "rc") = 0;
   property current_iteration (owner: HACKER, flags: "rc") = 0;
+  property execution_status (owner: ARCH_WIZARD, flags: "c") = 'idle;
   property last_token_usage (owner: HACKER, flags: "c") = [];
   property max_consecutive_failures (owner: ARCH_WIZARD, flags: "r") = 3;
   property max_iterations (owner: ARCH_WIZARD, flags: "r") = 50;
+  property max_tools_per_turn (owner: ARCH_WIZARD, flags: "rc") = 32;
   property min_messages_to_keep (owner: HACKER, flags: "c") = 15;
-  property system_prompt (owner: HACKER, flags: "rc") = "";
-  property token_limit (owner: ARCH_WIZARD, flags: "r") = 128000;
   property model_override (owner: HACKER, flags: "rc") = false;
-  property tool_callback (owner: HACKER, flags: "rc") = #-1;
-  property execution_status (owner: ARCH_WIZARD, flags: "c") = 'idle;
-  property running (owner: ARCH_WIZARD, flags: "c") = false;
   property pending_tools (owner: ARCH_WIZARD, flags: "c") = [];
   property presented_text (owner: ARCH_WIZARD, flags: "rc") = {};
+  property project_state (owner: ARCH_WIZARD, flags: "") = #-1;
+  property running (owner: ARCH_WIZARD, flags: "c") = false;
+  property system_prompt (owner: HACKER, flags: "rc") = "";
+  property token_limit (owner: ARCH_WIZARD, flags: "r") = 128000;
+  property tool_callback (owner: HACKER, flags: "rc") = #-1;
   property tool_outcomes (owner: ARCH_WIZARD, flags: "c") = [];
-  property max_tools_per_turn (owner: ARCH_WIZARD, flags: "rc") = 32;
   property tools (owner: HACKER, flags: "c") = [];
   property total_tokens_used (owner: HACKER, flags: "rc") = 0;
 
@@ -101,7 +101,7 @@ object LLM_AGENT [
   method _get_tool_schemas owner: ARCH_WIZARD
     "Get OpenAI-format tool schemas from registered tools. Internal only.";
     caller == this || raise(E_PERM);
-    return {$llm_tool_catalog:normalize(this.tools[k]):to_schema() for k in (mapkeys(this.tools))};
+    return { $llm_tool_catalog:normalize(this.tools[k]):to_schema() for k in (mapkeys(this.tools)) };
   endmethod
 
   method _find_tool owner: ARCH_WIZARD
@@ -121,8 +121,7 @@ object LLM_AGENT [
     const {schemas, opts, actor} = args;
     typeof(actor) == TYPE_OBJ && valid(actor) && (actor == principal || principal.wizard) || raise(E_PERM);
     const options = typeof(opts) == TYPE_FLYWEIGHT ? opts | this.chat_opts;
-    return $llm_response:mk($llm_provider:chat_as(this.client, actor, 'conversation,
-      this.conversation:snapshot(), options, this.model_override, false, schemas));
+    return $llm_response:mk($llm_provider:chat_as(this.client, actor, 'conversation, this.conversation:snapshot(), options, this.model_override, false, schemas));
   endmethod
 
   method _track_token_usage owner: ARCH_WIZARD
@@ -149,8 +148,7 @@ object LLM_AGENT [
     const id = call["id"];
     const tool = this:_find_tool(name);
     const registered = typeof(tool) == TYPE_FLYWEIGHT;
-    const failures = registered && maphaskey(this.consecutive_tool_failures, name)
-      ? this.consecutive_tool_failures[name] | 0;
+    const failures = registered && maphaskey(this.consecutive_tool_failures, name) ? this.consecutive_tool_failures[name] | 0;
     let outcome = false;
     let delivered = {};
     if (this.cancel_requested)
@@ -164,7 +162,7 @@ object LLM_AGENT [
         let started = false;
         try
           const validated = $llm_tool_schema:arguments(parameters, tool.parameters);
-          delivered = {value for value in (mapvalues(validated)) if (typeof(value) == TYPE_STR)};
+          delivered = { value for value in (mapvalues(validated)) if typeof(value) == TYPE_STR };
           if (valid(this.tool_callback) && respond_to(this.tool_callback, 'on_tool_call))
             $llm_agent:_invoke_request_callback(this, actor, "on_tool_call", {name, parameters});
           endif
@@ -179,8 +177,7 @@ object LLM_AGENT [
           const effect = `tool.effect ! E_PROPNF => 'unknown';
           const detail = tostr(e[2]);
           const code = tostr(e[1]);
-          outcome = $llm_tool_result:mk(started && effect != 'inspection ? 'unknown | 'failure,
-            detail[1..min(length(detail), 2048)], code[1..min(length(code), 256)]);
+          outcome = $llm_tool_result:mk(started && effect != 'inspection ? 'unknown | 'failure, detail[1..min(length(detail), 2048)], code[1..min(length(code), 256)]);
         endtry
       endif
     endif
@@ -192,8 +189,7 @@ object LLM_AGENT [
     endif
     if (outcome:is_success())
       "Remember what presentation tools showed the room, so a caller can avoid repeating it.";
-      if (registered && `tool.effect ! E_PROPNF => 'unknown' == 'presentation
-          && length(this.presented_text) < 64)
+      if (registered && `tool.effect ! E_PROPNF => 'unknown' == 'presentation && length(this.presented_text) < 64)
         this.presented_text = {@this.presented_text, @delivered};
       endif
       if (maphaskey(this.consecutive_tool_failures, name))
@@ -400,14 +396,11 @@ object LLM_AGENT [
     typeof(plan) == TYPE_MAP || return false;
     const callback = this.compaction_callback;
     if (valid(callback) && respond_to(callback, 'on_compaction_start))
-      `$llm_agent:_invoke_request_callback(this, request_principal,
-        "on_compaction_start", {}, callback) ! ANY';
+      `$llm_agent:_invoke_request_callback(this, request_principal, "on_compaction_start", {}, callback) ! ANY';
     endif
     try
-      const prompt = "Summarize this conversation, preserving decisions, completed actions, "
-        + "unresolved work, and relevant references:\n\n" + toliteral(plan['old]);
-      const raw = $llm_provider:chat_as(this.client, request_principal, 'compaction,
-        {@plan['prefix], ["role" -> "user", "content" -> prompt]}, this.chat_opts, this.model_override, false, false);
+      const prompt = "Summarize this conversation, preserving decisions, completed actions, " + "unresolved work, and relevant references:\n\n" + toliteral(plan['old]);
+      const raw = $llm_provider:chat_as(this.client, request_principal, 'compaction, {@plan['prefix], ["role" -> "user", "content" -> prompt]}, this.chat_opts, this.model_override, false, false);
       const response = $llm_response:mk(raw);
       this:_track_token_usage(response);
       if (!response:is_valid() || !response:content())
@@ -421,8 +414,7 @@ object LLM_AGENT [
       return applied;
     finally
       if (valid(callback) && respond_to(callback, 'on_compaction_end))
-        `$llm_agent:_invoke_request_callback(this, request_principal,
-          "on_compaction_end", {}, callback) ! ANY';
+        `$llm_agent:_invoke_request_callback(this, request_principal, "on_compaction_end", {}, callback) ! ANY';
       endif
     endtry
   endmethod
@@ -484,8 +476,7 @@ object LLM_AGENT [
       this:needs_compaction() && this:compact_context(actor);
       this:add_message("user", input);
       const options = typeof(opts) == TYPE_FLYWEIGHT ? opts | this.chat_opts;
-      const response = $llm_response:mk($llm_provider:chat_as(this.client, actor, 'no_tools,
-        this.conversation:snapshot(), options, this.model_override, false, false));
+      const response = $llm_response:mk($llm_provider:chat_as(this.client, actor, 'no_tools, this.conversation:snapshot(), options, this.model_override, false, false));
       this:_track_token_usage(response);
       response:is_valid() && !response:has_tool_calls() || raise(E_INVARG, "Invalid text-only LLM response.");
       this:add_message("assistant", response:content());

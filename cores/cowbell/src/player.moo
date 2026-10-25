@@ -8,8 +8,6 @@ object PLAYER [
   readable: true
 
   property admin_features (owner: ARCH_WIZARD, flags: "") = {};
-  property llm_assist_contexts (owner: ARCH_WIZARD, flags: "") = {};
-  property llm_suggestions (owner: ARCH_WIZARD, flags: "") = {};
   property authoring_features (owner: ARCH_WIZARD, flags: "") = #-1;
   property direct_messages (owner: ARCH_WIZARD, flags: "c") = {};
   property editing_sessions (owner: ARCH_WIZARD, flags: "c") = [];
@@ -24,6 +22,8 @@ object PLAYER [
   property last_connected (owner: ARCH_WIZARD, flags: "r") = 0;
   property last_disconnected (owner: ARCH_WIZARD, flags: "r") = 0;
   property last_dm_from (owner: ARCH_WIZARD, flags: "c") = #-1;
+  property llm_assist_contexts (owner: ARCH_WIZARD, flags: "") = {};
+  property llm_suggestions (owner: ARCH_WIZARD, flags: "") = {};
   property oauth2_identities (owner: ARCH_WIZARD, flags: "") = {};
   property object_gaglist (owner: ARCH_WIZARD, flags: "rc") = {};
   property password (owner: ARCH_WIZARD, flags: "c") clear;
@@ -32,7 +32,7 @@ object PLAYER [
 
   override description (owner: ARCH_WIZARD, flags: "rc") = "You see a player who should get around to describing themself.";
 
-  verb "go" (any any any) owner: ARCH_WIZARD flags: "rd"
+  verb go (any any any) owner: ARCH_WIZARD flags: "rd"
     "Go through a local exit by name or to its destination. Usage: go [to] NAME.";
     caller == this || raise(E_PERM);
     set_task_perms(this);
@@ -42,12 +42,10 @@ object PLAYER [
       target = target:first_word()[2];
     endif
     if (!length(target))
-      return this:inform_current($event:mk_info(this,
-        "Go where? Type 'exits' to see the ways out."));
+      return this:inform_current($event:mk_info(this, "Go where? Type 'exits' to see the ways out."));
     endif
     try
-      valid(this.location) && isa(this.location, $room)
-        || raise(E_INVARG, "There are no ways out here.");
+      valid(this.location) && isa(this.location, $room) || raise(E_INVARG, "There are no ways out here.");
       return this.location:go(this, target);
     except error (E_INVARG)
       return this:inform_current($event:mk_info(this, error[2]));
@@ -300,11 +298,8 @@ object PLAYER [
     set_task_perms(this);
     const query = argstr:trim();
     if (!length(query))
-      const lines = {"Your pronouns: " + this:pronouns_display(),
-        "Presets: " + $pronouns:list_presets():join(", "),
-        "Use @pronouns PRESET, or @pronouns custom to enter your own words."};
-      this:inform_current($event:mk_info(this, @{$format.paragraph:mk(line) for line in (lines)})
-        :with_audience('utility));
+      const lines = {"Your pronouns: " + this:pronouns_display(), "Presets: " + $pronouns:list_presets():join(", "), "Use @pronouns PRESET, or @pronouns custom to enter your own words."};
+      this:inform_current($event:mk_info(this, @{ $format.paragraph:mk(line) for line in (lines) }):with_audience('utility));
       return;
     endif
     try
@@ -314,8 +309,7 @@ object PLAYER [
         typeof(input) == TYPE_MAP || return;
       endif
       this:set_pronouns(input);
-      this:inform_current($event:mk_info(this, "Pronouns set to: " + this:pronouns_display())
-        :with_audience('utility));
+      this:inform_current($event:mk_info(this, "Pronouns set to: " + this:pronouns_display()):with_audience('utility));
     except error (E_INVARG, E_TYPE, E_PERM)
       this:inform_current($event:mk_error(this, error[2]):with_audience('utility));
     endtry
@@ -569,9 +563,7 @@ object PLAYER [
       endif
     endfor
     if (new_dm_count > 0)
-      msg = $format.paragraph:mk(new_dm_count == 1 ? "You have a new direct message. Type "
-        | tostr("You have ", new_dm_count, " new direct messages. Type "),
-        $format.annotation:command("dms", "dms"), new_dm_count == 1 ? " to read it." | " to read them.");
+      msg = $format.paragraph:mk(new_dm_count == 1 ? "You have a new direct message. Type " | tostr("You have ", new_dm_count, " new direct messages. Type "), $format.annotation:command("dms", "dms"), new_dm_count == 1 ? " to read it." | " to read them.");
       event = $event:mk_info(this, msg):as_inset():with_group('dm_notify);
       this:inform_current(event);
     endif
@@ -580,9 +572,7 @@ object PLAYER [
     if (valid(mailbox))
       unread = mailbox:unread_count();
       if (unread > 0)
-        msg = $format.paragraph:mk(unread == 1 ? "You have an unread letter. Type "
-          | tostr("You have ", unread, " unread letters. Type "),
-          $format.annotation:command("mail", "mail"), " to check your mailbox.");
+        msg = $format.paragraph:mk(unread == 1 ? "You have an unread letter. Type " | tostr("You have ", unread, " unread letters. Type "), $format.annotation:command("mail", "mail"), " to check your mailbox.");
         event = $event:mk_info(this, msg):as_inset():with_group('mail_notify);
         this:inform_current(event);
       endif
@@ -1884,8 +1874,7 @@ object PLAYER [
     set_task_perms(this);
     const token = $llm_assist_context:offer(this, destination, 'command, input);
     length(token) > 0 || return false;
-    const message = $format.paragraph:mk("I didn't understand that command. Want help checking alternatives? ",
-      $format.annotation:command("assist --request " + token, "Yes"));
+    const message = $format.paragraph:mk("I didn't understand that command. Want help checking alternatives? ", $format.annotation:command("assist --request " + token, "Yes"));
     this:inform_connection(destination, $event:mk_do_not_understand(this, message):with_audience('utility));
     return true;
   endverb
@@ -1899,8 +1888,7 @@ object PLAYER [
     set_task_perms(this);
     const token = $llm_assist_context:offer(this, destination, 'help, input);
     length(token) > 0 || return false;
-    const message = $format.paragraph:mk("No help found for '" + input + "'. Want help finding similar topics? ",
-      $format.annotation:command("assist --request " + token, "Yes"));
+    const message = $format.paragraph:mk("No help found for '" + input + "'. Want help finding similar topics? ", $format.annotation:command("assist --request " + token, "Yes"));
     this:inform_connection(destination, $event:mk_error(this, message):with_audience('utility));
     return true;
   endverb
@@ -2306,7 +2294,7 @@ object PLAYER [
     "Use the same scope matcher as other object commands.";
     match_result = $match:resolve_in_scope(dest_str, targets);
     if (match_result == $ambiguous_match)
-      candidates = {room.name for room in ($match:candidates_in_scope(dest_str, targets))};
+      candidates = { room.name for room in ($match:candidates_in_scope(dest_str, targets)) };
       if (length(candidates) > 0)
         max = length(candidates) < 5 ? length(candidates) | 5;
         hint = " Try one of: " + candidates[1..max]:join(", ") + ".";
@@ -2680,8 +2668,7 @@ object PLAYER [
     length(input) <= 1024 || raise(E_QUOTA, "Assist input is too long.");
     set_task_perms(this);
     if (input == "--request")
-      return this:inform_connection(destination,
-        $event:mk_info(this, "Usage: assist --request TOKEN"):with_audience('utility));
+      return this:inform_connection(destination, $event:mk_info(this, "Usage: assist --request TOKEN"):with_audience('utility));
     endif
     if (input != "" && !input:starts_with("--request "))
       const pc = ['verb -> input, 'dobjstr -> "", 'prepstr -> "", 'iobjstr -> ""];
@@ -2690,8 +2677,7 @@ object PLAYER [
     const token = input == "" ? "" | input[11..$]:trim();
     const context = $llm_assist_context:take(this, destination, token);
     if (typeof(context) != TYPE_FLYWEIGHT)
-      this:inform_connection(destination, $event:mk_info(this,
-        "No current assist request on this connection. Try your command or help query again."):with_audience('utility));
+      this:inform_connection(destination, $event:mk_info(this, "No current assist request on this connection. Try your command or help query again."):with_audience('utility));
       return true;
     endif
     if (context.kind == 'help)
@@ -2704,14 +2690,12 @@ object PLAYER [
     "Start a bounded LLM command suggestion using the invoking actor and connection.";
     $llm_tool_provider:_require_tool_dispatch(this, caller_perms());
     const {pc, ?requested_connection = 0} = args;
-    const destination = typeof(requested_connection) == TYPE_OBJ
-      ? requested_connection | `connection() ! E_INVARG => 0';
+    const destination = typeof(requested_connection) == TYPE_OBJ ? requested_connection | `connection() ! E_INVARG => 0';
     typeof(destination) == TYPE_OBJ || return false;
     const client = $player.suggestions_llm_client;
     set_task_perms(this);
     if (typeof(client) != TYPE_OBJ || !valid(client))
-      this:inform_connection(destination,
-        $event:mk_info(this, "Assist is not configured right now."):with_audience('utility));
+      this:inform_connection(destination, $event:mk_info(this, "Assist is not configured right now."):with_audience('utility));
       return false;
     endif
     let request = [];
@@ -2725,14 +2709,12 @@ object PLAYER [
     "Start an owned LLM help suggestion after explicit assist opt-in.";
     $llm_tool_provider:_require_tool_dispatch(this, caller_perms());
     const {query, ?requested_connection = 0} = args;
-    const destination = typeof(requested_connection) == TYPE_OBJ
-      ? requested_connection | `connection() ! E_INVARG => 0';
+    const destination = typeof(requested_connection) == TYPE_OBJ ? requested_connection | `connection() ! E_INVARG => 0';
     typeof(destination) == TYPE_OBJ || return false;
     set_task_perms(this);
     const handled = $llm_help_suggestion:offer(this, destination, ['query -> query]);
     if (!handled)
-      this:inform_connection(destination,
-        $event:mk_error(this, "Help assist is not configured right now."):with_audience('utility));
+      this:inform_connection(destination, $event:mk_error(this, "Help assist is not configured right now."):with_audience('utility));
       return false;
     endif
     return true;

@@ -45,9 +45,7 @@ object RULE_ENGINE [
       inputs['Dobj] = 'object;
     elseif (name == 'feed_rule)
       inputs['Food] = 'object;
-    elseif (!(name in {'get_rule, 'drop_rule, 'open_rule, 'close_rule, 'view_rule,
-      'read_rule, 'write_rule, 'wear_rule, 'remove_rule, 'use_rule, 'consume_rule, 'pet_rule,
-      'sit_rule, 'stand_rule, 'pass_rule}))
+    elseif (!(name in {'get_rule, 'drop_rule, 'open_rule, 'close_rule, 'view_rule, 'read_rule, 'write_rule, 'wear_rule, 'remove_rule, 'use_rule, 'consume_rule, 'pet_rule, 'sit_rule, 'stand_rule, 'pass_rule}))
       inputs = [];
     endif
     return $rule_engine:scope(inputs);
@@ -55,8 +53,7 @@ object RULE_ENGINE [
 
   method passage_scope owner: HACKER
     "Name passage endpoints explicitly. Key is required only when the condition uses it.";
-    return $rule_engine:scope(['Accessor -> 'object, 'From -> 'object, 'To -> 'object,
-      'Passage -> 'any, 'Key -> 'object]);
+    return $rule_engine:scope(['Accessor -> 'object, 'From -> 'object, 'To -> 'object, 'Passage -> 'any, 'Key -> 'object]);
   endmethod
 
   method trigger_scope owner: HACKER
@@ -67,8 +64,7 @@ object RULE_ENGINE [
       trigger in {'on_take, 'on_put, 'on_get, 'on_drop, 'on_wear, 'on_remove} && (inputs['Item] = 'object);
       trigger in {'on_lock, 'on_unlock} && (inputs['Key] = 'object);
       if (trigger in {'on_passage_open, 'on_passage_close, 'on_passage_lock, 'on_passage_unlock})
-        inputs = mapmerge(inputs, ['From -> 'object, 'To -> 'object, 'Passage -> 'any,
-          'Connection -> 'string, 'Direction -> 'string, 'Key -> 'object]);
+        inputs = mapmerge(inputs, ['From -> 'object, 'To -> 'object, 'Passage -> 'any, 'Connection -> 'string, 'Direction -> 'string, 'Key -> 'object]);
       endif
       trigger in {'on_enter, 'on_exit} && (inputs['Who] = 'object);
       trigger in {'on_consume, 'on_empty} && (inputs['Amount] = 'integer);
@@ -93,8 +89,7 @@ object RULE_ENGINE [
     $behavior_schema:_name(name, "predicate");
     name != 'relation || raise(E_INVARG, "relation is reserved for explicit relation queries.");
     !maphaskey($world_facts:schemas(), name) || raise(E_INVARG, "Cannot replace a core predicate");
-    (typeof(provider) == TYPE_OBJ && valid(provider) && typeof(method) == TYPE_STR)
-      || raise(E_INVARG, "Invalid predicate provider");
+    typeof(provider) == TYPE_OBJ && valid(provider) && typeof(method) == TYPE_STR || raise(E_INVARG, "Invalid predicate provider");
     $behavior_schema:_vocabulary(['triggers -> [], 'actions -> [], 'predicates -> [name -> schema]]);
     $rule_engine.predicate_providers[name] = ['schema -> schema, 'provider -> provider, 'method -> method];
   endmethod
@@ -119,8 +114,7 @@ object RULE_ENGINE [
     "Validate tree structure, registered predicates, input types, and definite output bindings.";
     const {rule, ?scope = rule.scope} = args;
     try
-      (typeof(rule) == TYPE_FLYWEIGHT && rule.delegate == $rule)
-        || raise(E_INVARG, "Expected a canonical rule");
+      typeof(rule) == TYPE_FLYWEIGHT && rule.delegate == $rule || raise(E_INVARG, "Expected a canonical rule");
       $behavior_schema:_fields(scope, {'input, 'parameter, 'state, 'binding}, {}, "scope");
       for namespace in ({'input, 'parameter, 'state, 'binding})
         $behavior_schema:_types(scope[namespace], "scope." + tostr(namespace));
@@ -148,8 +142,7 @@ object RULE_ENGINE [
     const used = $condition:references(rule.condition);
     for namespace in ({'input, 'parameter, 'state})
       for name in (used[namespace])
-        maphaskey(environment[namespace], name) || raise(E_INVARG,
-          "Missing " + tostr(namespace) + " " + tostr(name));
+        maphaskey(environment[namespace], name) || raise(E_INVARG, "Missing " + tostr(namespace) + " " + tostr(name));
         $behavior_schema:_type(environment[namespace][name], rule.scope[namespace][name], tostr(name));
       endfor
     endfor
@@ -157,16 +150,14 @@ object RULE_ENGINE [
     const result = $condition:evaluate(rule.condition, environment, query);
     result['complete] || raise(E_QUOTA, "Condition search is incomplete");
     const rows = result['bindings];
-    return ['success -> length(rows) > 0, 'bindings -> length(rows) > 0 ? rows[1] | [],
-      'alternatives -> length(rows) > 1 ? rows[2..$] | {}, 'warnings -> {}, 'complete -> true];
+    return ['success -> length(rows) > 0, 'bindings -> length(rows) > 0 ? rows[1] | [], 'alternatives -> length(rows) > 1 ? rows[2..$] | {}, 'warnings -> {}, 'complete -> true];
   endmethod
 
   method query owner: ARCH_WIZARD
     "Call one registered provider with the caller's permissions and validate its complete row shape.";
     set_task_perms(caller_perms());
     const {name, values, limit, ?preview = false} = args;
-    (typeof(limit) == TYPE_INT && limit > 0 && limit <= 256)
-      || raise(E_INVARG, "Query result limit must be between 1 and 256");
+    typeof(limit) == TYPE_INT && limit > 0 && limit <= 256 || raise(E_INVARG, "Query result limit must be between 1 and 256");
     const schemas = $rule_engine:schemas();
     maphaskey(schemas, name) || raise(E_INVARG, "Unknown predicate: " + tostr(name));
     const schema = schemas[name];

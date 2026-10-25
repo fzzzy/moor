@@ -14,10 +14,8 @@ object HELP [
   method mk owner: ARCH_WIZARD
     "Create a help topic flyweight.";
     "Args: name, summary, content, optional aliases, category, related topics, and content kind.";
-    const {name, summary, content, ?aliases = {}, ?category = 'general,
-      ?see_also = {}, ?content_kind = 'literal} = args;
-    return <this, .name = name, .summary = summary, .content = content,
-      .content_kind = content_kind, .aliases = aliases, .category = category, .see_also = see_also>;
+    const {name, summary, content, ?aliases = {}, ?category = 'general, ?see_also = {}, ?content_kind = 'literal} = args;
+    return <this, .name = name, .summary = summary, .content = content, .content_kind = content_kind, .aliases = aliases, .category = category, .see_also = see_also>;
   endmethod
 
   method from_provider owner: ARCH_WIZARD

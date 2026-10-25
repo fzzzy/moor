@@ -18,8 +18,7 @@ object LLM_PROMPT_OBSERVER [
     "Replace idle collaborators with anonymous objects owned by the observer's owner.";
     const principal = caller_perms();
     principal == this.owner || principal.wizard || raise(E_PERM);
-    const local_runner = !is_clear_property(this, "runner") && valid(this.runner)
-      && this.runner.owner == this.owner && isa(this.runner, $llm_runner);
+    const local_runner = !is_clear_property(this, "runner") && valid(this.runner) && this.runner.owner == this.owner && isa(this.runner, $llm_runner);
     if (local_runner && valid(this.runner.agent) && this.runner.agent.owner == this.owner)
       !this.runner.agent.running || raise(E_INVARG, "Wait for the active response before reconfiguring");
     endif
@@ -49,8 +48,7 @@ object LLM_PROMPT_OBSERVER [
     endif
     const runner = this.runner;
     const response = runner:run_once(prompt, false, principal);
-    if (announce && this.runner == runner && typeof(response) == TYPE_STR
-        && valid(destination) && this.location == destination && length(response) > 0)
+    if (announce && this.runner == runner && typeof(response) == TYPE_STR && valid(destination) && this.location == destination && length(response) > 0)
       destination:announce($event:mk_say(this, this:name(), " says, \"", response, "\""));
     endif
     return response;

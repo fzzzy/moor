@@ -11,39 +11,39 @@ object SITTABLE [
 
   property already_sitting_msg (owner: HACKER, flags: "rc") = {
     "You're already sitting on ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property cant_reach_msg (owner: HACKER, flags: "rc") = {
     "You can't reach ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     " from here."
   };
   property dumped_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
     " dumped off ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property no_room_msg (owner: HACKER, flags: "rc") = {
     "There's no room on ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property not_sitting_msg (owner: HACKER, flags: "rc") = {
     "You aren't sitting on ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property seats (owner: HACKER, flags: "rc") = 2;
   property sit_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "sit", .singular_form = "sits">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "sit", .singular_form = "sits">,
     " on ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property sitting (owner: HACKER, flags: "r") = {};
@@ -51,19 +51,19 @@ object SITTABLE [
   property sitting_verb (owner: HACKER, flags: "rc") = "sitting";
   property squeeze (owner: HACKER, flags: "rc") = 0;
   property squeezed_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
     " squeezed off ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
   property stand_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "stand", .singular_form = "stands">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "stand", .singular_form = "stands">,
     " up from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'This>,
+    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
     "."
   };
 
@@ -185,16 +185,13 @@ object SITTABLE [
     const {property} = args;
     if (tostr(property) in {"already_sitting_msg", "cant_reach_msg", "no_room_msg", "not_sitting_msg", "sit_msg", "stand_msg"})
       let bindings = $sub_utils:standard_bindings("The person sitting or standing.");
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The furniture.",
-        'example -> 'host];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The furniture.", 'example -> 'host];
       return bindings;
     endif
     if (tostr(property) in {"dumped_msg", "squeezed_msg"})
       let bindings = $sub_utils:standard_bindings("The person removed from the furniture.");
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The furniture.",
-        'example -> 'host];
-      bindings['dobj] = ['kind -> 'object, 'description -> "The same person removed from the furniture.",
-        'example -> 'actor];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The furniture.", 'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The same person removed from the furniture.", 'example -> 'actor];
       return bindings;
     endif
     return pass(@args);
@@ -217,8 +214,7 @@ object SITTABLE [
     room:engage_actor(who, this);
     "Disengaging other furniture can call authored code and suspend.";
     $root:check_actor(who, principal);
-    equal(before, {this.owner, this.location, this.seats, this.squeeze, who.owner, who.location})
-      || return false;
+    equal(before, {this.owner, this.location, this.seats, this.squeeze, who.owner, who.location}) || return false;
     who in this.sitting && return false;
     this.sitting = {@this.sitting, who};
     if (!silent)
@@ -297,8 +293,7 @@ object SITTABLE [
       const message = use_dumped ? this.dumped_msg | this.squeezed_msg;
       room:announce($event:mk_info(who, @message):with_dobj(who):with_this(this));
     endif
-    this:fire_trigger(use_dumped ? 'on_sittable_dump | 'on_sittable_squeeze,
-      ['Actor -> who, 'Location -> room]);
+    this:fire_trigger(use_dumped ? 'on_sittable_dump | 'on_sittable_squeeze, ['Actor -> who, 'Location -> room]);
     return true;
   endverb
 
@@ -315,17 +310,14 @@ object SITTABLE [
   method sitter_description owner: ARCH_WIZARD
     "Describe the current sitters with linked phrases and agreement for the whole subject.";
     set_task_perms(caller_perms());
-    const sitters = {sitter for sitter in (this.sitting) if valid(sitter)};
+    const sitters = { sitter for sitter in (this.sitting) if valid(sitter) };
     !sitters && return false;
     let parts = {};
     for i in [1..length(sitters)]
       i > 1 && (parts = {@parts, i == length(sitters) ? " and " | ", "});
       parts = {@parts, $sub:reference(sitters[i])};
     endfor
-    let event = $event:mk_info(player, $sub:capitalize(parts), " ",
-      length(sitters) > 1 ? "are" | $sub:agree('sitter, 'name, "are", "is"),
-      " ", this.sitting_verb, " ", this.sitting_prep, " ", $sub:reference(this), ".")
-      :with_object_binding('sitter, sitters[1]);
+    let event = $event:mk_info(player, $sub:capitalize(parts), " ", length(sitters) > 1 ? "are" | $sub:agree('sitter, 'name, "are", "is"), " ", this.sitting_verb, " ", this.sitting_prep, " ", $sub:reference(this), "."):with_object_binding('sitter, sitters[1]);
     return event:resolve(player);
   endmethod
 
@@ -395,8 +387,7 @@ object SITTABLE [
     "Remove a departed sitter only for the room's departure callback.";
     const {who} = args;
     const source = callers()[1];
-    (caller == this.location && source[4] == $room && source[2] == "exitfunc")
-      || raise(E_PERM);
+    caller == this.location && source[4] == $room && source[2] == "exitfunc" || raise(E_PERM);
     if (who.location != this.location && who in this.sitting)
       this:remove_sitter(who);
     endif
@@ -405,8 +396,7 @@ object SITTABLE [
   method remove_occupant owner: ARCH_WIZARD
     "Allow the room to switch seats; other callers must control the departing actor.";
     const source = callers()[1];
-    const room_callback = caller == this.location && source[4] == $room
-      && source[2] == "engage_actor";
+    const room_callback = caller == this.location && source[4] == $room && source[2] == "engage_actor";
     if (!room_callback)
       set_task_perms(caller_perms());
     endif

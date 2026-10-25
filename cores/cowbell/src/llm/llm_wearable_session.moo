@@ -6,17 +6,17 @@ object LLM_WEARABLE_SESSION [
   parent: LLM_JOB
   owner: ARCH_WIZARD
 
-  property base_tools (owner: ARCH_WIZARD, flags: "") = [];
-  property tools_bound (owner: ARCH_WIZARD, flags: "") = false;
-  property tool_providers (owner: ARCH_WIZARD, flags: "") = {};
-  property approvals (owner: ARCH_WIZARD, flags: "") = [];
-  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
-  property actor_wizard (owner: ARCH_WIZARD, flags: "") = false;
-  property actor_programmer (owner: ARCH_WIZARD, flags: "") = false;
   property active (owner: ARCH_WIZARD, flags: "") = false;
+  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
+  property actor_programmer (owner: ARCH_WIZARD, flags: "") = false;
+  property actor_wizard (owner: ARCH_WIZARD, flags: "") = false;
+  property approvals (owner: ARCH_WIZARD, flags: "") = [];
+  property base_tools (owner: ARCH_WIZARD, flags: "") = [];
   property device_owner (owner: ARCH_WIZARD, flags: "") = #-1;
   property interaction_task (owner: ARCH_WIZARD, flags: "") = 0;
   property monitor_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property tool_providers (owner: ARCH_WIZARD, flags: "") = {};
+  property tools_bound (owner: ARCH_WIZARD, flags: "") = false;
 
   method open owner: ARCH_WIZARD
     "Admit one interaction before configuration or input; descendants get independent state.";
@@ -54,8 +54,7 @@ object LLM_WEARABLE_SESSION [
     this:_start_monitor();
     try
       this:_check_frontend();
-      if (is_clear_property(device, "agent") || !valid(device.agent)
-          || device.agent.owner != device.owner)
+      if (is_clear_property(device, "agent") || !valid(device.agent) || device.agent.owner != device.owner)
         device:configure();
       endif
       $llm_wearable_session:check(this, actor);
@@ -85,8 +84,7 @@ object LLM_WEARABLE_SESSION [
           providers[prototype] = provider;
           this.tool_providers = {@this.tool_providers, provider};
         endif
-        tools[name] = $llm_agent_tool:mk(tool.name, tool.description, tool.parameters,
-          providers[prototype], tool.target_verb, tool.effect);
+        tools[name] = $llm_agent_tool:mk(tool.name, tool.description, tool.parameters, providers[prototype], tool.target_verb, tool.effect);
       endif
     endfor
     this.agent.tools = tools;
@@ -115,8 +113,7 @@ object LLM_WEARABLE_SESSION [
     const {session, actor} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     isa(session, $llm_wearable_session) && session.active || raise(E_INVARG, "Interaction closed.");
-    actor == session.requester && actor.programmer == session.actor_programmer
-      && actor.is_builder == session.actor_builder && actor.wizard == session.actor_wizard || raise(E_PERM);
+    actor == session.requester && actor.programmer == session.actor_programmer && actor.is_builder == session.actor_builder && actor.wizard == session.actor_wizard || raise(E_PERM);
     const device = session.host;
     $llm_wearable_session:_eligible(device, actor);
     valid(device) && device.owner == session.device_owner || raise(E_PERM);
@@ -127,7 +124,7 @@ object LLM_WEARABLE_SESSION [
     endif
     time() < session.deadline || raise(E_QUOTA, "Interaction timed out.");
     if (typeof(session.reply_connection) == TYPE_OBJ)
-      const attached = {entry[1] for entry in (connections(actor))};
+      const attached = { entry[1] for entry in (connections(actor)) };
       session.reply_connection in attached || raise(E_PERM, "Connection is no longer attached.");
     endif
     return true;
@@ -137,8 +134,7 @@ object LLM_WEARABLE_SESSION [
     "Return only the live interaction bound to this device and actor.";
     const {device, actor} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
-    !is_clear_property(device, "interaction") && valid(device.interaction)
-      || raise(E_INVARG, "No active interaction.");
+    !is_clear_property(device, "interaction") && valid(device.interaction) || raise(E_INVARG, "No active interaction.");
     const session = device.interaction;
     session.host == device || raise(E_PERM);
     $llm_wearable_session:check(session, actor);
@@ -209,11 +205,8 @@ object LLM_WEARABLE_SESSION [
       return true;
     endif
     const input_type = allow_all ? "yes_no_alternative_all" | "yes_no_alternative";
-    const suffix = allow_all
-      ? " Yes to All applies only to this operation on this object, for this request." | "";
-    const response = this:read_input(actor, {{"input_type", input_type},
-      {"prompt", prompt + suffix}, {"alternative_label", "Suggest an alternative:"},
-      {"alternative_placeholder", "Describe the change you want."}});
+    const suffix = allow_all ? " Yes to All applies only to this operation on this object, for this request." | "";
+    const response = this:read_input(actor, {{"input_type", input_type}, {"prompt", prompt + suffix}, {"alternative_label", "Suggest an alternative:"}, {"alternative_placeholder", "Describe the change you want."}});
     $llm_wearable_session:check(this, actor);
     if (!valid(target) || target.owner != owner)
       return $llm_tool_result:mk('waiting, "Target ownership changed while awaiting confirmation.", "stale_confirmation");
@@ -221,11 +214,9 @@ object LLM_WEARABLE_SESSION [
     if (response == "yes")
       return true;
     elseif (response == "yes_all" && allow_all)
-      maphaskey(this.approvals, target) || length(this.approvals) < 128
-        || raise(E_QUOTA, "Too many approval targets.");
+      maphaskey(this.approvals, target) || length(this.approvals) < 128 || raise(E_QUOTA, "Too many approval targets.");
       scopes = maphaskey(this.approvals, target) ? this.approvals[target] | [];
-      maphaskey(scopes, effect) || length(scopes) < 32
-        || raise(E_QUOTA, "Too many approval operations on this target.");
+      maphaskey(scopes, effect) || length(scopes) < 32 || raise(E_QUOTA, "Too many approval operations on this target.");
       scopes[effect] = owner;
       this.approvals[target] = scopes;
       return true;
@@ -252,9 +243,7 @@ object LLM_WEARABLE_SESSION [
     const actor = this.requester;
     const device = this.host;
     try
-      let prompt = this:read_input(actor, {{"input_type", "text"},
-        {"prompt", device.prompt_label + " " + device.prompt_text},
-        {"placeholder", device.placeholder_text}, {"tts_prompt", device.prompt_text}}):trim();
+      let prompt = this:read_input(actor, {{"input_type", "text"}, {"prompt", device.prompt_label + " " + device.prompt_text}, {"placeholder", device.placeholder_text}, {"tts_prompt", device.prompt_text}}):trim();
       if (!prompt || prompt == "@abort")
         return;
       endif
@@ -270,8 +259,7 @@ object LLM_WEARABLE_SESSION [
         if (continuations >= 3 || length(this.agent.pending_tools))
           break;
         endif
-        const answer = this:read_input(actor, {{"input_type", "yes_no"},
-          {"prompt", "Iteration limit reached. Continue this request?"}});
+        const answer = this:read_input(actor, {{"input_type", "yes_no"}, {"prompt", "Iteration limit reached. Continue this request?"}});
         if (answer != "yes")
           break;
         endif
@@ -301,7 +289,7 @@ object LLM_WEARABLE_SESSION [
   method close owner: ARCH_WIZARD
     "Cancel owned tasks and drop references while retaining the device's conversation.";
     const principal = caller_perms();
-    (caller == this || principal == this.requester || principal.wizard) || raise(E_PERM);
+    caller == this || principal == this.requester || principal.wizard || raise(E_PERM);
     this.active || return;
     this.active = false;
     const device = this.host;
@@ -358,8 +346,7 @@ object LLM_WEARABLE_SESSION [
     set_task_perms(actor);
     const message = device:_format_hud_message(name, parameters);
     const speech = device:_format_tts_message(name, parameters);
-    this:emit(actor, $event:mk_info(actor, message):as_inset():with_tts(speech)
-      :with_group('llm, device));
+    this:emit(actor, $event:mk_info(actor, message):as_inset():with_tts(speech):with_group('llm, device));
   endmethod
 
   method on_tool_complete owner: ARCH_WIZARD
@@ -414,8 +401,7 @@ object LLM_WEARABLE_SESSION [
     if (kind == "choice")
       response in choices || raise(E_INVARG, "Answer is not an offered choice.");
       if (response == "Request Change" && !maphaskey(parameters, "choices"))
-        const change = this:read_input(actor, {{"input_type", "text_area"},
-          {"prompt", "What changes would you like?"}, {"rows", 4}}):trim();
+        const change = this:read_input(actor, {{"input_type", "text_area"}, {"prompt", "What changes would you like?"}, {"rows", 4}}):trim();
         if (!change || change == "@abort")
           agent.cancel_requested = true;
           return $llm_tool_result:mk('cancelled, "User cancelled.", "user_cancelled");
@@ -440,17 +426,7 @@ object LLM_WEARABLE_SESSION [
     caller == this && caller_perms().wizard || raise(E_PERM);
     const {agent} = args;
     const text = ["type" -> "string", "maxLength" -> 4096];
-    const tools = {
-      $llm_agent_tool:mk("explain", "Give the user a concise progress update or finding.",
-        ["type" -> "object", "properties" -> ["message" -> text],
-          "required" -> {"message"}, "additionalProperties" -> false], this, "_tool_explain", 'presentation),
-      $llm_agent_tool:mk("ask_user", "Ask a question. Without choices or an input type, offer Accept, Stop, or Request Change.",
-        ["type" -> "object", "properties" -> ["question" -> text,
-          "choices" -> ["type" -> "array", "items" -> text, "minItems" -> 1, "maxItems" -> 16],
-          "input_type" -> ["type" -> "string", "enum" -> {"text", "text_area", "yes_no", "confirmation", "yes_no_alternative"}],
-          "placeholder" -> text, "rows" -> ["type" -> "integer", "minimum" -> 1, "maximum" -> 20]],
-          "required" -> {"question"}, "additionalProperties" -> false], this, "_tool_ask_user", 'input)
-    };
+    const tools = {$llm_agent_tool:mk("explain", "Give the user a concise progress update or finding.", ["type" -> "object", "properties" -> ["message" -> text], "required" -> {"message"}, "additionalProperties" -> false], this, "_tool_explain", 'presentation), $llm_agent_tool:mk("ask_user", "Ask a question. Without choices or an input type, offer Accept, Stop, or Request Change.", ["type" -> "object", "properties" -> ["question" -> text, "choices" -> ["type" -> "array", "items" -> text, "minItems" -> 1, "maxItems" -> 16], "input_type" -> ["type" -> "string", "enum" -> {"text", "text_area", "yes_no", "confirmation", "yes_no_alternative"}], "placeholder" -> text, "rows" -> ["type" -> "integer", "minimum" -> 1, "maximum" -> 20]], "required" -> {"question"}, "additionalProperties" -> false], this, "_tool_ask_user", 'input)};
     for tool in (tools)
       agent:add_tool(tool.name, tool);
     endfor
@@ -460,5 +436,4 @@ object LLM_WEARABLE_SESSION [
       agent:add_tool(tool.name, tool);
     endfor
   endmethod
-
 endobject

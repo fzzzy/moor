@@ -13,12 +13,9 @@ object LLM_TOOL_CATALOG [
     set_task_perms(caller_perms());
     let tool = false;
     if (typeof(definition) == TYPE_MAP)
-      tool = $llm_agent_tool:mk(definition["name"], definition["description"],
-        definition["input_schema"], definition["target_obj"], definition["target_verb"],
-        `definition["effect"] ! E_RANGE => 'unknown');
+      tool = $llm_agent_tool:mk(definition["name"], definition["description"], definition["input_schema"], definition["target_obj"], definition["target_verb"], `definition["effect"] ! E_RANGE => 'unknown');
     elseif (typeof(definition) == TYPE_FLYWEIGHT)
-      tool = $llm_agent_tool:mk(definition.name, definition.description, definition.parameters,
-        definition.target_obj, definition.target_verb, `definition.effect ! E_PROPNF => 'unknown');
+      tool = $llm_agent_tool:mk(definition.name, definition.description, definition.parameters, definition.target_obj, definition.target_verb, `definition.effect ! E_PROPNF => 'unknown');
     else
       raise(E_TYPE, "Tool definition must be a descriptor or map");
     endif
@@ -53,5 +50,4 @@ object LLM_TOOL_CATALOG [
     endfor
     return result;
   endmethod
-
 endobject

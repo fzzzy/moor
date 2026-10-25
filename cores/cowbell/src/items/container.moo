@@ -9,91 +9,154 @@ object CONTAINER [
   fertile: true
   readable: true
 
-  property already_closed_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>, " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " already closed."};
-  property already_locked_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>, " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " already locked."};
-  property already_open_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>, " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " already open."};
-  property already_unlocked_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>, " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " already unlocked."};
-  property close_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " won't close."};
+  property already_closed_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " already closed."
+  };
+  property already_locked_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " already locked."
+  };
+  property already_open_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " already open."
+  };
+  property already_unlocked_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " already unlocked."
+  };
+  property close_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " won't close."
+  };
   property close_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "close", .singular_form = "closes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "close", .singular_form = "closes">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property close_rule (owner: HACKER, flags: "rc") = 0;
-  property lock_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " won't lock."};
+  property lock_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " won't lock."
+  };
   property lock_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "lock", .singular_form = "locks">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "lock", .singular_form = "locks">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'iobj>,
+    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
     " with ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property lock_rule (owner: HACKER, flags: "rc") = 0;
   property locked (owner: HACKER, flags: "r") = false;
-  property not_closeable_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " can't be closed."};
-  property not_lockable_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " ", <SUB, .type = 'agree, .binding_name = 'iobj, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">, " have a lock."};
-  property not_openable_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " can't be opened."};
-  property not_unlockable_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " ", <SUB, .type = 'agree, .binding_name = 'iobj, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">, " have a lock."};
+  property not_closeable_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " can't be closed."
+  };
+  property not_lockable_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">,
+    " have a lock."
+  };
+  property not_openable_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " can't be opened."
+  };
+  property not_unlockable_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "do not", .singular_form = "does not">,
+    " have a lock."
+  };
   property open (owner: HACKER, flags: "r") = true;
-  property open_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " won't open."};
-  property open_locked_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'dobj>, " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " locked."};
+  property open_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " won't open."
+  };
+  property open_locked_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " locked."
+  };
   property open_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "open", .singular_form = "opens">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "open", .singular_form = "opens">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property open_rule (owner: HACKER, flags: "rc") = 0;
-  property put_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " ", <SUB, .type = 'agree, .binding_name = 'iobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " closed."};
+  property put_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " closed."
+  };
   property put_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "put", .singular_form = "puts">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "put", .singular_form = "puts">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     " ",
-    <SUB, .capitalize = false, .type = 'binding, .binding_name = 'prep>,
+    <SUB, .capitalize = false, .binding_name = 'prep, .type = 'binding>,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'iobj>,
+    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
     "."
   };
   property put_prep_display (owner: HACKER, flags: "rc") = "in";
   property put_preps (owner: HACKER, flags: "rc") = {"in", "inside", "into"};
   property put_rule (owner: HACKER, flags: "rc") = 0;
-  property take_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " ", <SUB, .type = 'agree, .binding_name = 'iobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " closed."};
+  property take_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " ",
+    <SUB, .binding_name = 'iobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " closed."
+  };
   property take_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     " from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'iobj>,
+    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
     "."
   };
   property take_rule (owner: HACKER, flags: "rc") = 0;
-  property view_rule (owner: HACKER, flags: "rc") = 0;
-  property view_denied_msg (owner: HACKER, flags: "rc") = {"You cannot see inside that container."};
-  property unlock_denied_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'article_the, .binding_name = 'iobj>, " won't unlock."};
+  property unlock_denied_msg (owner: HACKER, flags: "rc") = {
+    <SUB, .capitalize = true, .binding_name = 'iobj, .type = 'article_the>,
+    " won't unlock."
+  };
   property unlock_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "unlock", .singular_form = "unlocks">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "unlock", .singular_form = "unlocks">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'iobj>,
+    <SUB, .capitalize = false, .binding_name = 'iobj, .type = 'article_the>,
     " with ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'dobj>,
+    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
     "."
   };
   property unlock_rule (owner: HACKER, flags: "rc") = 0;
+  property view_denied_msg (owner: HACKER, flags: "rc") = {"You cannot see inside that container."};
+  property view_rule (owner: HACKER, flags: "rc") = 0;
 
   override description (owner: HACKER, flags: "rc") = "Generic container prototype for objects that can hold other items.";
   override object_documentation (owner: HACKER, flags: "rc") = {
@@ -264,46 +327,34 @@ object CONTAINER [
     const {property} = args;
     if (tostr(property) in {"open_msg", "close_msg"})
       let bindings = $sub_utils:standard_bindings("The person opening or closing the container.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
-      bindings['iobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.",
-        'example -> 'location];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
+      bindings['iobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.", 'example -> 'location];
       return bindings;
     endif
     if (tostr(property) in {"put_msg", "take_msg"})
       let bindings = $sub_utils:standard_bindings("The person moving an item.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The item being moved.",
-        'example -> 'item];
-      bindings['iobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.",
-        'example -> 'location];
-      bindings['prep] = ['kind -> 'text, 'description -> "The container preposition, such as in or on.",
-        'example -> "in"];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The item being moved.", 'example -> 'item];
+      bindings['iobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.", 'example -> 'location];
+      bindings['prep] = ['kind -> 'text, 'description -> "The container preposition, such as in or on.", 'example -> "in"];
       return bindings;
     endif
     if (tostr(property) in {"lock_msg", "unlock_msg"})
       let bindings = $sub_utils:standard_bindings("The person using the key.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The key.",
-        'example -> 'item];
-      bindings['iobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
-      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.",
-        'example -> 'location];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The key.", 'example -> 'item];
+      bindings['iobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
+      bindings['this_obj] = ['kind -> 'object, 'description -> "The room where this happens.", 'example -> 'location];
       return bindings;
     endif
     if (tostr(property) in {"already_open_msg", "already_closed_msg", "open_locked_msg", "already_locked_msg", "already_unlocked_msg"})
       let bindings = $sub_utils:standard_bindings("The person trying the operation.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
       return bindings;
     endif
     if (tostr(property) in {"put_denied_msg", "take_denied_msg", "open_denied_msg", "close_denied_msg", "lock_denied_msg", "unlock_denied_msg", "not_closeable_msg", "not_lockable_msg", "not_openable_msg", "not_unlockable_msg", "view_denied_msg"})
       let bindings = $sub_utils:standard_bindings("The person trying the operation.");
-      bindings['iobj] = ['kind -> 'object, 'description -> "The container.",
-        'example -> 'host];
+      bindings['iobj] = ['kind -> 'object, 'description -> "The container.", 'example -> 'host];
       return bindings;
     endif
     return pass(@args);
@@ -398,7 +449,7 @@ object CONTAINER [
     const description = this:description();
     let blocks = $format:blocks(typeof(description) == TYPE_LIST ? description | {description});
     if (this:can_view_contents(player))
-      const contents = {item for item in (this.contents) if (valid(item))};
+      const contents = { item for item in (this.contents) if valid(item) };
       if (length(contents))
         let parts = {"Contents: "};
         for i in [1..length(contents)]
@@ -698,9 +749,7 @@ object CONTAINER [
     "Capture custody, ownership, state, and policies that an operation must recheck after callbacks.";
     set_task_perms(caller_perms());
     const {host, who, arguments} = args;
-    let snapshot = {host.owner, host.location, host.open, host.locked,
-      host.take_rule, host.put_rule, host.open_rule, host.close_rule, host.lock_rule, host.unlock_rule,
-      who.owner, who.location, who.wearing};
+    let snapshot = {host.owner, host.location, host.open, host.locked, host.take_rule, host.put_rule, host.open_rule, host.close_rule, host.lock_rule, host.unlock_rule, who.owner, who.location, who.wearing};
     if (maphaskey(arguments, 'item))
       const item = arguments['item];
       snapshot = {@snapshot, item.owner, item.location, item.portable, item.get_rule, item.drop_rule};
@@ -718,8 +767,7 @@ object CONTAINER [
     const source = callers()[1];
     source[4] == $container && source[2] == "_operate" || raise(E_PERM);
     set_task_perms(principal);
-    $container:_policy(host, operation, who, arguments)
-      || return host.(tostr(operation) + "_denied_msg");
+    $container:_policy(host, operation, who, arguments) || return host.(tostr(operation) + "_denied_msg");
     if (operation in {'take, 'put})
       const item = arguments['item];
       if (operation == 'take)
@@ -741,8 +789,7 @@ object CONTAINER [
     $root:check_actor(who, principal);
     isa(host, $container) || raise(E_INVARG, "That object is not a container.");
     operation in {'take, 'put, 'open, 'close, 'lock, 'unlock} || raise(E_INVARG);
-    const schema = operation in {'take, 'put} ? ['item -> 'object]
-      | (operation in {'lock, 'unlock} ? ['key -> 'object] | []);
+    const schema = operation in {'take, 'put} ? ['item -> 'object] | operation in {'lock, 'unlock} ? ['key -> 'object] | [];
     $behavior_schema:bindings(arguments, schema, "action arguments");
     for argument in (mapvalues(arguments))
       valid(argument) || raise(E_INVARG, "An action argument no longer exists.");
@@ -770,11 +817,9 @@ object CONTAINER [
     const reason = $container:_check_operation(host, operation, who, arguments, principal);
     length(reason) == 0 || return denied(reason);
     $root:check_actor(who, principal);
-    equal(before, $container:_snapshot(host, who, arguments))
-      || return denied({"The objects or their rules changed. Try again."});
+    equal(before, $container:_snapshot(host, who, arguments)) || return denied({"The objects or their rules changed. Try again."});
     const location = who.location;
-    let context = ['Actor -> who, 'Location -> location,
-      '_reaction_chain -> `reaction_context['_reaction_chain] ! E_RANGE => {}'];
+    let context = ['Actor -> who, 'Location -> location, '_reaction_chain -> `reaction_context['_reaction_chain] ! E_RANGE => {}'];
     if (operation in {'take, 'put})
       const item = arguments['item];
       const destination = operation == 'take ? who | host;
@@ -797,8 +842,7 @@ object CONTAINER [
     if (!silent && valid(location))
       let event = $event:mk_info(who, @host.(tostr(operation) + "_msg")):with_this(location);
       if (operation in {'take, 'put})
-        event = event:with_dobj(arguments['item]):with_iobj(host)
-          :with_text_binding('prep, host.put_prep_display);
+        event = event:with_dobj(arguments['item]):with_iobj(host):with_text_binding('prep, host.put_prep_display);
       elseif (operation in {'lock, 'unlock})
         event = event:with_dobj(arguments['key]):with_iobj(host);
       else
