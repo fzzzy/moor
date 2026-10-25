@@ -323,22 +323,20 @@ impl CodegenState {
                 self.emit(Op::FinallyContinue);
             }
             StmtNode::Scope { num_bindings, body } => {
+                // Every scope is opened at run time, even one that declares nothing: variables in
+                // scopes nested inside it are numbered counting it, so skipping it would point
+                // them one scope too deep.
                 let end_label = self.make_jump_label(None);
-                if *num_bindings > 0 {
-                    self.emit(Op::BeginScope {
-                        num_bindings: *num_bindings as u16,
-                        end_label,
-                    });
-                }
-
+                self.emit(Op::BeginScope {
+                    num_bindings: *num_bindings as u16,
+                    end_label,
+                });
                 for stmt in body {
                     self.generate_stmt(stmt)?;
                 }
-                if *num_bindings > 0 {
-                    self.emit(Op::EndScope {
-                        num_bindings: *num_bindings as u16,
-                    });
-                }
+                self.emit(Op::EndScope {
+                    num_bindings: *num_bindings as u16,
+                });
                 self.commit_jump_label(end_label);
             }
             StmtNode::Break { exit: None } => {
