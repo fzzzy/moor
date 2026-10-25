@@ -657,38 +657,3 @@ object HEADLESS_WORLD_SCENARIOS [
   endmethod
 
 endobject
-
-object #90108
-  name: "Runtime World Area"
-  parent: AREA
-  owner: RUNTIME_WIZARD
-endobject
-
-object #90109
-  name: "Runtime World West Room"
-  parent: ROOM
-  owner: RUNTIME_WIZARD
-  location: #90108
-endobject
-
-object #90110
-  name: "Runtime World East Room"
-  parent: ROOM
-  owner: RUNTIME_WIZARD
-  location: #90108
-endobject
-
-object #90111
-  name: "Runtime World Container"
-  parent: CONTAINER
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
-endobject
-
-object #90112
-  name: "Runtime World Item"
-  parent: THING
-  owner: RUNTIME_PLAYER
-  location: RUNTIME_PLAYER
-
-endobject

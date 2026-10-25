@@ -1,4 +1,6 @@
-object #90030
+object HEADLESS_CHANGE_MODEL [
+  import_export_id -> "headless_change_model"
+]
   name: "Deterministic change-tool model fixture"
   parent: ROOT
   owner: ARCH_WIZARD

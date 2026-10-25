@@ -182,17 +182,3 @@ object HEADLESS_MESSAGING_SCENARIOS [
   endmethod
 
 endobject
-
-object #90106
-  name: "Runtime Messaging Letter"
-  parent: LETTER
-  owner: RUNTIME_PROGRAMMER
-  location: RUNTIME_PROGRAMMER
-endobject
-
-object #90107
-  name: "Runtime Messaging Mailbox"
-  parent: MAILBOX
-  owner: RUNTIME_PROGRAMMER
-  location: RUNTIME_ROOM
-endobject
