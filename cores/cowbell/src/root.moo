@@ -962,7 +962,7 @@ object ROOT [
         else
           input_label = "Object";
         endif
-        action["input"] = ["label" -> input_label, "placeholder" -> "Find an item\u2026", "suggestions" -> ["provider" -> $url_utils:to_curie_str(who), "source" -> "nearby"]];
+        action["input"] = ["label" -> input_label, "placeholder" -> "Find an item…", "suggestions" -> ["provider" -> $url_utils:to_curie_str(who), "source" -> "nearby"]];
       endif
       actions = {@actions, action};
     endfor
@@ -1353,8 +1353,8 @@ object ROOT [
       target:set_description("Original description");
       $test_utils:assert_raises(E_INVARG, target, "set_description", {{"line", "\x1B[Hhome"}}, "nested description control rejected");
       $test_utils:assert_eq(target.description, "Original description", "description unchanged");
-      target:set_description("Multiline\n\t\u65E5\u672C\u8A9E");
-      $test_utils:assert_eq(target.description, "Multiline\n\t\u65E5\u672C\u8A9E", "multiline Unicode retained");
+      target:set_description("Multiline\n\t日本語");
+      $test_utils:assert_eq(target.description, "Multiline\n\t日本語", "multiline Unicode retained");
     endfor
     return true;
   endmethod

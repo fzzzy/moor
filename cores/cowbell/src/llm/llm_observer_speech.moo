@@ -25,12 +25,12 @@ object LLM_OBSERVER_SPEECH [
       text = (before + after):trim();
     endwhile
     "Leaked tool markup cannot invoke actions or supply spoken parameters.";
-    for marker in ({"<\uFF5CDSML\uFF5C", "<|DSML|", "<DSML", "<tool_call", "</think>"})
+    for marker in ({"<｜DSML｜", "<|DSML|", "<DSML", "<tool_call", "</think>"})
       index(text, marker) > 0 && return <$llm_observer_speech, .text = "">;
     endfor
     text == "SILENT" && (text = "");
     "Speech is announced inside quotes; drop one pair the model wrapped around the whole reply.";
-    for pair in ({{"\"", "\""}, {"\u201C", "\u201D"}})
+    for pair in ({{"\"", "\""}, {"“", "”"}})
       const {opening, closing} = pair;
       if (length(text) >= 2 && text[1] == opening && text[$] == closing)
         const inner = text[2..$ - 1];

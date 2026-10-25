@@ -503,7 +503,7 @@ object FORMAT_DJOT [
           cursor = cursor + hard[2];
           continue;
         elseif (next == " ")
-          tokens = {@tokens, $format.djot:_text("\u00A0")};
+          tokens = {@tokens, $format.djot:_text(" ")};
           cursor = cursor + 2;
           continue;
         elseif (length(binary_from_str(next)) == 1 && $format.djot:_match(next, "^[[:punct:]]$", 1))
@@ -677,8 +677,8 @@ object FORMAT_DJOT [
         else
           opening = 0;
         endif
-        const left = marker == "\"" ? "\u201C" | "\u2018";
-        const right = marker == "\"" ? "\u201D" | "\u2019";
+        const left = marker == "\"" ? "“" | "‘";
+        const right = marker == "\"" ? "”" | "’";
         if (opening)
           const contents = $format.djot:_nodes(tokens[opening + 1..$]);
           tokens = {@tokens[1..opening - 1], $format.djot:_text(left), @contents, $format.djot:_text(right)};
@@ -690,13 +690,13 @@ object FORMAT_DJOT [
         cursor = cursor + (marked ? 2 | 1);
         continue;
       elseif (tail:starts_with("..."))
-        tokens = {@tokens, $format.djot:_text("\u2026")};
+        tokens = {@tokens, $format.djot:_text("…")};
         cursor = cursor + 3;
         continue;
       elseif (tail:starts_with("--"))
         const width = $format.djot:_match(tail, "^-+", 1)[2];
         const size = width % 3 == 0 ? 3 | width % 2 == 0 ? 2 | 3;
-        tokens = {@tokens, $format.djot:_text(size == 3 ? "\u2014" | "\u2013")};
+        tokens = {@tokens, $format.djot:_text(size == 3 ? "—" | "–")};
         cursor = cursor + size;
         continue;
       endif

@@ -88,7 +88,7 @@ object OBJ_UTILS [
     const {invocation, receiver, name, definer, viewer} = args;
     const linked = maphaskey(invocation.descriptor, 'action) ? invocation | invocation:with_action(definer:command_action(name));
     !viewer.programmer && return linked;
-    return $format.paragraph:inline(linked, " ", $format.annotation:verb(receiver, name, "\u2197", definer));
+    return $format.paragraph:inline(linked, " ", $format.annotation:verb(receiver, name, "↗", definer));
   endmethod
 
   method format_verb_signature owner: ARCH_WIZARD

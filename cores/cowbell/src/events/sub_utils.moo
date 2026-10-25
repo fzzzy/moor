@@ -491,7 +491,7 @@ object SUB_UTILS [
   method test_binding_diagnostics owner: HACKER
     "Editing reports the misspelled binding and its source position before saving.";
     const bindings = $thing:message_bindings("get_msg");
-    for example in ({{"Hello {dobbj}.", "At character 7:", "Did you mean {dobj}?"}, {"\u00E9 {dobbj}", "At character 3:", "Did you mean {dobj}?"}, {"{self:ok|{missing}}", "At character 10:", "{missing}"}, {"{pronoun iobj subject}", "", ""}})
+    for example in ({{"Hello {dobbj}.", "At character 7:", "Did you mean {dobj}?"}, {"é {dobbj}", "At character 3:", "Did you mean {dobj}?"}, {"{self:ok|{missing}}", "At character 10:", "{missing}"}, {"{pronoun iobj subject}", "", ""}})
       try
         this:compile(example[1], bindings);
         $test_utils:assert_eq(example[2], "", "unknown bindings must fail during editing");
@@ -657,7 +657,7 @@ object SUB_UTILS [
   method test_template_roundtrips owner: HACKER
     "Editing compiled templates preserves both perspectives, literal delimiters, and capitalization.";
     const actor = $thing:create(true);
-    actor.name = "\u00E9lo\u00EFse";
+    actor.name = "éloïse";
     const item = $thing:create(true);
     item.name = "apple";
     const samples = {{"literal {n} | \\ end"}, {"plain ", this:compile("{nc}")[1]}, {$sub:bindingc('direction)}, {$sub:binding('s)}, {$sub:the('dc)}, {$sub:self_altc("you", {"they see ", $sub:d()})}, {$sub:self_alt({$sub:nc(), " | ", $sub:d()}, {$sub:thec('d), " is here"})}, {$sub:content_binding('detail)}, {$sub:self_alt("agree actor name:are", "is")}, {$sub:self_alt("self:literal", "other")}};

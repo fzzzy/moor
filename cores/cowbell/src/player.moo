@@ -909,7 +909,7 @@ object PLAYER [
       if (!topics || typeof(topics) != TYPE_LIST)
         lines = {@lines, "(No topics)"};
       else
-        const topic_links = { $format.paragraph:mk($format.annotation:help(src, topic_entry.name), " \u2014 ", topic_entry.summary) for topic_entry in (topics) };
+        const topic_links = { $format.paragraph:mk($format.annotation:help(src, topic_entry.name), " — ", topic_entry.summary) for topic_entry in (topics) };
         lines = {@lines, $format.list:mk(topic_links, false)};
       endif
       lines = {@lines, $format.paragraph:mk("Tip: ", $format.code:inline("help <topic> from " + src.name))};

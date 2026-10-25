@@ -60,7 +60,7 @@ object MR_WELCOME [
     <SUB, .type = 'dobj, .capitalize = false>,
     "'s head. *click* ",
     <SUB, .type = 'dobj, .capitalize = true>,
-    " blinks rapidly, systems rebooting. \"I... appear to have been deactivated. How very disconcerting. I was in the middle of a thought about\u2014\" ",
+    " blinks rapidly, systems rebooting. \"I... appear to have been deactivated. How very disconcerting. I was in the middle of a thought about—\" ",
     <SUB, .type = 'dobj_subject, .capitalize = true>,
     " pause. \"Actually, I have no idea what I was thinking about.\""
   };
