@@ -89,7 +89,7 @@ define REGION = #6006;
 - The package name is letters, digits and `_`, not starting with a digit.
 - `objdef_version` is required. Version 2 is the first with packages; a newer version than the
   reader understands is refused.
-- `depends` lists the packages whose constants this one uses. Import reads them first, and refuses a
+- `depends` lists the packages this one builds on. Import reads their objects first, and refuses a
   missing package or a cycle.
 - Other entries are kept with the package and written back on export.
 
@@ -126,6 +126,21 @@ Each subdirectory with a `package.moo` is a package, and each with a `constants.
 directory read first. Import records which package each object came from, and export writes such a
 world back in the same shape: one directory per package, plus an `unpackaged` directory for objects
 that came from no package.
+
+Every directory's constants are read before any objects, so an object in a plain directory can name
+an object in a package, `parent: minecraft::REGION`, as well as the other way round.
+
+### Packages in a running world
+
+Which package an object belongs to is its `objdef_package` metadata, which import sets and export
+reads. A world that has never been imported from packages can put objects into one by setting it:
+
+```moo
+set_object_metadata(#6000, 'objdef_package, "minecraft");
+```
+
+The next export writes those objects to a `minecraft/` directory with its own `package.moo`, and
+their constants become `minecraft::` names.
 
 ## Object Definitions
 
