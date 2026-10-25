@@ -423,6 +423,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `toliteral()`, decompiled verb code and objdef exports write printable non-ASCII characters as
+  they are, such as `—` or `é`, instead of as `\uXXXX` escapes, so exported source keeps its text.
+  Control characters and invisible characters such as zero-width spaces and right-to-left overrides
+  are still escaped. String literals also accept `\u{X}` with one to six hex digits.
 - Maps with symbol keys iterate in the same order in every server process and after a restart, and
   objdef exports write them in that order. Symbols used to order by when the running server first
   saw each name. The order is otherwise unspecified, and is not alphabetical.

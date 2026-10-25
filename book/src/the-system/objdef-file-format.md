@@ -586,7 +586,9 @@ The complete formal grammar is defined in `/crates/compiler/src/moo.pest`. Key p
 - **Case sensitivity**: Keywords like `object`, `verb`, `property` are case-insensitive
 - **Whitespace**: Whitespace and comments are ignored between tokens
 - **Identifiers**: Must start with letter or underscore, can contain letters, digits, underscores
-- **String escaping**: Standard escape sequences: `\n`, `\t`, `\"`, `\\`, etc.
+- **String escaping**: `\n`, `\r`, `\t`, `\0`, `\"`, `\\`, `\xHH`, `\uXXXX` and `\u{X}` (one to six
+  hex digits). Export writes printable characters, non-ASCII included, as they are, and escapes
+  control characters and invisible format characters.
 - **Number formats**: Support for scientific notation, underscores in large numbers
 - **Keyword conflicts**: Identifiers can start with keywords (e.g., `objects` is valid)
 
