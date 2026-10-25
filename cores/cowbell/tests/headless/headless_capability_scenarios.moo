@@ -7,7 +7,6 @@ object HEADLESS_CAPABILITY_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for capability issuance, grants, merges, revocation, and denial paths.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_capability_scenarios";
 
   verb _test_key (this none this) owner: ARCH_WIZARD flags: "rxd"

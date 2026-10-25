@@ -7,7 +7,6 @@ object HEADLESS_RELATION_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for relation queries over runtime-created fixtures.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_relation_scenarios";
 
   verb test_headless_relation_graph_query (this none this) owner: ARCH_WIZARD flags: "rxd"
@@ -252,7 +251,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method _define_as_player owner: RUNTIME_PLAYER
+  method _define_as_player owner: fixtures::RUNTIME_PLAYER
     "Use relation authoring services under the non-programmer owner's permissions.";
     caller == this || raise(E_PERM);
     const {relation, ?operation = "both"} = args;
@@ -264,7 +263,7 @@ object HEADLESS_RELATION_SCENARIOS [
     endif
   endmethod
 
-  method _define_as_programmer owner: RUNTIME_PROGRAMMER
+  method _define_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Define the same local fields as another owner and store a different fact.";
     caller == this || raise(E_PERM);
     const {relation} = args;
@@ -272,7 +271,7 @@ object HEADLESS_RELATION_SCENARIOS [
     $relation:assert({2}, relation);
   endmethod
 
-  method _query_as_player owner: RUNTIME_PLAYER
+  method _query_as_player owner: fixtures::RUNTIME_PLAYER
     "Exercise explicit relation reads with ordinary player permissions.";
     caller == this || raise(E_PERM);
     const {rule, room} = args;

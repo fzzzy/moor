@@ -20,7 +20,6 @@ object RUNTIME_PROGRAMMER [
   programmer: true
   readable: true
   override import_export_id = "runtime_programmer";
-  override import_export_hierarchy = {"tests", "baseline"};
   override home = RUNTIME_ROOM;
   property runtime_probe (owner: RUNTIME_PROGRAMMER, flags: "r") = 0;
   verb permission_probe (this none this) owner: RUNTIME_PROGRAMMER flags: "rxd"

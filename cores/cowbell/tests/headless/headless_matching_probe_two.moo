@@ -5,10 +5,10 @@ object HEADLESS_MATCHING_PROBE_TWO [
 ]
   name: "matching probe"
   parent: THING
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
+  owner: fixtures::RUNTIME_WIZARD
+  location: fixtures::RUNTIME_ROOM
   override aliases = {"second probe", "probe", "special probe"};
-  verb "runtime-match-probe" (this none none) owner: RUNTIME_WIZARD flags: "rd"
+  verb "runtime-match-probe" (this none none) owner: fixtures::RUNTIME_WIZARD flags: "rd"
     "Expose the real object selected by command dispatch.";
     player:inform_current($event:mk_note(player, "MATCHING DISPATCH " + tostr(this)):with_audience('utility));
   endverb

@@ -18,5 +18,4 @@ object RUNTIME_ROOM [
   readable: true
   override description = "A room for isolated Cowbell runtime tests.";
   override import_export_id = "runtime_room";
-  override import_export_hierarchy = {"tests", "baseline"};
 endobject

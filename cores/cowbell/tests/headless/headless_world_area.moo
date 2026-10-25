@@ -5,5 +5,5 @@ object HEADLESS_WORLD_AREA [
 ]
   name: "Runtime World Area"
   parent: AREA
-  owner: RUNTIME_WIZARD
+  owner: fixtures::RUNTIME_WIZARD
 endobject

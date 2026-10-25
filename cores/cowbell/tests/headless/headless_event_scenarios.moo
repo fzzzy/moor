@@ -9,7 +9,6 @@ object HEADLESS_EVENT_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for pure event and substitution rendering.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_event_scenarios";
 
   method _descriptor owner: ARCH_WIZARD

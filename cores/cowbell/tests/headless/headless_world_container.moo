@@ -5,6 +5,6 @@ object HEADLESS_WORLD_CONTAINER [
 ]
   name: "Runtime World Container"
   parent: CONTAINER
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
+  owner: fixtures::RUNTIME_WIZARD
+  location: fixtures::RUNTIME_ROOM
 endobject

@@ -107,20 +107,18 @@ check-style:
 	@echo "PASS converted source style (details: gen.style-strict.log)"
 	bash tests/style/check-audit.sh $(TEST_BIN_DIR)/core-style-audit
 
+# The test worlds are directories of packages: Cowbell's source as a plain directory beside the
+# fixtures package, and for headless tests, the headless package as well.
 runtime-test-src: FORCE
 	rm -rf $(TEST_SRC_DIRECTORY)
 	mkdir -p $(TEST_SRC_DIRECTORY)
-	rsync -a src/ $(TEST_SRC_DIRECTORY)/
-	rsync -a tests/baseline/fixtures/ $(TEST_SRC_DIRECTORY)/
-	cat tests/baseline/fixtures/baseline_constants.moo >> $(TEST_SRC_DIRECTORY)/constants.moo
-	rm -f $(TEST_SRC_DIRECTORY)/baseline_constants.moo
+	rsync -a src/ $(TEST_SRC_DIRECTORY)/cowbell/
+	rsync -a tests/baseline/fixtures/ $(TEST_SRC_DIRECTORY)/fixtures/
 
 $(HEADLESS_SRC_STAMP): runtime-test-src
 	rm -rf $(HEADLESS_SRC_DIRECTORY)
 	cp -r $(TEST_SRC_DIRECTORY) $(HEADLESS_SRC_DIRECTORY)
-	rsync -a tests/headless/ $(HEADLESS_SRC_DIRECTORY)/
-	cat tests/headless/headless_constants.moo >> $(HEADLESS_SRC_DIRECTORY)/constants.moo
-	rm -f $(HEADLESS_SRC_DIRECTORY)/headless_constants.moo
+	rsync -a tests/headless/ $(HEADLESS_SRC_DIRECTORY)/headless/
 	touch $(HEADLESS_SRC_STAMP)
 
 runtime-headless-src: $(HEADLESS_SRC_STAMP)

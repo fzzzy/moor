@@ -7,7 +7,6 @@ object HEADLESS_OBJECT_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for object creation, mutation, movement, and object identity.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_object_scenarios";
 
   verb test_headless_object_lifecycle (this none this) owner: ARCH_WIZARD flags: "rxd"

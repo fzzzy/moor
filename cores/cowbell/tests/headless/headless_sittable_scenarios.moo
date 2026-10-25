@@ -6,7 +6,6 @@ object HEADLESS_SITTABLE_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
   override import_export_id = "headless_sittable_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
 
   method _as owner: ARCH_WIZARD
     "Call a furniture operation as the specified fixture principal.";

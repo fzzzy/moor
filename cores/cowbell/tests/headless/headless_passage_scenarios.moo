@@ -8,17 +8,16 @@ object HEADLESS_PASSAGE_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
   override import_export_id = "headless_passage_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
   property policy_probe (owner: ARCH_WIZARD, flags: "r") = [];
 
-  method _as_programmer owner: RUNTIME_PROGRAMMER
+  method _as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Call an operation as the fixture programmer, without granting wizard authority.";
     caller == this && this == #90019 || raise(E_PERM);
     const {target, operation, @arguments} = args;
     return target:(operation)(@arguments);
   endmethod
 
-  method _as_visitor owner: RUNTIME_PLAYER
+  method _as_visitor owner: fixtures::RUNTIME_PLAYER
     "Call an operation as an ordinary visitor who does not own the provider.";
     caller == this && this == #90019 || raise(E_PERM);
     const {target, operation, @arguments} = args;

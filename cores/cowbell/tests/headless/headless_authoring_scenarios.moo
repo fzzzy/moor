@@ -8,7 +8,6 @@ object HEADLESS_AUTHORING_SCENARIOS [
 
   property preview_calls (owner: ARCH_WIZARD, flags: "") = 0;
   override import_export_id = "headless_authoring_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
 
   method _author owner: ARCH_WIZARD
     "Exercise the public shared service with the ordinary builder's permissions.";

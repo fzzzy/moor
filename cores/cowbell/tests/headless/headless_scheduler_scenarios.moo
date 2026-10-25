@@ -7,7 +7,6 @@ object HEADLESS_SCHEDULER_SCENARIOS [
   readable: true
 
   override description = "Native schedule lifecycle scenarios for housekeeping.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_scheduler_scenarios";
 
   method test_headless_housekeeping_native_lifecycle owner: ARCH_WIZARD

@@ -6,7 +6,6 @@ object GIT_SCENARIOS [
   owner: #90100
   readable: true
   override import_export_id = "git_scenarios";
-  override import_export_hierarchy = {"tests", "baseline"};
 
   method call_as owner: #90100
     "Invoke a wrapper with the specified incoming principal and preserve the exception tuple.";

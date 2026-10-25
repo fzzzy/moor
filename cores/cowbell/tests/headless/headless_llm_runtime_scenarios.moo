@@ -5,8 +5,6 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_llm_runtime_scenarios";
 
   method _client owner: ARCH_WIZARD
@@ -57,14 +55,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return sink;
   endmethod
 
-  method _as_player owner: RUNTIME_PLAYER
+  method _as_player owner: fixtures::RUNTIME_PLAYER
     "Invoke the fixture target with ordinary player authority.";
     caller == this && this == #90031 || raise(E_PERM);
     const {target, name, values} = args;
     return target:(name)(@values);
   endmethod
 
-  method _as_programmer owner: RUNTIME_PROGRAMMER
+  method _as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Invoke a fixture with a different ordinary principal for cross-actor checks.";
     caller == this && this == #90031 || raise(E_PERM);
     const {target, name, values} = args;

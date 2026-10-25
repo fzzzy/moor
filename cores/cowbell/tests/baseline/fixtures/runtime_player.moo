@@ -19,7 +19,6 @@ object RUNTIME_PLAYER [
   player: true
   readable: true
   override import_export_id = "runtime_player";
-  override import_export_hierarchy = {"tests", "baseline"};
   override home = RUNTIME_ROOM;
   verb "runtime-test-raise" (none none none) owner: RUNTIME_WIZARD flags: "rd"
     "Raise an uncaught error to verify command exception handling.";

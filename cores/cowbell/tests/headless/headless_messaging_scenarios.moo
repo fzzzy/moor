@@ -8,15 +8,14 @@ object HEADLESS_MESSAGING_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
   override import_export_id = "headless_messaging_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
 
-  method call_as_programmer owner: RUNTIME_PROGRAMMER
+  method call_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Invoke a messaging entry point with a non-wizard principal.";
     const {target, method, @parameters} = args;
     return target:(method)(@parameters);
   endmethod
 
-  method property_as_programmer owner: RUNTIME_PROGRAMMER
+  method property_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Read a property without wizard permissions.";
     const {target, property_name} = args;
     return target.(property_name);

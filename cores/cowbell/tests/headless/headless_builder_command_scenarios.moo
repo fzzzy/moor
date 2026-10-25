@@ -9,7 +9,6 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
 
   override description = "Headless integration scenarios for builder command wrappers.";
   override import_export_id = "headless_builder_command_scenarios";
-  override import_export_hierarchy = {"tests", "headless"};
 
   verb test_headless_builder_commands_use_stored_grants (this none this) owner: ARCH_WIZARD flags: "rxd"
     "Runtime scenario: builder command verbs use stored capabilities for room and passage operations.";

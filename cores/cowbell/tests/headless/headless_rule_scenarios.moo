@@ -7,7 +7,6 @@ object HEADLESS_RULE_SCENARIOS [
   readable: true
 
   override description = "Rules select and join facts from runtime-created objects.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_rule_scenarios";
 
   method query_parents owner: ARCH_WIZARD

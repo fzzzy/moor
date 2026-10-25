@@ -7,7 +7,6 @@ object HEADLESS_BOOT_SCENARIOS [
   readable: true
 
   override description = "Headless runtime scenarios for bootstrapping a running Cowbell core.";
-  override import_export_hierarchy = {"tests", "headless"};
   override import_export_id = "headless_boot_scenarios";
 
   verb _assert_valid_global (this none this) owner: HACKER flags: "rxd"

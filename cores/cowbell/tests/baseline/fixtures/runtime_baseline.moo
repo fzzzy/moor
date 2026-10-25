@@ -17,7 +17,6 @@ object RUNTIME_BASELINE [
   owner: RUNTIME_WIZARD
   readable: true
   override import_export_id = "runtime_baseline";
-  override import_export_hierarchy = {"tests", "baseline"};
 
   verb test_fixture_principals (this none this) owner: #90100 flags: "rxd"
     $test_utils:assert_true(#90100.wizard, "fixture wizard flag");
