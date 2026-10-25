@@ -1,4 +1,6 @@
-object DJOT_SCENARIOS
+object DJOT_SCENARIOS [
+  import_export_id -> "djot_scenarios"
+]
   name: "Djot Authoring Scenarios"
   parent: ROOT
   owner: HACKER

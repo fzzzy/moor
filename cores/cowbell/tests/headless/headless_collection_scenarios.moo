@@ -1,6 +1,8 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-object HEADLESS_COLLECTION_SCENARIOS
+object HEADLESS_COLLECTION_SCENARIOS [
+  import_export_id -> "headless_collection_scenarios"
+]
   name: "Headless Collection Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

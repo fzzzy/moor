@@ -1,4 +1,6 @@
-object HEADLESS_BUILDER_COMMAND_SCENARIOS
+object HEADLESS_BUILDER_COMMAND_SCENARIOS [
+  import_export_id -> "headless_builder_command_scenarios"
+]
   name: "Headless Builder Command Scenarios"
   parent: ROOT
   location: PROTOTYPE_BOX

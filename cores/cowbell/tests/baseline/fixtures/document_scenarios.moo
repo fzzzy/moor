@@ -1,4 +1,6 @@
-object DOCUMENT_SCENARIOS
+object DOCUMENT_SCENARIOS [
+  import_export_id -> "document_scenarios"
+]
   name: "Document Contract Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

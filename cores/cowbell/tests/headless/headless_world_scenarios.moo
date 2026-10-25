@@ -1,6 +1,8 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-object HEADLESS_WORLD_SCENARIOS
+object HEADLESS_WORLD_SCENARIOS [
+  import_export_id -> "headless_world_scenarios"
+]
   name: "World Boundary Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

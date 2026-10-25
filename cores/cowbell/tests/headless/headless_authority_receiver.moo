@@ -1,6 +1,8 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-object HEADLESS_AUTHORITY_RECEIVER
+object HEADLESS_AUTHORITY_RECEIVER [
+  import_export_id -> "headless_authority_receiver"
+]
   name: "Authority Delivery Probe"
   parent: EVENT_RECEIVER
   owner: RUNTIME_PROGRAMMER

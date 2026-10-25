@@ -1,4 +1,6 @@
-object BEHAVIOR_SCENARIOS
+object BEHAVIOR_SCENARIOS [
+  import_export_id -> "behavior_scenarios"
+]
   name: "Behavior Contract Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

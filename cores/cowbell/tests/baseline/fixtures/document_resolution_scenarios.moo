@@ -1,4 +1,6 @@
-object DOCUMENT_RESOLUTION_SCENARIOS
+object DOCUMENT_RESOLUTION_SCENARIOS [
+  import_export_id -> "document_resolution_scenarios"
+]
   name: "Document Resolution Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

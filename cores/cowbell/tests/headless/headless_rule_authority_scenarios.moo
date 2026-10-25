@@ -1,7 +1,9 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-object HEADLESS_RULE_AUTHORITY_SCENARIOS
+object HEADLESS_RULE_AUTHORITY_SCENARIOS [
+  import_export_id -> "headless_rule_authority_scenarios"
+]
   name: "Rule Authority Scenarios"
   parent: ROOT
   owner: RUNTIME_WIZARD

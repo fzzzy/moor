@@ -1,4 +1,6 @@
-object DISCORD_SCENARIOS
+object DISCORD_SCENARIOS [
+  import_export_id -> "discord_scenarios"
+]
   name: "Discord Bridge Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

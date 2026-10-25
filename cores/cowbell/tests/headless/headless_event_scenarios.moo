@@ -1,6 +1,8 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-object HEADLESS_EVENT_SCENARIOS
+object HEADLESS_EVENT_SCENARIOS [
+  import_export_id -> "headless_event_scenarios"
+]
   name: "Headless Event Runtime Scenarios"
   parent: ROOT
   owner: HACKER

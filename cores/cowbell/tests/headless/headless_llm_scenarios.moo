@@ -1,4 +1,6 @@
-object HEADLESS_LLM_SCENARIOS
+object HEADLESS_LLM_SCENARIOS [
+  import_export_id -> "headless_llm_scenarios"
+]
   name: "Headless LLM and Tool Scenarios"
   parent: ROOT
   owner: HACKER

@@ -1,4 +1,6 @@
-object #90032
+object #90032 [
+  import_export_id -> "headless_llm_suggestion_scenarios"
+]
   name: "LLM Suggestion Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD

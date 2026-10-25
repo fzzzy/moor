@@ -1,4 +1,6 @@
-object HEADLESS_BOOT_SCENARIOS
+object HEADLESS_BOOT_SCENARIOS [
+  import_export_id -> "headless_boot_scenarios"
+]
   name: "Headless Boot Runtime Scenarios"
   parent: ROOT
   owner: HACKER
