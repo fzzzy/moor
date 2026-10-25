@@ -192,6 +192,15 @@ fn symbol_eq_different(ctx: &mut SymbolCompareContext, chunk_size: usize, _chunk
     }
 }
 
+/// Ordering two different symbols, as symbol-keyed maps and sorting do.
+fn symbol_cmp_different(ctx: &mut SymbolCompareContext, chunk_size: usize, _chunk_num: usize) {
+    let sym1 = black_box(&ctx.sym1);
+    let sym3 = black_box(&ctx.sym3_different);
+    for _ in 0..chunk_size {
+        black_box(sym1.cmp(sym3));
+    }
+}
+
 // ============================================================================
 // SYMBOL HASHING BENCHMARKS
 // ============================================================================
@@ -587,6 +596,7 @@ benchmark_main!(
             g.bench("symbol_eq_same", symbol_eq_same);
             g.bench("symbol_eq_case_variant", symbol_eq_case_variant);
             g.bench("symbol_eq_different", symbol_eq_different);
+            g.bench("symbol_cmp_different", symbol_cmp_different);
         });
 
         runner.group::<SymbolHashContext>("Symbol Hashing", |g| {
