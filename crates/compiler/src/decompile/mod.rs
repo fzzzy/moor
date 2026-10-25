@@ -1971,6 +1971,30 @@ mod tests {
     }
 
     #[test]
+    fn lambda_bodies_decompile_without_an_added_begin() {
+        // The body's own scope is the body, not a block the author wrote.
+        let source = "const f = fn (x) let y = {x}; return y; endfn;\nreturn f(1);";
+        let binary = compile(source, CompileOptions::default()).unwrap();
+        let text = unparse(&program_to_tree(&binary).unwrap(), false, true)
+            .unwrap()
+            .join("\n");
+        assert!(!text.contains("begin"), "decompiled as {text}");
+        let recompiled = compile(&text, CompileOptions::default()).unwrap();
+        let again = unparse(&program_to_tree(&recompiled).unwrap(), false, true)
+            .unwrap()
+            .join("\n");
+        assert_eq!(text, again, "decompiling is stable");
+
+        // A block the author did write inside the body stays.
+        let source = "const f = fn (x) begin let y = {x}; return y; end endfn;\nreturn f(1);";
+        let binary = compile(source, CompileOptions::default()).unwrap();
+        let text = unparse(&program_to_tree(&binary).unwrap(), false, true)
+            .unwrap()
+            .join("\n");
+        assert_eq!(text.matches("begin").count(), 1, "decompiled as {text}");
+    }
+
+    #[test]
     fn decompiled_unary_postfix_operands_do_not_get_extra_parens() {
         let program = r#"return !ic:ends_with(".");"#;
         let binary = compile(program, CompileOptions::default()).unwrap();

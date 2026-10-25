@@ -215,7 +215,15 @@ impl<'a> Unparse<'a> {
             self.write_expr(expr, writer)?;
         } else {
             write!(writer, ") ")?;
-            self.write_lambda_body_inline(&self.tree.stmts, writer)?;
+            // A `fn ... endfn` body is one scope; it is the body itself, not a `begin` block.
+            let statements = match self.tree.stmts.as_slice() {
+                [single] => match &single.node {
+                    crate::ast::StmtNode::Scope { body, .. } => body.as_slice(),
+                    _ => self.tree.stmts.as_slice(),
+                },
+                stmts => stmts,
+            };
+            self.write_lambda_body_inline(statements, writer)?;
             write!(writer, "endfn")?;
         }
 
