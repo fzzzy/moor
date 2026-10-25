@@ -22,10 +22,10 @@ mod tests {
 
     use moor_common::tasks::Event;
     use moor_runtime_api::{
-        AuthToken, ClientToken, HostType, RpcMessageError,
+        AuthToken, ClientToken, ListenerKind, RpcMessageError,
         api::{ClientReply, ClientRequest, HostReply, HostRequest, InvocationMode, ListenerInfo},
-        mk_client_pong_msg, mk_command_capture_msg, mk_command_msg, mk_connection_establish_msg,
-        mk_host_pong_msg, mk_login_command_msg, mk_register_host_msg, obj_fb,
+        listener_fb, mk_client_pong_msg, mk_command_capture_msg, mk_command_msg,
+        mk_connection_establish_msg, mk_host_pong_msg, mk_login_command_msg, mk_register_host_msg,
     };
     use moor_schema::{convert::obj_from_flatbuffer_struct, rpc as moor_rpc};
     use moor_var::{Obj, SYSTEM_OBJECT, Symbol};
@@ -231,6 +231,7 @@ mod tests {
             let host_id = Uuid::new_v4();
             let listeners = vec![ListenerInfo {
                 handler_object: SYSTEM_OBJECT,
+                kind: ListenerKind::TELNET,
                 socket_addr: "127.0.0.1:7777".parse().unwrap(),
             }];
 
@@ -239,7 +240,7 @@ mod tests {
                     host_id,
                     HostRequest::RegisterHost {
                         timestamp: now_nanos(),
-                        host_type: HostType::TCP,
+                        listener_kinds: vec![ListenerKind::TELNET],
                         listeners: listeners.clone(),
                     },
                 )
@@ -251,7 +252,7 @@ mod tests {
                     host_id,
                     HostRequest::HostPong {
                         timestamp: now_nanos(),
-                        host_type: HostType::TCP,
+                        listener_kinds: vec![ListenerKind::TELNET],
                         listeners,
                     },
                 )
@@ -443,23 +444,23 @@ mod tests {
         match request {
             HostRequest::RegisterHost {
                 timestamp,
-                host_type,
+                listener_kinds,
                 listeners,
             } => Ok(mk_register_host_msg(
                 host_id,
                 timestamp,
-                encode_host_type(host_type),
-                encode_listeners(listeners),
+                &listener_kinds,
+                listeners.iter().map(listener_fb).collect(),
             )),
             HostRequest::HostPong {
                 timestamp,
-                host_type,
+                listener_kinds,
                 listeners,
             } => Ok(mk_host_pong_msg(
                 host_id,
                 timestamp,
-                encode_host_type(host_type),
-                encode_listeners(listeners),
+                &listener_kinds,
+                listeners.iter().map(listener_fb).collect(),
             )),
             other => Err(format!(
                 "unsupported host request in parity backend: {other:?}"
@@ -535,13 +536,11 @@ mod tests {
                 client_token,
                 client_sys_time,
                 player,
-                host_type,
                 socket_addr,
             } => Ok(mk_client_pong_msg(
                 &client_token,
                 client_sys_time,
                 &player,
-                encode_host_type(host_type),
                 socket_addr,
             )),
             other => Err(format!(
@@ -599,23 +598,6 @@ mod tests {
             other => Err(RpcMessageError::InternalError(format!(
                 "unsupported client reply in parity backend: {other:?}"
             ))),
-        }
-    }
-
-    fn encode_listeners(listeners: Vec<ListenerInfo>) -> Vec<moor_rpc::Listener> {
-        listeners
-            .into_iter()
-            .map(|listener| moor_rpc::Listener {
-                handler_object: obj_fb(&listener.handler_object),
-                socket_addr: listener.socket_addr.to_string(),
-            })
-            .collect()
-    }
-
-    fn encode_host_type(host_type: HostType) -> moor_rpc::HostType {
-        match host_type {
-            HostType::TCP => moor_rpc::HostType::Tcp,
-            HostType::WebSocket => moor_rpc::HostType::WebSocket,
         }
     }
 

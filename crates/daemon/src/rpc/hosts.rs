@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use moor_runtime_api::HostType;
+use moor_runtime_api::ListenerKind;
 use moor_var::Obj;
 use std::{collections::HashMap, net::SocketAddr, time::SystemTime};
 use tracing::warn;
@@ -20,8 +20,8 @@ use uuid::Uuid;
 /// Manages the set of known hosts and the listeners they have registered.
 struct HostRecord {
     last_seen: SystemTime,
-    host_type: HostType,
-    listeners: Vec<(Obj, SocketAddr)>,
+    listener_kinds: Vec<ListenerKind>,
+    listeners: Vec<(Obj, ListenerKind, SocketAddr)>,
 }
 
 #[derive(Default)]
@@ -31,8 +31,8 @@ impl Hosts {
     pub(crate) fn receive_ping(
         &mut self,
         host_id: Uuid,
-        host_type: HostType,
-        listeners: Vec<(Obj, SocketAddr)>,
+        listener_kinds: Vec<ListenerKind>,
+        listeners: Vec<(Obj, ListenerKind, SocketAddr)>,
     ) -> bool {
         let now = SystemTime::now();
         self.0
@@ -40,7 +40,7 @@ impl Hosts {
                 host_id,
                 HostRecord {
                     last_seen: now,
-                    host_type,
+                    listener_kinds,
                     listeners,
                 },
             )
@@ -65,24 +65,70 @@ impl Hosts {
         }
     }
 
-    pub(crate) fn listeners(&self) -> Vec<(Obj, HostType, SocketAddr)> {
+    pub(crate) fn listeners(&self) -> Vec<(Obj, ListenerKind, SocketAddr)> {
         self.0
             .values()
-            .flat_map(
-                |HostRecord {
-                     host_type,
-                     listeners,
-                     ..
-                 }| {
-                    listeners
-                        .iter()
-                        .map(move |(oid, addr)| (*oid, *host_type, *addr))
-                },
-            )
+            .flat_map(|HostRecord { listeners, .. }| listeners.iter().copied())
             .collect()
+    }
+
+    /// Whether any registered host can open listeners of this kind.
+    pub(crate) fn offers(&self, kind: ListenerKind) -> bool {
+        self.0
+            .values()
+            .any(|HostRecord { listener_kinds, .. }| listener_kinds.contains(&kind))
     }
 
     pub(crate) fn unregister_host(&mut self, host_id: &Uuid) {
         self.0.remove(host_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use moor_var::SYSTEM_OBJECT;
+
+    #[test]
+    fn listeners_keep_their_kinds_across_hosts() {
+        let quic = ListenerKind::parse("webtransport").unwrap();
+        let mut hosts = Hosts::default();
+        hosts.receive_ping(
+            Uuid::new_v4(),
+            vec![ListenerKind::TELNET],
+            vec![(
+                SYSTEM_OBJECT,
+                ListenerKind::TELNET,
+                "0.0.0.0:7777".parse().unwrap(),
+            )],
+        );
+        hosts.receive_ping(
+            Uuid::new_v4(),
+            vec![ListenerKind::HTTP, quic],
+            vec![
+                (
+                    SYSTEM_OBJECT,
+                    ListenerKind::HTTP,
+                    "0.0.0.0:8080".parse().unwrap(),
+                ),
+                (Obj::mk_id(5), quic, "0.0.0.0:4433".parse().unwrap()),
+            ],
+        );
+
+        let mut listeners = hosts.listeners();
+        listeners.sort_by_key(|(_, _, addr)| addr.port());
+        assert_eq!(
+            listeners
+                .iter()
+                .map(|(obj, kind, addr)| (*obj, kind.id_str(), addr.port()))
+                .collect::<Vec<_>>(),
+            vec![
+                (Obj::mk_id(5), "webtransport", 4433),
+                (SYSTEM_OBJECT, "telnet", 7777),
+                (SYSTEM_OBJECT, "http", 8080),
+            ]
+        );
+        assert!(hosts.offers(quic));
+        assert!(!hosts.offers(ListenerKind::parse("minecraft").unwrap()));
     }
 }

@@ -85,7 +85,7 @@ impl RuntimeClient for LocalRuntimeClient {
 mod tests {
     use moor_kernel::SchedulerClient;
     use moor_runtime_api::{
-        HostType, RpcError, RpcMessageError,
+        ListenerKind, RpcError, RpcMessageError,
         api::{ClientRequest, HostReply, HostRequest},
     };
     use uuid::Uuid;
@@ -108,11 +108,11 @@ mod tests {
             match request {
                 HostRequest::RegisterHost {
                     timestamp,
-                    host_type,
+                    listener_kinds,
                     listeners,
                 } => {
                     assert_eq!(timestamp, 42);
-                    assert_eq!(host_type, HostType::TCP);
+                    assert_eq!(listener_kinds, vec![ListenerKind::TELNET]);
                     assert!(listeners.is_empty());
                     self.reply.clone()
                 }
@@ -142,7 +142,7 @@ mod tests {
             host_id,
             HostRequest::RegisterHost {
                 timestamp: 42,
-                host_type: HostType::TCP,
+                listener_kinds: vec![ListenerKind::TELNET],
                 listeners: Vec::new(),
             },
         )
@@ -160,7 +160,7 @@ mod tests {
             host_id,
             HostRequest::RegisterHost {
                 timestamp: 42,
-                host_type: HostType::TCP,
+                listener_kinds: vec![ListenerKind::TELNET],
                 listeners: Vec::new(),
             },
         )

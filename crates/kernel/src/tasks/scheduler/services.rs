@@ -623,14 +623,14 @@ mod tests {
         fn listen(
             &self,
             _handler_object: Obj,
-            _host_type: &str,
+            _kind: &str,
             _port: u16,
             _options: Vec<(Symbol, Var)>,
         ) -> Result<(), Error> {
             Ok(())
         }
 
-        fn unlisten(&self, _port: u16, _host_type: &str) -> Result<(), Error> {
+        fn unlisten(&self, _port: u16, _kind: &str) -> Result<(), Error> {
             Ok(())
         }
 

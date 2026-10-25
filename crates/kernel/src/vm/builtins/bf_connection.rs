@@ -1194,7 +1194,7 @@ fn bf_connection_name(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
 }
 
 /// Usage: `list listeners([obj|int search])`
-/// Returns active network listeners. Each entry is `{object, port, options}`.
+/// Returns active network listeners. Each entry is `{object, port, options, kind}`.
 /// Options is a map of Symbol->Var pairs (e.g., ["tls" -> 1, "print_messages" -> 1]).
 /// If search is given, returns only the matching listener (by object or port).
 fn bf_listeners(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
@@ -1229,6 +1229,7 @@ fn bf_listeners(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
                         v_obj(listener.0),
                         v_int(listener.2 as i64),
                         options_map,
+                        v_str(&listener.1),
                     ])));
                 }
             }
@@ -1241,6 +1242,7 @@ fn bf_listeners(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
                     v_obj(listener.0),
                     v_int(listener.2 as i64),
                     options_map,
+                    v_str(&listener.1),
                 ])));
             }
         }
@@ -1251,7 +1253,12 @@ fn bf_listeners(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     // No argument provided, return all listeners
     let listeners = listeners.iter().map(|listener| {
         let options_map = options_to_map(&listener.3);
-        v_list(&[v_obj(listener.0), v_int(listener.2 as i64), options_map])
+        v_list(&[
+            v_obj(listener.0),
+            v_int(listener.2 as i64),
+            options_map,
+            v_str(&listener.1),
+        ])
     });
 
     let listeners = v_list_iter(listeners);
@@ -1259,8 +1266,8 @@ fn bf_listeners(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     Ok(Ret(listeners))
 }
 
-/// Usage: `none unlisten(int port [, str host_type])`
-/// Stops listening on the specified port. Host_type defaults to "tcp". Wizard-only.
+/// Usage: `none unlisten(int port [, str kind])`
+/// Stops the listener of this kind on the specified port. Kind defaults to "telnet". Wizard-only.
 fn bf_unlisten(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     // Requires wizard permissions.
     bf_args.require_wizard_or_builtin_call()?;
@@ -1283,18 +1290,18 @@ fn bf_unlisten(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     }
 
     let port = point as u16;
-    let host_type = if bf_args.args.len() == 4 {
-        let Some(host_type) = bf_args.args[3].as_string() else {
+    let kind = if bf_args.args.len() == 2 {
+        let Some(kind) = bf_args.args[1].as_string() else {
             return Err(ErrValue(
                 E_TYPE.msg("unlisten() requires a string as the second argument"),
             ));
         };
-        host_type.to_string()
+        kind.to_string()
     } else {
-        "tcp".to_string()
+        "telnet".to_string()
     };
 
-    if let Some(err) = current_task_scheduler_client().unlisten(host_type, port) {
+    if let Some(err) = current_task_scheduler_client().unlisten(kind, port) {
         return Err(ErrValue(err));
     }
 
@@ -1308,6 +1315,10 @@ fn bf_unlisten(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
 ///
 ///   - An integer (legacy): treated as print_messages flag (0 or 1)
 ///   - A map (new style): options like ["tls" -> 1, "print_messages" -> 1]
+///
+/// The `kind` option names the kind of listener, such as "telnet" (the default, served by the
+/// telnet host) or "http" (the web host). Only hosts that open that kind listen. The other
+/// options go to that host.
 ///
 /// Returns the canonical port. Wizard-only.
 fn bf_listen(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
@@ -1371,11 +1382,24 @@ fn bf_listen(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
         vec![]
     };
 
-    // Host type defaults to TCP
-    let host_type = "tcp".to_string();
+    let mut kind = "telnet".to_string();
+    let mut host_options = Vec::with_capacity(options.len());
+    for (key, value) in options {
+        if key != Symbol::mk("kind") {
+            host_options.push((key, value));
+            continue;
+        }
+        let Some(name) = value.as_string() else {
+            return Err(ErrValue(
+                E_TYPE.msg("listen() kind option must be a string"),
+            ));
+        };
+        kind = name.to_string();
+    }
+    let options = host_options;
 
     // Ask the scheduler to broadcast a listen request out to all the hosts.
-    if let Some(error) = current_task_scheduler_client().listen(object, host_type, port, options) {
+    if let Some(error) = current_task_scheduler_client().listen(object, kind, port, options) {
         return Err(ErrValue(error));
     }
 

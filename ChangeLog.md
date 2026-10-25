@@ -14,6 +14,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Listeners have a kind, such as `"telnet"` for the telnet host or `"http"` for the web host, in
+  place of a fixed set of host types. Each host declares the kinds it can open, so one host can
+  serve several, and new hosts need no schema change. `listen()` takes a `"kind"` option, such as
+  `listen(#0, 7777, ["kind" -> "http"])`, and defaults to `"telnet"`. `unlisten(port, kind)` now
+  uses its second argument; it was ignored before. `listeners()` entries gain the kind as a fourth
+  element. The web host registers its listener as `"http"`, so a `listen()` meant for the telnet
+  host no longer asks the web host to bind the same port. The RPC between the daemon and hosts
+  changes, so upgrade the daemon and all hosts together.
+
 - Web clients can send structured data to `do_client_data`, as telnet clients do with GMCP. A
   WebSocket binary frame `0x05` followed by a JSON object `{"kind": "...", "payload": ...}` or a
   FlatBuffers `ClientDataMessage` arrives as `do_client_data(connection, 'web, kind, payload)`, and

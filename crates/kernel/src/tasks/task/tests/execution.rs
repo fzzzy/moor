@@ -199,3 +199,54 @@ fn test_simple_run_fork() {
     let result = wait_result(&handle).unwrap();
     assert_eq!(result, v_int(123));
 }
+
+/// listen() uses its `kind` option to choose the hosts, and does not pass it on to them;
+/// unlisten() takes the kind as its second argument; listeners() reports each kind.
+#[test]
+fn test_listen_unlisten_and_listeners_name_kinds() {
+    let system = Arc::new(MockClientSession::new());
+    let (client, _sched) =
+        start_scheduler_with_system(Box::new(setup_database(&[])), system.clone());
+    let handle = client
+        .submit_eval_task(
+            &SYSTEM_OBJECT,
+            &SYSTEM_OBJECT,
+            "listen(#0, 7000, [\"kind\" -> \"minecraft\", \"tls\" -> 0]); \
+             listen(#0, 7001); unlisten(7000, \"minecraft\"); unlisten(7001); \
+             return {`listen(#0, 7002, [\"kind\" -> 5]) ! ANY', listeners()};"
+                .to_string(),
+            None,
+            Arc::new(NoopClientSession::new()),
+            Arc::new(FeaturesConfig::default()),
+        )
+        .unwrap();
+    let result = wait_result(&handle).unwrap();
+    let error = result
+        .index(&v_int(1), moor_var::IndexMode::OneBased)
+        .unwrap();
+    assert_eq!(
+        error.as_error().map(|e| e.err_type()),
+        Some(moor_var::E_TYPE)
+    );
+    let listeners = result
+        .index(&v_int(2), moor_var::IndexMode::OneBased)
+        .unwrap();
+    assert_eq!(
+        listeners,
+        moor_var::v_list(&[moor_var::v_list(&[
+            v_obj(SYSTEM_OBJECT),
+            v_int(8888),
+            moor_var::v_map(&[]),
+            v_str("telnet"),
+        ])])
+    );
+    assert_eq!(
+        system.system(),
+        vec![
+            "listen: minecraft 7000 [\"tls\"]",
+            "listen: telnet 7001 []",
+            "unlisten: minecraft 7000",
+            "unlisten: telnet 7001",
+        ]
+    );
+}

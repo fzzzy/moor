@@ -23,7 +23,7 @@ use std::{
 };
 
 use moor_common::tasks::{EventLogPurgeResult, EventLogStats, SystemControl, WorkerInfo};
-use moor_runtime_api::HostType;
+use moor_runtime_api::ListenerKind;
 use moor_var::{E_INVARG, E_QUOTA, Obj, Symbol, Var};
 use tracing::warn;
 
@@ -82,32 +82,24 @@ impl SystemControl for SystemControlHandle {
     fn listen(
         &self,
         handler_object: Obj,
-        host_type: &str,
+        kind: &str,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Result<(), moor_var::Error> {
-        let host_type = match host_type {
-            "tcp" => HostType::TCP,
-            _ => {
-                return Err(
-                    moor_var::E_INVARG.with_msg(|| format!("Unhandled host type: {host_type}"))
-                );
-            }
-        };
+        let kind = ListenerKind::parse(kind)
+            .map_err(|e| moor_var::E_INVARG.with_msg(|| format!("{e}: {kind:?}")))?;
 
         self.message_handler
-            .broadcast_listen(handler_object, host_type, port, options)
+            .broadcast_listen(handler_object, kind, port, options)
             .map_err(|_| moor_var::E_INVARG.msg("Unable to send Listen event"))
     }
 
-    fn unlisten(&self, port: u16, host_type: &str) -> Result<(), moor_var::Error> {
-        let host_type = match host_type {
-            "tcp" => HostType::TCP,
-            _ => return Err(moor_var::E_INVARG.msg("Invalid host type")),
-        };
+    fn unlisten(&self, port: u16, kind: &str) -> Result<(), moor_var::Error> {
+        let kind = ListenerKind::parse(kind)
+            .map_err(|e| moor_var::E_INVARG.with_msg(|| format!("{e}: {kind:?}")))?;
 
         self.message_handler
-            .broadcast_unlisten(host_type, port)
+            .broadcast_unlisten(kind, port)
             .map_err(|_| moor_var::E_INVARG.msg("Unable to send Unlisten event"))
     }
 

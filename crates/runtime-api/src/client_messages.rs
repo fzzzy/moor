@@ -166,7 +166,6 @@ pub fn mk_client_pong_msg(
     client_token: &ClientToken,
     client_sys_time: u64,
     player: &Obj,
-    host_type: rpc::HostType,
     socket_addr: String,
 ) -> rpc::HostClientToDaemonMessage {
     rpc::HostClientToDaemonMessage {
@@ -174,7 +173,6 @@ pub fn mk_client_pong_msg(
             client_token: client_token_fb(client_token),
             client_sys_time,
             player: obj_fb(player),
-            host_type,
             socket_addr,
         })),
     }

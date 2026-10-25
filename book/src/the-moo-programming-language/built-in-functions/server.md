@@ -945,23 +945,59 @@ input = read(player, [
 
 ### `listen`
 
-**Description:** Registers to listen for specific events. **Arguments:**
+```
+int listen(obj object, int port [, int|map options])
+```
 
-- `event_type`: The type of event to listen for
-- `callback`: The function to call when the event occurs
+**Description:** Asks the hosts that open listeners of one kind to listen for connections on `port`.
+Connections on that listener are handled by `object` instead of `#0`.
+
+**Arguments:**
+
+- `object`: The object that handles connections on this listener.
+- `port`: The port to listen on.
+- `options`: A map of options, or an integer. An integer is the legacy `print_messages` flag.
+
+**Options:**
+
+- `kind`: The kind of listener. `"telnet"` (the default) is served by the telnet host, and `"http"`
+  by the web host. Other hosts may offer their own kinds. A kind is 1 to 32 characters of `a-z`,
+  `0-9`, `-` or `_`.
+- Every other option is passed to the host, such as `"tls" -> 1`.
+
+**Returns:** The port.
+
+**Permission Requirements:**
+
+- Wizard-only
+
+**Errors:**
+
+- `E_TYPE` if the `kind` option is not a string
+- `E_INVARG` if the kind is not a valid name
 
 ### `listeners`
 
-**Description:** Returns a list of all current event listeners. **Arguments:**
+```
+list listeners([obj|int search])
+```
 
-- `event_type`: Optional parameter to filter listeners by event type
+**Description:** Returns the active listeners. Each entry is `{object, port, options, kind}`, where
+`options` is a map and `kind` is a string such as `"telnet"`. With `search`, returns only the
+listener with that handler object or port.
 
 ### `unlisten`
 
-**Description:** Removes a previously registered event listener. **Arguments:**
+```
+none unlisten(int port [, str kind])
+```
 
-- `event_type`: The type of event to stop listening for
-- `callback`: Optional specific callback to remove (if omitted, removes all listeners for the event)
+**Description:** Asks the hosts that open listeners of `kind` to stop listening on `port`. `kind`
+defaults to `"telnet"`.
+
+**Permission Requirements:**
+
+- Wizard-only
 
 ## Code Execution
 

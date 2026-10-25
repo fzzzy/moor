@@ -27,7 +27,7 @@ use moor_common::tasks::{NarrativeEvent, SchedulerError};
 use moor_var::{Obj, Symbol, Var};
 use uuid::Uuid;
 
-use crate::{AuthToken, ClientToken, HostType, RpcError};
+use crate::{AuthToken, ClientToken, ListenerKind, RpcError};
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -37,6 +37,7 @@ use crate::{AuthToken, ClientToken, HostType, RpcError};
 #[derive(Debug, Clone)]
 pub struct ListenerInfo {
     pub handler_object: Obj,
+    pub kind: ListenerKind,
     pub socket_addr: SocketAddr,
 }
 
@@ -394,12 +395,12 @@ pub enum BroadcastEvent {
 pub enum HostBroadcastEvent {
     Listen {
         handler_object: Obj,
-        host_type: HostType,
+        kind: ListenerKind,
         port: u16,
         options: Vec<(Symbol, Var)>,
     },
     Unlisten {
-        host_type: HostType,
+        kind: ListenerKind,
         port: u16,
     },
     PingPong,
@@ -456,12 +457,14 @@ pub trait HostServices: Send + Sync {
 pub enum HostRequest {
     RegisterHost {
         timestamp: u64,
-        host_type: HostType,
+        /// Kinds of listener this host can open.
+        listener_kinds: Vec<ListenerKind>,
         listeners: Vec<ListenerInfo>,
     },
     HostPong {
         timestamp: u64,
-        host_type: HostType,
+        /// Kinds of listener this host can open.
+        listener_kinds: Vec<ListenerKind>,
         listeners: Vec<ListenerInfo>,
     },
     DetachHost,
@@ -530,7 +533,6 @@ pub enum ClientRequest {
         client_token: ClientToken,
         client_sys_time: u64,
         player: Obj,
-        host_type: HostType,
         socket_addr: String,
     },
     ReplayClientEvents {

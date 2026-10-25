@@ -28,7 +28,7 @@ use moor_common::{
     },
     tasks::{
         CommandError, MockClientSession, NoopClientSession, NoopSystemControl, SchedulerError,
-        SessionError, SessionFactory,
+        SessionError, SessionFactory, SystemControl,
     },
     util::BitEnum,
 };
@@ -151,12 +151,19 @@ fn setup_database(verbs: &[TestVerb]) -> TxDB {
 }
 
 fn start_scheduler(database: Box<dyn Database>) -> (SchedulerClient, RunningScheduler) {
+    start_scheduler_with_system(database, Arc::new(NoopSystemControl::default()))
+}
+
+fn start_scheduler_with_system(
+    database: Box<dyn Database>,
+    system_control: Arc<dyn SystemControl>,
+) -> (SchedulerClient, RunningScheduler) {
     let scheduler = Scheduler::new(
         semver::Version::new(0, 0, 0),
         database,
         Box::new(NoopTasksDb {}),
         Arc::new(Config::default()),
-        Arc::new(NoopSystemControl::default()),
+        system_control,
         None,
         None,
     );

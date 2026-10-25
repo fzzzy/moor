@@ -150,7 +150,7 @@ impl SystemControl for RecordingSystemControl {
     fn listen(
         &self,
         _handler_object: Obj,
-        _host_type: &str,
+        _kind: &str,
         _port: u16,
         _options: Vec<(Symbol, Var)>,
     ) -> Result<(), Error> {
@@ -158,7 +158,7 @@ impl SystemControl for RecordingSystemControl {
         Ok(())
     }
 
-    fn unlisten(&self, _port: u16, _host_type: &str) -> Result<(), Error> {
+    fn unlisten(&self, _port: u16, _kind: &str) -> Result<(), Error> {
         self.calls.lock().push("unlisten");
         Ok(())
     }
@@ -247,11 +247,11 @@ fn stale_operations() -> [fn(&TaskSchedulerClient); 7] {
         |client| {
             assert!(
                 client
-                    .listen(SYSTEM_OBJECT, "tcp".into(), 8888, vec![])
+                    .listen(SYSTEM_OBJECT, "telnet".into(), 8888, vec![])
                     .is_some()
             )
         },
-        |client| assert!(client.unlisten("tcp".into(), 8888).is_some()),
+        |client| assert!(client.unlisten("telnet".into(), 8888).is_some()),
         |client| {
             assert!(
                 client

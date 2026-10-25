@@ -55,7 +55,7 @@ pub struct EventLogPurgeResult {
     pub pubkey_deleted: bool,
 }
 
-/// Information about a network listener: (handler_object, host_type, port, options)
+/// Information about a network listener: (handler_object, kind, port, options)
 pub type ListenerInfo = (Obj, String, u16, Vec<(Symbol, Var)>);
 
 /// Information about a worker type and its current state.
@@ -210,18 +210,19 @@ pub trait SystemControl: Send + Sync {
     /// Process a (wizard) request for system shutdown, with an optional shutdown message.
     fn shutdown(&self, msg: Option<String>) -> Result<(), Error>;
 
-    /// Ask hosts of `host_type` to listen on the given port, with the given handler object.
+    /// Ask the hosts that open listeners of `kind` to listen on the given port, with the given
+    /// handler object.
     /// `options` is a map of Symbol->Var options (e.g., tls, print_messages).
     fn listen(
         &self,
         handler_object: Obj,
-        host_type: &str,
+        kind: &str,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Result<(), Error>;
 
-    /// Ask hosts of `host_type` to stop listening on the given port.
-    fn unlisten(&self, port: u16, host_type: &str) -> Result<(), Error>;
+    /// Ask the hosts that open listeners of `kind` to stop listening on the given port.
+    fn unlisten(&self, port: u16, kind: &str) -> Result<(), Error>;
 
     /// Return the set of listeners, their type, port, and options.
     fn listeners(&self) -> Result<Vec<ListenerInfo>, Error>;
@@ -390,14 +391,14 @@ impl SystemControl for NoopSystemControl {
     fn listen(
         &self,
         _handler_object: Obj,
-        _host_type: &str,
+        _kind: &str,
         _port: u16,
         _options: Vec<(Symbol, Var)>,
     ) -> Result<(), Error> {
         Ok(())
     }
 
-    fn unlisten(&self, _port: u16, _host_type: &str) -> Result<(), Error> {
+    fn unlisten(&self, _port: u16, _kind: &str) -> Result<(), Error> {
         Ok(())
     }
 
@@ -621,23 +622,24 @@ impl SystemControl for MockClientSession {
     fn listen(
         &self,
         _handler_object: Obj,
-        _host_type: &str,
-        _port: u16,
-        _options: Vec<(Symbol, Var)>,
+        kind: &str,
+        port: u16,
+        options: Vec<(Symbol, Var)>,
     ) -> Result<(), Error> {
         let mut system = self.system.write().unwrap();
-        system.push(String::from("listen"));
+        let options: Vec<String> = options.iter().map(|(key, _)| key.to_string()).collect();
+        system.push(format!("listen: {kind} {port} {options:?}"));
         Ok(())
     }
 
-    fn unlisten(&self, port: u16, host_type: &str) -> Result<(), Error> {
+    fn unlisten(&self, port: u16, kind: &str) -> Result<(), Error> {
         let mut system = self.system.write().unwrap();
-        system.push(format!("unlisten: {host_type} {port}"));
+        system.push(format!("unlisten: {kind} {port}"));
         Ok(())
     }
 
     fn listeners(&self) -> Result<Vec<(Obj, String, u16, Vec<(Symbol, Var)>)>, Error> {
-        Ok(vec![(SYSTEM_OBJECT, String::from("tcp"), 8888, vec![])])
+        Ok(vec![(SYSTEM_OBJECT, String::from("telnet"), 8888, vec![])])
     }
 
     fn switch_player(

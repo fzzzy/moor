@@ -252,7 +252,7 @@ fn mk_builtin_table() -> Vec<Builtin> {
         mk_builtin("connection_name", Q(1), Q(1), vec![Typed(TYPE_OBJ)], true),
         mk_builtin("listeners", Q(0), Q(0), vec![], true),
         mk_builtin("listen", Q(2), Q(3), vec![Typed(TYPE_OBJ), Any, Any], true),
-        mk_builtin("unlisten", Q(1), Q(1), vec![Any], true),
+        mk_builtin("unlisten", Q(1), Q(2), vec![Any, Typed(TYPE_STR)], true),
         mk_builtin(
             "event_log",
             Q(2),

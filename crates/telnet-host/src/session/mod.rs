@@ -983,7 +983,6 @@ impl TelnetConnection {
                                     client_token: self.client_token.clone(),
                                     client_sys_time: timestamp,
                                     player: self.connection_object,
-                                    host_type: moor_runtime_api::HostType::TCP,
                                     socket_addr: self.peer_addr.to_string(),
                                 },
                             ).await?;
@@ -1177,7 +1176,6 @@ impl TelnetConnection {
                                     client_token: self.client_token.clone(),
                                     client_sys_time: timestamp,
                                     player: self.handler_object,
-                                    host_type: moor_runtime_api::HostType::TCP,
                                     socket_addr: self.peer_addr.to_string(),
                                 },
                             ).await.with_context(|| "Unable to send pong to RPC server")?;

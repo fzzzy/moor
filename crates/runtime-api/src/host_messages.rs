@@ -13,7 +13,11 @@
 
 //! Host message builders for HostToDaemon messages
 
-use crate::helpers::uuid_fb;
+use crate::{
+    ListenerKind,
+    api::ListenerInfo,
+    helpers::{obj_fb, uuid_fb},
+};
 use moor_schema::rpc;
 use uuid::Uuid;
 
@@ -37,19 +41,32 @@ pub fn mk_get_server_features_msg() -> rpc::HostToDaemonMessage {
     }
 }
 
+fn listener_kinds_fb(kinds: &[ListenerKind]) -> Vec<String> {
+    kinds.iter().map(|kind| kind.id_str().to_string()).collect()
+}
+
+/// Build the wire form of a listener a host advertises.
+pub fn listener_fb(listener: &ListenerInfo) -> rpc::Listener {
+    rpc::Listener {
+        handler_object: obj_fb(&listener.handler_object),
+        socket_addr: listener.socket_addr.to_string(),
+        kind: listener.kind.id_str().to_string(),
+    }
+}
+
 /// Build a RegisterHost message
 #[inline]
 pub fn mk_register_host_msg(
     host_id: Uuid,
     timestamp: u64,
-    host_type: rpc::HostType,
+    listener_kinds: &[ListenerKind],
     listeners: Vec<rpc::Listener>,
 ) -> rpc::HostToDaemonMessage {
     rpc::HostToDaemonMessage {
         message: rpc::HostToDaemonMessageUnion::RegisterHost(Box::new(rpc::RegisterHost {
             host_id: uuid_fb(host_id),
             timestamp,
-            host_type,
+            listener_kinds: listener_kinds_fb(listener_kinds),
             listeners,
         })),
     }
@@ -70,14 +87,14 @@ pub fn mk_detach_host_msg(host_id: Uuid) -> rpc::HostToDaemonMessage {
 pub fn mk_host_pong_msg(
     host_id: Uuid,
     timestamp: u64,
-    host_type: rpc::HostType,
+    listener_kinds: &[ListenerKind],
     listeners: Vec<rpc::Listener>,
 ) -> rpc::HostToDaemonMessage {
     rpc::HostToDaemonMessage {
         message: rpc::HostToDaemonMessageUnion::HostPong(Box::new(rpc::HostPong {
             host_id: uuid_fb(host_id),
             timestamp,
-            host_type,
+            listener_kinds: listener_kinds_fb(listener_kinds),
             listeners,
         })),
     }

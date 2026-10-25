@@ -265,32 +265,27 @@ impl TaskSchedulerClient {
     pub fn listen(
         &self,
         handler_object: Obj,
-        host_type: String,
+        kind: String,
         port: u16,
         options: Vec<(Symbol, Var)>,
     ) -> Option<Error> {
         let Some(dispatch) = &self.dispatch else {
             return Some(E_INVARG.msg("Task not found"));
         };
-        self.scheduler.handle_listen_for_dispatch(
-            dispatch,
-            handler_object,
-            host_type,
-            port,
-            options,
-        )
+        self.scheduler
+            .handle_listen_for_dispatch(dispatch, handler_object, kind, port, options)
     }
 
     pub fn listeners(&self) -> Vec<ListenerInfo> {
         self.scheduler.handle_get_listeners()
     }
 
-    pub fn unlisten(&self, host_type: String, port: u16) -> Option<Error> {
+    pub fn unlisten(&self, kind: String, port: u16) -> Option<Error> {
         let Some(dispatch) = &self.dispatch else {
             return Some(E_INVARG.msg("Task not found"));
         };
         self.scheduler
-            .handle_unlisten_for_dispatch(dispatch, host_type, port)
+            .handle_unlisten_for_dispatch(dispatch, kind, port)
     }
 
     pub fn refresh_server_options(&self) {

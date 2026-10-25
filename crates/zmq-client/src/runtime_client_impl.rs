@@ -26,7 +26,7 @@ use moor_runtime_api::api::{
     self, ClientReply, ClientRequest, HostReply, HostRequest, InvocationMode, RuntimeClient,
 };
 use moor_runtime_api::{
-    HostType, RpcError, auth_token_from_ref, client_token_from_ref, mk_attach_msg,
+    RpcError, auth_token_from_ref, client_token_from_ref, listener_fb, mk_attach_msg,
     mk_batch_world_state_msg, mk_client_data_msg, mk_client_pong_msg, mk_command_capture_msg,
     mk_command_msg, mk_connection_establish_msg, mk_delete_event_log_history_msg,
     mk_detach_host_msg, mk_detach_msg, mk_dismiss_presentation_msg, mk_eval_capture_msg,
@@ -37,7 +37,7 @@ use moor_runtime_api::{
     mk_request_current_presentations_msg, mk_request_history_msg,
     mk_request_performance_counters_msg, mk_request_sys_prop_msg, mk_requested_input_msg,
     mk_resolve_msg, mk_retrieve_msg, mk_set_client_attribute_msg, mk_set_event_log_pubkey_msg,
-    mk_update_property_msg, mk_verbs_msg, obj_fb, read_reply_result, rpc_message_error_from_ref,
+    mk_update_property_msg, mk_verbs_msg, read_reply_result, rpc_message_error_from_ref,
     scheduler_error_from_ref, uuid_fb, verb_program_error_from_ref,
 };
 use moor_schema::{convert, rpc as moor_rpc};
@@ -161,18 +161,8 @@ fn encode_client_request(
             client_token,
             client_sys_time,
             player,
-            host_type,
             socket_addr,
-        } => {
-            let host_type_fb = encode_host_type(host_type);
-            mk_client_pong_msg(
-                &client_token,
-                client_sys_time,
-                &player,
-                host_type_fb,
-                socket_addr,
-            )
-        }
+        } => mk_client_pong_msg(&client_token, client_sys_time, &player, socket_addr),
         ClientRequest::EventStream {
             client_token,
             request,
@@ -462,33 +452,19 @@ fn encode_host_request(host_id: Uuid, request: HostRequest) -> moor_rpc::HostToD
     match request {
         HostRequest::RegisterHost {
             timestamp,
-            host_type,
+            listener_kinds,
             listeners,
         } => {
-            let host_type_fb = encode_host_type(host_type);
-            let listeners_fb: Vec<moor_rpc::Listener> = listeners
-                .into_iter()
-                .map(|l| moor_rpc::Listener {
-                    handler_object: obj_fb(&l.handler_object),
-                    socket_addr: l.socket_addr.to_string(),
-                })
-                .collect();
-            mk_register_host_msg(host_id, timestamp, host_type_fb, listeners_fb)
+            let listeners_fb = listeners.iter().map(listener_fb).collect();
+            mk_register_host_msg(host_id, timestamp, &listener_kinds, listeners_fb)
         }
         HostRequest::HostPong {
             timestamp,
-            host_type,
+            listener_kinds,
             listeners,
         } => {
-            let host_type_fb = encode_host_type(host_type);
-            let listeners_fb: Vec<moor_rpc::Listener> = listeners
-                .into_iter()
-                .map(|l| moor_rpc::Listener {
-                    handler_object: obj_fb(&l.handler_object),
-                    socket_addr: l.socket_addr.to_string(),
-                })
-                .collect();
-            mk_host_pong_msg(host_id, timestamp, host_type_fb, listeners_fb)
+            let listeners_fb = listeners.iter().map(listener_fb).collect();
+            mk_host_pong_msg(host_id, timestamp, &listener_kinds, listeners_fb)
         }
         HostRequest::DetachHost => mk_detach_host_msg(host_id),
         HostRequest::RequestPerformanceCounters => mk_request_performance_counters_msg(),
@@ -1460,13 +1436,6 @@ fn decode_host_reply_ref(reply: moor_rpc::DaemonToHostReplyRef<'_>) -> Result<Ho
 // ===========================================================================
 // Helper functions
 // ===========================================================================
-
-fn encode_host_type(host_type: HostType) -> moor_rpc::HostType {
-    match host_type {
-        HostType::TCP => moor_rpc::HostType::Tcp,
-        HostType::WebSocket => moor_rpc::HostType::WebSocket,
-    }
-}
 
 fn decode_connect_type(ct: moor_rpc::ConnectType) -> api::ConnectType {
     match ct {
