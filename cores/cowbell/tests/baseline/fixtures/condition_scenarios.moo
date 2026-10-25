@@ -8,16 +8,12 @@ object CONDITION_SCENARIOS [
 
   method _rule owner: HACKER
     "Parse with a boolean input scope used by the expression truth tables.";
-    return $rule_engine:parse_expression(args[1], 'condition_test,
-      $rule_engine:scope(['A -> 'boolean, 'B -> 'boolean, 'C -> 'boolean]));
+    return $rule_engine:parse_expression(args[1], 'condition_test, $rule_engine:scope(['A -> 'boolean, 'B -> 'boolean, 'C -> 'boolean]));
   endmethod
 
   method test_nested_conditions_and_printing owner: ARCH_WIZARD
     "Mixed nested groups and NOT preserve meaning through printing and reparsing.";
-    const expressions = {
-      "input.A == true AND (input.B == true OR input.C == true)",
-      "NOT (input.A == true AND input.B == true)",
-      "NOT (input.A == true OR (input.B == true AND NOT input.C == true))"};
+    const expressions = {"input.A == true AND (input.B == true OR input.C == true)", "NOT (input.A == true AND input.B == true)", "NOT (input.A == true OR (input.B == true AND NOT input.C == true))"};
     for text in (expressions)
       const rule = this:_rule(text);
       const printed = $rule_engine:decompile_rule(rule);
@@ -46,10 +42,7 @@ object CONDITION_SCENARIOS [
 
   method test_literal_roundtrip owner: ARCH_WIZARD
     "Strings remain text, symbols remain literals, and nested collection literals retain value.";
-    const examples = {
-      "\"a, (b) \\\"quoted\\\"\" == \"a, (b) \\\"quoted\\\"\"",
-      "'Actor == 'Actor", "#-1 == #-1", "-3.5 < 0.0",
-      "{1, \"two\", {3}} == {1, \"two\", {3}}", "['x -> \"y\"] == ['x -> \"y\"]"};
+    const examples = {"\"a, (b) \\\"quoted\\\"\" == \"a, (b) \\\"quoted\\\"\"", "'Actor == 'Actor", "#-1 == #-1", "-3.5 < 0.0", "{1, \"two\", {3}} == {1, \"two\", {3}}", "['x -> \"y\"] == ['x -> \"y\"]"};
     for text in (examples)
       const rule = $rule_engine:parse_expression(text);
       const copy = $rule_engine:parse_expression($rule_engine:decompile_rule(rule));
@@ -64,24 +57,17 @@ object CONDITION_SCENARIOS [
   method test_namespaces_and_supplied_negation_inputs owner: ARCH_WIZARD
     "Declared inputs satisfy negation; identically named parameters and state remain distinct.";
     const scope = $rule_engine:scope(['Actor -> 'object], ['Actor -> 'object], ['count -> 'integer]);
-    const rule = $rule_engine:parse_expression(
-      "NOT (input.Actor == parameter.Actor) AND state.count >= 4", 'scoped, scope);
-    $test_utils:assert_true($rule_engine:evaluate(rule, ['Actor -> #1], ['Actor -> #2], ['count -> 4])['success],
-      "Negation uses supplied inputs");
-    $test_utils:assert_false($rule_engine:evaluate(rule, ['Actor -> #1], ['Actor -> #1], ['count -> 4])['success],
-      "The parameter cannot be confused with the operation actor");
-    $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {rule, [], ['Actor -> #2], ['count -> 4]},
-      "Missing inputs remain errors");
-    $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT input.Actor == #1"},
-      "Undeclared inputs fail validation");
+    const rule = $rule_engine:parse_expression("NOT (input.Actor == parameter.Actor) AND state.count >= 4", 'scoped, scope);
+    $test_utils:assert_true($rule_engine:evaluate(rule, ['Actor -> #1], ['Actor -> #2], ['count -> 4])['success], "Negation uses supplied inputs");
+    $test_utils:assert_false($rule_engine:evaluate(rule, ['Actor -> #1], ['Actor -> #1], ['count -> 4])['success], "The parameter cannot be confused with the operation actor");
+    $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {rule, [], ['Actor -> #2], ['count -> 4]}, "Missing inputs remain errors");
+    $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT input.Actor == #1"}, "Undeclared inputs fail validation");
     return true;
   endmethod
 
   method _register_pairs owner: ARCH_WIZARD
     "Register a bounded test provider with two declared output fields.";
-    $rule_engine:register_predicate('test_pairs,
-      ['description -> "Two-field test records.", 'inputs -> [],
-        'outputs -> ['left -> 'integer, 'right -> 'integer]], this, "query_pairs");
+    $rule_engine:register_predicate('test_pairs, ['description -> "Two-field test records.", 'inputs -> [], 'outputs -> ['left -> 'integer, 'right -> 'integer]], this, "query_pairs");
   endmethod
 
   method query_pairs owner: HACKER
@@ -100,13 +86,10 @@ object CONDITION_SCENARIOS [
       const one = $rule_engine:evaluate(constrained);
       $test_utils:assert_eq(one['bindings]['N], 1, "Repeated output binding");
       $test_utils:assert_eq(one['alternatives], {}, "Unequal outputs do not match");
-      const join = $rule_engine:parse_expression(
-        "test_pairs() -> (left: L, right: R) AND binding.R == 2");
+      const join = $rule_engine:parse_expression("test_pairs() -> (left: L, right: R) AND binding.R == 2");
       $test_utils:assert_eq($rule_engine:evaluate(join)['bindings]['L], 1, "Later conditions use selected outputs");
-      for text in ({"NOT test_pairs() -> (left: N)",
-        "(test_pairs() -> (left: N) OR TRUE) AND binding.N == 1"})
-        $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {text},
-          "An output unavailable on every path cannot escape its scope");
+      for text in ({"NOT test_pairs() -> (left: N)", "(test_pairs() -> (left: N) OR TRUE) AND binding.N == 1"})
+        $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {text}, "An output unavailable on every path cannot escape its scope");
       endfor
     finally
       $rule_engine:unregister_predicate('test_pairs);
@@ -116,9 +99,7 @@ object CONDITION_SCENARIOS [
 
   method test_parse_rejects_entire_invalid_input owner: ARCH_WIZARD
     "Trailing garbage, missing delimiters, unknown names, and extra arguments are errors.";
-    for text in ({"TRUE garbage", "TRUE)", "(TRUE", "NOT", "TRUE AND", "input.No == 1",
-      "unknown_predicate()", "isa(object: #1)", "isa(object: #1, object: #2)",
-      "is(left: 1, right: 1, ignored: 2)", "is(left: 1, right: 1,)", "\"unterminated"})
+    for text in ({"TRUE garbage", "TRUE)", "(TRUE", "NOT", "TRUE AND", "input.No == 1", "unknown_predicate()", "isa(object: #1)", "isa(object: #1, object: #2)", "is(left: 1, right: 1, ignored: 2)", "is(left: 1, right: 1,)", "\"unterminated"})
       $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {text}, text);
     endfor
     return true;
@@ -145,8 +126,7 @@ object CONDITION_SCENARIOS [
     "A full intermediate candidate set cannot skip a later condition that rejects every row.";
     const tree = $condition:parse("test_many() -> (value: N) AND FALSE");
     const environment = ['input -> [], 'parameter -> [], 'state -> [], 'binding -> []];
-    const provider = {name, inputs, limit} =>
-      ['rows -> {['value -> 1], ['value -> 2], ['value -> 3]}, 'complete -> true];
+    const provider = {name, inputs, limit} => ['rows -> {['value -> 1], ['value -> 2], ['value -> 3]}, 'complete -> true];
     const result = $condition:evaluate(tree, environment, provider, 2);
     $test_utils:assert_eq(result['bindings], {}, "A truncated prefix is not a conjunction answer");
     $test_utils:assert_false(result['complete], "The discarded candidates are still reported");

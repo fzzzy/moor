@@ -1,11 +1,10 @@
-object #90032 [
+object HEADLESS_LLM_SUGGESTION_SCENARIOS [
   import_export_id -> "headless_llm_suggestion_scenarios"
 ]
   name: "LLM Suggestion Scenarios"
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-  override import_export_id = "headless_llm_suggestion_scenarios";
 
   method fixture owner: ARCH_WIZARD
     "Install a deterministic suggestion client for isolated session tests; only a wizard may configure it.";
@@ -17,12 +16,7 @@ object #90032 [
     add_property(client, "blocked", false, {#90100, ""});
     add_property(client, "response", "Try @doc properties.", {#90100, ""});
     add_verb(client, {#90100, "rxd", "simple_query"}, {"this", "none", "this"});
-    set_verb_code(client, "simple_query", {
-      "this.requests = {@this.requests, args[1]};",
-      "this.principals = {@this.principals, caller_perms()};",
-      "this.purposes = {@this.purposes, args[2]};",
-      "while (this.blocked) suspend(0.1); endwhile",
-      "return this.response;"});
+    set_verb_code(client, "simple_query", {"this.requests = {@this.requests, args[1]};", "this.principals = {@this.principals, caller_perms()};", "this.purposes = {@this.purposes, args[2]};", "while (this.blocked) suspend(0.1); endwhile", "return this.response;"});
     $player.suggestions_llm_client = client;
     #90101.authoring_features = $prog_features;
     return client;
@@ -39,9 +33,7 @@ object #90032 [
     add_property(room, "principal", #-1, {#90102, ""});
     add_property(room, "blocked", false, {#90102, ""});
     add_verb(room, {#90102, "rxd", "command_hints"}, {"this", "none", "this"});
-    set_verb_code(room, "command_hints", {
-      "this.principal = caller_perms(); while (this.blocked) suspend(0.1); endwhile",
-      "return {[\"command\" -> \"press 7\", \"description\" -> \"Select floor seven.\"]};"});
+    set_verb_code(room, "command_hints", {"this.principal = caller_perms(); while (this.blocked) suspend(0.1); endwhile", "return {[\"command\" -> \"press 7\", \"description\" -> \"Select floor seven.\"]};"});
     const item = create($thing, #90102, 1);
     item.r = 1;
     item.name = "Command Probe";
@@ -78,11 +70,7 @@ object #90032 [
     add_property(provider, "summary", "A test topic.", {#90102, ""});
     add_property(provider, "topic_name", "probe", {#90102, ""});
     add_verb(provider, {#90102, "rxd", "help_topics"}, {"this", "none", "this"});
-    set_verb_code(provider, "help_topics", {
-      "this.principal = caller_perms(); this.entered = this.entered + 1;",
-      "while (this.blocked) suspend(0.1); endwhile",
-      "if (args[2] != \"\") return 0; endif",
-      "return {$help:mk(this.topic_name, this.summary, \"Private body is not model context.\", {\"alias\"})};"});
+    set_verb_code(provider, "help_topics", {"this.principal = caller_perms(); this.entered = this.entered + 1;", "while (this.blocked) suspend(0.1); endwhile", "if (args[2] != \"\") return 0; endif", "return {$help:mk(this.topic_name, this.summary, \"Private body is not model context.\", {\"alias\"})};"});
     add_property(#90102, "help_probe", provider, {#90102, ""});
     add_verb(#90102, {#90102, "rxd", "help_environment"}, {"this", "none", "this"});
     set_verb_code(#90102, "help_environment", {"return {this.help_probe};"});
@@ -185,9 +173,7 @@ object #90032 [
       add_property(provider, "used", false, {#90102, ""});
       add_property(provider, "available", true, {#90102, ""});
       add_verb(provider, {#90102, "rxd", "travel_options"}, {"this", "none", "this"});
-      set_verb_code(provider, "travel_options", {
-        "this.principal = caller_perms();",
-        "return {['id -> \"archway\", 'label -> \"archway\", 'command -> \"enter archway\", 'available -> this.available]};"});
+      set_verb_code(provider, "travel_options", {"this.principal = caller_perms();", "return {['id -> \"archway\", 'label -> \"archway\", 'command -> \"enter archway\", 'available -> this.available]};"});
       add_verb(provider, {#90102, "rxd", "use_exit"}, {"this", "none", "this"});
       set_verb_code(provider, "use_exit", {"this.used = true; return #-1;"});
       $room:register_exit_provider(room, provider);
@@ -216,15 +202,11 @@ object #90032 [
     $test_utils:assert_true(index(toliteral(info["commands"]), "<this>") > 0, "Inherited target signatures remain available");
     const snapshot = this:_as_player($llm_command_context, "snapshot", {#90102});
     const repeated = this:_as_player($llm_command_context, "snapshot", {#90102});
-    $test_utils:assert_true(snapshot == repeated && strcmp(toliteral(snapshot), toliteral(repeated)) == 0,
-      "Unchanged context is stable across native player enumeration order");
+    $test_utils:assert_true(snapshot == repeated && strcmp(toliteral(snapshot), toliteral(repeated)) == 0, "Unchanged context is stable across native player enumeration order");
     $test_utils:assert_true(value_bytes(generate_json(snapshot['data])) <= 24576, "Shipped context fits model limits");
-    $test_utils:assert_true(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "look"}),
-      "Native command syntax is accepted");
-    $test_utils:assert_false(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "nonsuch_command_xyz"}),
-      "Invented verbs are rejected");
-    $test_utils:assert_false(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "look\nquit"}),
-      "Multiple input lines cannot become one command link");
+    $test_utils:assert_true(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "look"}), "Native command syntax is accepted");
+    $test_utils:assert_false(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "nonsuch_command_xyz"}), "Invented verbs are rejected");
+    $test_utils:assert_false(this:_as_player($llm_command_context, "accepts", {#90102, snapshot, "look\nquit"}), "Multiple input lines cannot become one command link");
     return true;
   endmethod
 
@@ -271,9 +253,7 @@ object #90032 [
     provider.r = 1;
     add_property(provider, "principal", #-1, {#90102, ""});
     add_verb(provider, {#90102, "rxd", "help_topics"}, {"this", "none", "this"});
-    set_verb_code(provider, "help_topics", {
-      "this.principal = caller_perms();",
-      "if (args[2] == \"\") return {}; endif return 0;"});
+    set_verb_code(provider, "help_topics", {"this.principal = caller_perms();", "if (args[2] == \"\") return {}; endif return 0;"});
     try
       #90102.features = {provider};
       this:_as_player($llm_help_tools, "help_lookup", {["topic" -> "missing_probe_topic"], #90102});
@@ -292,10 +272,8 @@ object #90032 [
     const environment = this:_as_player(#90102, "help_environment", {});
     const catalog = this:_as_player($llm_help_tools, "catalog", {#90102, environment});
     $test_utils:assert_true(length(catalog) > 0, "The shipped catalog contains topics");
-    const topics = {["name" -> entry['name], "summary" -> entry['summary], "aliases" -> entry['aliases]]
-      for entry in (catalog)};
-    $test_utils:assert_true(value_bytes(generate_json(["query" -> "movement", "topics" -> topics])) <= 24576,
-      "The ordinary environment fits the suggestion context limit");
+    const topics = { ["name" -> entry['name], "summary" -> entry['summary], "aliases" -> entry['aliases]] for entry in (catalog) };
+    $test_utils:assert_true(value_bytes(generate_json(["query" -> "movement", "topics" -> topics])) <= 24576, "The ordinary environment fits the suggestion context limit");
     return true;
   endmethod
 
@@ -310,7 +288,7 @@ object #90032 [
     $test_utils:assert_true(denied, "A help catalog cannot borrow another actor's authority");
     let limited = false;
     try
-      this:_as_player($llm_help_tools, "catalog", {#90102, {#-1 for index in [1..129]}});
+      this:_as_player($llm_help_tools, "catalog", {#90102, { #-1 for index in [1..129] }});
     except (E_QUOTA)
       limited = true;
     endtry
@@ -333,7 +311,7 @@ object #90032 [
     endtry
     $test_utils:assert_true(malformed, "Only canonical help values enter the catalog");
     const topic = $help:mk("probe", "Summary.", "Body.");
-    provider.reply = {topic for index in [1..257]};
+    provider.reply = { topic for index in [1..257] };
     let limited = false;
     try
       this:_as_player($llm_help_tools, "catalog", {#90102, {provider}});
@@ -342,8 +320,7 @@ object #90032 [
     endtry
     $test_utils:assert_true(limited, "Topic lists are bounded before iteration");
     provider.r = 0;
-    $test_utils:assert_eq(this:_as_player($llm_help_tools, "catalog", {#90102, {provider}}), {},
-      "Private providers do not enter the public help catalog");
+    $test_utils:assert_eq(this:_as_player($llm_help_tools, "catalog", {#90102, {provider}}), {}, "Private providers do not enter the public help catalog");
     return true;
   endmethod
 
@@ -379,14 +356,14 @@ object #90032 [
     $test_utils:assert_true(denied, "Actor authentication precedes connection and provider work");
     return true;
   endmethod
+
   method test_suggestion_event_rejects_foreign_actor owner: ARCH_WIZARD
     "Structured placeholder delivery cannot bypass the presenter's actor authentication.";
     const presenter = $llm_presenter:new(#90101, 0, $prog_features);
     try
       let denied = false;
       try
-        this:_as_player($llm_presenter, "send_event",
-          {presenter, #90101, $event:mk_info(#90101, "forged")});
+        this:_as_player($llm_presenter, "send_event", {presenter, #90101, $event:mk_info(#90101, "forged")});
       except (E_PERM)
         denied = true;
       endtry

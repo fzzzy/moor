@@ -5,6 +5,6 @@ object HEADLESS_MESSAGING_LETTER [
 ]
   name: "Runtime Messaging Letter"
   parent: LETTER
-  owner: fixtures::RUNTIME_PROGRAMMER
   location: fixtures::RUNTIME_PROGRAMMER
+  owner: fixtures::RUNTIME_PROGRAMMER
 endobject

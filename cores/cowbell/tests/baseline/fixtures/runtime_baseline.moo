@@ -16,9 +16,8 @@ object RUNTIME_BASELINE [
   parent: ROOT
   owner: RUNTIME_WIZARD
   readable: true
-  override import_export_id = "runtime_baseline";
 
-  verb test_fixture_principals (this none this) owner: #90100 flags: "rxd"
+  method test_fixture_principals owner: RUNTIME_WIZARD
     $test_utils:assert_true(#90100.wizard, "fixture wizard flag");
     $test_utils:assert_true(#90100.programmer, "wizard programmer flag");
     $test_utils:assert_false(#90101.wizard, "programmer has no wizard flag");
@@ -34,5 +33,5 @@ object RUNTIME_BASELINE [
       $test_utils:assert_eq(principal.location, #90103, "isolated fixture room");
     endfor
     return true;
-  endverb
+  endmethod
 endobject

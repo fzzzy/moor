@@ -5,7 +5,6 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-  override import_export_id = "headless_llm_runtime_scenarios";
 
   method _client owner: ARCH_WIZARD
     "Create a deterministic provider fixture; the caller must recycle it.";
@@ -16,17 +15,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     add_property(client, "requests", {}, {#90102, ""});
     add_property(client, "append_to", #-1, {#90102, ""});
     add_verb(client, {#90102, "rxd", "chat"}, {"this", "none", "this"});
-    set_verb_code(client, "chat", {
-      "this.requests = {@this.requests, args[1]};",
-      "const reply = this.replies[1];",
-      "if (length(this.replies) > 1)",
-      "  this.replies = listdelete(this.replies, 1);",
-      "endif",
-      "if (valid(this.append_to))",
-      "  this.append_to:add_message(\"user\", \"arrived during compaction\");",
-      "  suspend(0);",
-      "endif",
-      "return reply;"});
+    set_verb_code(client, "chat", {"this.requests = {@this.requests, args[1]};", "const reply = this.replies[1];", "if (length(this.replies) > 1)", "  this.replies = listdelete(this.replies, 1);", "endif", "if (valid(this.append_to))", "  this.append_to:add_message(\"user\", \"arrived during compaction\");", "  suspend(0);", "endif", "return reply;"});
     return client;
   endmethod
 
@@ -35,8 +24,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     const {names} = args;
     let calls = {};
     for i in [1..length(names)]
-      calls = {@calls, ["id" -> tostr(i), "type" -> "function",
-        "function" -> ["name" -> names[i], "arguments" -> []]]};
+      calls = {@calls, ["id" -> tostr(i), "type" -> "function", "function" -> ["name" -> names[i], "arguments" -> []]]};
     endfor
     return ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}];
   endmethod
@@ -152,9 +140,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const sink = this:_sink(agent);
       try
         agent.client = client;
-        agent.tools = [
-          "stop" -> delegate:mk("stop", "Cancel", [], sink, "stop"),
-          "mark" -> delegate:mk("mark", "Record an effect", [], sink, "mark")];
+        agent.tools = ["stop" -> delegate:mk("stop", "Cancel", [], sink, "stop"), "mark" -> delegate:mk("mark", "Record an effect", [], sink, "mark")];
         const result = this:_as_player(agent, "send_message", {"cancelled batch"});
         $test_utils:assert_eq(sink.effects, 0, "Cancellation precedes the next mutation");
         $test_utils:assert_eq(length(client.requests), 1, "Cancellation prevents another provider call");
@@ -176,14 +162,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       try
         agent.client = client;
         agent.min_messages_to_keep = 4;
-        agent:set_context({
-          ["role" -> "system", "content" -> "instructions"],
-          ["role" -> "user", "content" -> "inspect"],
-          this:_tool_reply({"mark"})["choices"][1]["message"],
-          ["role" -> "tool", "tool_call_id" -> "1", "content" -> "recorded"],
-          ["role" -> "user", "content" -> "follow up"],
-          ["role" -> "assistant", "content" -> "answer"],
-          ["role" -> "user", "content" -> "next"]});
+        agent:set_context({["role" -> "system", "content" -> "instructions"], ["role" -> "user", "content" -> "inspect"], this:_tool_reply({"mark"})["choices"][1]["message"], ["role" -> "tool", "tool_call_id" -> "1", "content" -> "recorded"], ["role" -> "user", "content" -> "follow up"], ["role" -> "assistant", "content" -> "answer"], ["role" -> "user", "content" -> "next"]});
         this:_as_player(agent, "compact_context", {});
         let seen = {};
         for message in (agent:get_context())
@@ -193,8 +172,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
             endfor
           endif
           if (message["role"] == "tool")
-            $test_utils:assert_true(message["tool_call_id"] in seen,
-              "A retained tool response has its preceding assistant call");
+            $test_utils:assert_true(message["tool_call_id"] in seen, "A retained tool response has its preceding assistant call");
           endif
         endfor
       finally
@@ -219,8 +197,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
           agent:add_message("user", tostr(i));
         endfor
         this:_as_player(agent, "compact_context", {});
-        $test_utils:assert_eq(agent:get_context()[$]["content"], "arrived during compaction",
-          "The intervening message remains after the stale summary returns");
+        $test_utils:assert_eq(agent:get_context()[$]["content"], "arrived during compaction", "The intervening message remains after the stale summary returns");
       finally
         recycle(client);
         recycle(agent);
@@ -235,8 +212,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     try
       const project = agent:get_project();
       const task = project:create_task("original");
-      for invocation in ({{project, "create_task", {"foreign"}}, {task, "mark_complete", {"foreign"}},
-                         {task, "get_status", {}}, {task, "add_finding", {"private", "key", "value"}}})
+      for invocation in ({{project, "create_task", {"foreign"}}, {task, "mark_complete", {"foreign"}}, {task, "get_status", {}}, {task, "add_finding", {"private", "key", "value"}}})
         let denied = false;
         try
           this:_as_player(invocation[1], invocation[2], invocation[3]);
@@ -303,8 +279,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       endtry
       $test_utils:assert_true(hidden, "Project storage is private even to the subject owner");
       agent.owner = #90101;
-      for invocation in ({{project, "get_todos", {}}, {task, "mark_complete", {"done"}},
-                         {project, "clear", {}}})
+      for invocation in ({{project, "get_todos", {}}, {task, "mark_complete", {"done"}}, {project, "clear", {}}})
         let denied = false;
         try
           this:_as_player(invocation[1], invocation[2], invocation[3]);
@@ -367,12 +342,10 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       target.r = 0;
       add_verb(target, {#90100, "rxd", "all_properties"}, {"this", "none", "this"});
       set_verb_code(target, "all_properties", {"raise(E_ASSERT, \"Do not enumerate through target callbacks\");"});
-      add_property(target, "input_rule", $rule_engine:parse_expression("input.Actor == #90101",
-        'input_rule, $rule_engine:scope(['Actor -> 'object])), {#90100, "r"});
+      add_property(target, "input_rule", $rule_engine:parse_expression("input.Actor == #90101", 'input_rule, $rule_engine:scope(['Actor -> 'object])), {#90100, "r"});
       add_property(target, "private_rule", target.constant_rule, {#90100, ""});
       add_property(target, "secret", 1, {#90100, ""});
-      add_property(target, "query_rule", $rule_engine:parse_expression(
-        "property_is(object: " + tostr(target) + ", field: 'secret, value: 1)", 'query_rule), {#90100, "r"});
+      add_property(target, "query_rule", $rule_engine:parse_expression("property_is(object: " + tostr(target) + ", field: 'secret, value: 1)", 'query_rule), {#90100, "r"});
       for prototype in ({$data_visor, $architects_compass})
         const device = create(prototype, actor, 2);
         const client = this:_client({});
@@ -385,24 +358,15 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
           actor.is_builder = true;
           session = $llm_wearable_session:open(device, actor, 0);
           agent.tool_callback = #-1;
-          const requests = {
-            {"evaluate_rule", ["object" -> tostr(target), "property" -> "constant_rule"]},
-            {"evaluate_rule", ["object" -> tostr(target), "property" -> "private_rule"]},
-            {"evaluate_rule", ["object" -> tostr(target), "property" -> "input_rule",
-              "bindings" -> ["Actor" -> "#90101"]]},
-            {"test_rule", ["expression" -> "input.Actor == #90101", "bindings" -> ["Actor" -> "#90101"]]},
-            {"evaluate_rule", ["object" -> tostr(target), "property" -> "query_rule"]}};
+          const requests = {{"evaluate_rule", ["object" -> tostr(target), "property" -> "constant_rule"]}, {"evaluate_rule", ["object" -> tostr(target), "property" -> "private_rule"]}, {"evaluate_rule", ["object" -> tostr(target), "property" -> "input_rule", "bindings" -> ["Actor" -> "#90101"]]}, {"test_rule", ["expression" -> "input.Actor == #90101", "bindings" -> ["Actor" -> "#90101"]]}, {"evaluate_rule", ["object" -> tostr(target), "property" -> "query_rule"]}};
           let calls = {};
           for i in [1..length(requests)]
-            calls = {@calls, ["id" -> tostr(i), "type" -> "function",
-              "function" -> ["name" -> requests[i][1], "arguments" -> requests[i][2]]]};
+            calls = {@calls, ["id" -> tostr(i), "type" -> "function", "function" -> ["name" -> requests[i][1], "arguments" -> requests[i][2]]]};
           endfor
           client.replies = {["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}]};
           this:_as_programmer(agent, "run_turn", {});
-          $test_utils:assert_eq(agent.tool_outcomes["1"].status, 'success,
-            "A stored constant rule needs no bindings argument: " + agent.tool_outcomes["1"].code);
-          $test_utils:assert_true(index(agent.tool_outcomes["1"].value, "Success: true") > 0,
-            "The stored condition was evaluated");
+          $test_utils:assert_eq(agent.tool_outcomes["1"].status, 'success, "A stored constant rule needs no bindings argument: " + agent.tool_outcomes["1"].code);
+          $test_utils:assert_true(index(agent.tool_outcomes["1"].value, "Success: true") > 0, "The stored condition was evaluated");
           $test_utils:assert_eq(agent.tool_outcomes["2"].code, "E_PERM", "Private rule reads use actor authority");
           $test_utils:assert_eq(agent.tool_outcomes["2"].status, 'failure, "A denied read is a known failure");
           $test_utils:assert_eq(agent.tool_outcomes["3"].status, 'success, "JSON bindings support object references");
@@ -555,7 +519,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       endwhile
       $test_utils:assert_eq(job.state, 'cancelled, "The terminal state is cancellation");
       $test_utils:assert_eq(agent.effects, 0, "The cancelled child cannot perform its delayed effect");
-      $test_utils:assert_false(worker in {task[1] for task in (queued_tasks())}, "No model child remains queued");
+      $test_utils:assert_false(worker in { task[1] for task in (queued_tasks()) }, "No model child remains queued");
       const entry = room:job_call(job, "take_history", {});
       $test_utils:assert_eq(entry['context], agent:get_context(), "Cancellation retains resumable context");
       room:job_call(job, "release", {});
@@ -593,8 +557,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       large = large + large;
     endfor
     for effect in ({'inspection, 'mutation})
-      for payload in ({retained, <$root, .reference = retained>, large,
-          <$llm_tool_result, .status = 'success, .value = "small", .code = "", .wire = ["object" -> retained]>})
+      for payload in ({retained, <$root, .reference = retained>, large, <$llm_tool_result, .status = 'success, .value = "small", .code = "", .wire = ["object" -> retained]>})
         const agent = create($llm_agent, actor, 2);
         const client = this:_client({this:_tool_reply({"result", "mark"})});
         const sink = this:_sink(agent);
@@ -603,18 +566,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
           add_verb(sink, {actor, "rxd", "result"}, {"this", "none", "this"});
           set_verb_code(sink, "result", {"return this.result;"});
           agent.client = client;
-          agent.tools = ["result" -> $llm_agent_tool:mk("result", "Return fixture data", [], sink, "result", effect),
-            "mark" -> $llm_agent_tool:mk("mark", "Record later work", [], sink, "mark", 'mutation)];
+          agent.tools = ["result" -> $llm_agent_tool:mk("result", "Return fixture data", [], sink, "result", effect), "mark" -> $llm_agent_tool:mk("mark", "Record later work", [], sink, "mark", 'mutation)];
           const turn = this:_as_player(agent, "run_turn", {});
           const outcome = agent.tool_outcomes["1"];
-          $test_utils:assert_eq(outcome.status, effect == 'inspection ? 'failure | 'unknown,
-            "Rejected results preserve the handler's effect classification");
+          $test_utils:assert_eq(outcome.status, effect == 'inspection ? 'failure | 'unknown, "Rejected results preserve the handler's effect classification");
           $llm_value:validate_json(outcome.value);
           $test_utils:assert_true(value_bytes(outcome) <= 65536, "A failed result cannot retain an oversized payload");
-          $test_utils:assert_eq(length(agent.pending_tools), effect == 'inspection ? 0 | 1,
-            "Only a potentially committed effect requires recovery");
-          $test_utils:assert_eq(sink.effects, effect == 'inspection ? 1 | 0,
-            "Later tools continue after a known read failure and stop after an uncertain mutation");
+          $test_utils:assert_eq(length(agent.pending_tools), effect == 'inspection ? 0 | 1, "Only a potentially committed effect requires recovery");
+          $test_utils:assert_eq(sink.effects, effect == 'inspection ? 1 | 0, "Later tools continue after a known read failure and stop after an uncertain mutation");
         finally
           recycle(sink);
           recycle(client);
@@ -633,9 +592,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     try
       add_property(sink, "intent_seen", false, {#90102, ""});
       add_verb(sink, {#90102, "rxd", "mutate"}, {"this", "none", "this"});
-      set_verb_code(sink, "mutate", {
-        "this.intent_seen = length(this.agent:get_context()) == 4 && this.agent:get_context()[2][\"role\"] == \"assistant\" && this.agent:get_context()[3][\"role\"] == \"tool\";",
-        "this.effects = 1;", "suspend(0);", "raise(E_INVARG, \"failure after commit\");"});
+      set_verb_code(sink, "mutate", {"this.intent_seen = length(this.agent:get_context()) == 4 && this.agent:get_context()[2][\"role\"] == \"assistant\" && this.agent:get_context()[3][\"role\"] == \"tool\";", "this.effects = 1;", "suspend(0);", "raise(E_INVARG, \"failure after commit\");"});
       agent.client = client;
       agent.tools = ["mutate" -> $llm_agent_tool:mk("mutate", "Commit then fail", [], sink, "mutate", 'mutation), "mark" -> $llm_agent_tool:mk("mark", "A later effect", [], sink, "mark", 'mutation)];
       const result = this:_as_player(agent, "send_message", {"run mutation"});
@@ -711,11 +668,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     "History selection uses newest-first order and the actual request actor.";
     const room = create($agent_room, #90101, 2);
     try
-      room.history = {
-        ['requester -> #90102, 'query -> "old", 'status -> 'failed],
-        ['requester -> #90102, 'query -> "recent failure", 'status -> 'failed],
-        ['requester -> #90102, 'query -> "recent success", 'status -> 'completed],
-        ['requester -> #90101, 'query -> "foreign failure", 'status -> 'failed]};
+      room.history = {['requester -> #90102, 'query -> "old", 'status -> 'failed], ['requester -> #90102, 'query -> "recent failure", 'status -> 'failed], ['requester -> #90102, 'query -> "recent success", 'status -> 'completed], ['requester -> #90101, 'query -> "foreign failure", 'status -> 'failed]};
       $test_utils:assert_eq($agent_room:latest_history(room, #90100), [], "A wizard continuation cannot select another actor's conversation");
       const latest = this:_as_player($agent_room, "latest_history", {room, #90102});
       $test_utils:assert_eq(latest['query], "recent success", "Select the newest own entry");
@@ -742,15 +695,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     try
       add_verb(target, {#90102, "rxd", "inspect_probe alias"}, {"this", "none", "this"});
       set_verb_code(target, "inspect_probe", {"return 1;"});
-      const result = $llm_inspection_tools:get_verb_code(
-        ["object" -> target, "verb" -> "inspect_probe"], #90102);
-      $test_utils:assert_true(index(result, "Argspec: this none this"),
-        "Argument specification comes from verb_args");
+      const result = $llm_inspection_tools:get_verb_code(["object" -> target, "verb" -> "inspect_probe"], #90102);
+      $test_utils:assert_true(index(result, "Argspec: this none this"), "Argument specification comes from verb_args");
     finally
       recycle(target);
     endtry
     return true;
   endmethod
+
   method test_catalog_collision owner: ARCH_WIZARD
     "A conflicting definition cannot replace a registered tool; exact repeats are harmless.";
     const schema = ["type" -> "object", "properties" -> []];
@@ -776,6 +728,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     $test_utils:assert_eq(agent.tools["probe"].target_verb, "probe", "Original descriptor survives rejection");
     return true;
   endmethod
+
   method test_room_views_filter_private_state owner: ARCH_WIZARD
     "Room snapshots disclose only the authenticated requester's work unless the actor administers the room.";
     const room = create($agent_room, #90101, 2);
@@ -788,8 +741,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const own_queued = this:_job(room, #90102, "own queued request");
       const foreign_queued = this:_job(room, #90100, "private foreign queue");
       room.jobs = {@room.jobs, own_queued, foreign_queued};
-      room.history = {['requester -> #90102, 'query -> "own history", 'status -> 'complete, 'context -> {}],
-        ['requester -> #90100, 'query -> "private foreign history", 'status -> 'complete, 'context -> {["role" -> "assistant", "content" -> "private foreign answer"]}]};
+      room.history = {['requester -> #90102, 'query -> "own history", 'status -> 'complete, 'context -> {}], ['requester -> #90100, 'query -> "private foreign history", 'status -> 'complete, 'context -> {["role" -> "assistant", "content" -> "private foreign answer"]}]};
       const snapshot = this:_as_player($llm_room_view, "snapshot", {room, #90102});
       $test_utils:assert_eq(length(snapshot['jobs]), 1, "Only the requester's active job is visible");
       $test_utils:assert_eq(length(snapshot['queue]), 1, "Only the requester's queue entry is visible");
@@ -826,22 +778,13 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_tool_schema_constraints owner: ARCH_WIZARD
     "Shared validation checks nested fields, exact names, enums, and bounds without coercion.";
-    const schema = ["type" -> "object", "properties" -> [
-      "items" -> ["type" -> "array", "minItems" -> 1, "maxItems" -> 2, "items" -> [
-        "type" -> "object", "properties" -> ["name" -> ["type" -> "string", "enum" -> {"Keep"}],
-          "count" -> ["type" -> "number", "minimum" -> 1, "maximum" -> 3]],
-        "required" -> {"name", "count"}, "additionalProperties" -> false]]],
-      "required" -> {"items"}, "additionalProperties" -> false];
+    const schema = ["type" -> "object", "properties" -> ["items" -> ["type" -> "array", "minItems" -> 1, "maxItems" -> 2, "items" -> ["type" -> "object", "properties" -> ["name" -> ["type" -> "string", "enum" -> {"Keep"}], "count" -> ["type" -> "number", "minimum" -> 1, "maximum" -> 3]], "required" -> {"name", "count"}, "additionalProperties" -> false]]], "required" -> {"items"}, "additionalProperties" -> false];
     const good = ["items" -> {["name" -> "Keep", "count" -> 2.5]}];
     $test_utils:assert_eq($llm_tool_schema:arguments(generate_json(good), schema), good, "Valid values are preserved");
-    for value in ({[], ["items" -> {}], ["items" -> {["name" -> "keep", "count" -> 2]}],
-        ["items" -> {["name" -> "Keep", "count" -> "2"]}],
-        ["items" -> {["name" -> "Keep", "count" -> 4]}],
-        ["items" -> {["name" -> "Keep", "count" -> true]}],
-        ["Items" -> {["name" -> "Keep", "count" -> 2]}],
-        ["items" -> {["name" -> "Keep", "count" -> 2, "extra" -> 0]}]})
+    for value in ({[], ["items" -> {}], ["items" -> {["name" -> "keep", "count" -> 2]}], ["items" -> {["name" -> "Keep", "count" -> "2"]}], ["items" -> {["name" -> "Keep", "count" -> 4]}], ["items" -> {["name" -> "Keep", "count" -> true]}], ["Items" -> {["name" -> "Keep", "count" -> 2]}], ["items" -> {["name" -> "Keep", "count" -> 2, "extra" -> 0]}]})
       let denied = false;
       try
         $llm_tool_schema:arguments(value, schema);
@@ -875,8 +818,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       add_verb(sink, {#90102, "rxd", "on_tool_call"}, {"this", "none", "this"});
       set_verb_code(sink, "on_tool_call", {"this.callbacks = this.callbacks + 1;"});
       agent.tool_callback = sink;
-      const schema = ["type" -> "object", "properties" -> ["count" -> ["type" -> "integer"]],
-        "required" -> {"count"}, "additionalProperties" -> false];
+      const schema = ["type" -> "object", "properties" -> ["count" -> ["type" -> "integer"]], "required" -> {"count"}, "additionalProperties" -> false];
       agent:add_tool("mark", $llm_agent_tool:mk("mark", "Count a mutation", schema, sink, "mark", 'mutation));
       const result = agent:run_turn(false, #90102);
       $test_utils:assert_eq(result["status"], "all_failed", "Invalid arguments are a known failure");
@@ -961,8 +903,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const named = ["type" -> "function", "function" -> ["name" -> "inspect"]];
       const choice = $llm_provider:options($llm_chat_opts:mk():with_tool_choice(named));
       $test_utils:assert_eq(choice["tool_choice"], named, "A named tool choice retains its wire shape");
-      for invalid in ({<hostile, .model = "forged">, <hostile, .max_tokens = -1>, <hostile, .temperature = 7>,
-          $llm_chat_opts:mk():with_tool_choice(["type" -> "function", "function" -> ["name" -> ""]])})
+      for invalid in ({<hostile, .model = "forged">, <hostile, .max_tokens = -1>, <hostile, .temperature = 7>, $llm_chat_opts:mk():with_tool_choice(["type" -> "function", "function" -> ["name" -> ""]])})
         let denied = false;
         try
           $llm_provider:options(invalid);
@@ -1020,26 +961,23 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_wearable_progress_uses_current_arguments owner: ARCH_WIZARD
     "LLM wearable progress uses canonical object arguments and accepts partial source ranges.";
     for prototype in ({$data_visor, $architects_compass})
       const device = create(prototype, #90101, 2);
       try
         for formatter in ({"_format_hud_message", "_format_tts_message"})
-          const inspected = this:_as_programmer(device, formatter,
-            {"inspect_object", ["object" -> "#90101"]});
-          $test_utils:assert_true(index(inspected, "#90101") > 0,
-            "Object inspection progress uses the published object argument");
+          const inspected = this:_as_programmer(device, formatter, {"inspect_object", ["object" -> "#90101"]});
+          $test_utils:assert_true(index(inspected, "#90101") > 0, "Object inspection progress uses the published object argument");
           for bounds in ({["start_line" -> 2], ["end_line" -> 9]})
             let parameters = ["object" -> "#90101", "verb" -> "example"];
             for field in (mapkeys(bounds))
               parameters[field] = bounds[field];
             endfor
             const ranged = this:_as_programmer(device, formatter, {"get_verb_code_range", parameters});
-            $test_utils:assert_true(index(ranged, "#90101:example") > 0,
-              "Range progress retains its source reference");
-            $test_utils:assert_true(index(ranged, tostr(mapvalues(bounds)[1])) > 0,
-              "A supplied boundary remains visible without requiring the omitted boundary");
+            $test_utils:assert_true(index(ranged, "#90101:example") > 0, "Range progress retains its source reference");
+            $test_utils:assert_true(index(ranged, tostr(mapvalues(bounds)[1])) > 0, "A supplied boundary remains visible without requiring the omitted boundary");
           endfor
         endfor
       finally
@@ -1059,18 +997,13 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     try
       add_property(target, "description_principal", #-1, {#90101, "r"});
       add_verb(target, {#90101, "rxd", "description"}, {"this", "none", "this"});
-      set_verb_code(target, "description", {
-        "this.description_principal = caller_perms();", "return this.description;"});
-      for content in ({"literal *stars* {braces}",
-          $format.paragraph:mk("structured description"), {"first paragraph", "second paragraph"},
-          $format:authored('djot_blocks, "*formatted description*")})
+      set_verb_code(target, "description", {"this.description_principal = caller_perms();", "return this.description;"});
+      for content in ({"literal *stars* {braces}", $format.paragraph:mk("structured description"), {"first paragraph", "second paragraph"}, $format:authored('djot_blocks, "*formatted description*")})
         target.description = content;
         person.description = content;
         person.description_kind = 'literal;
-        const inspected = this:_as_player($llm_inspection_tools, "inspect_object",
-          {["object" -> tostr(target)], actor});
-        const social = parse_json(this:_as_player($llm_social_tools, "player_info",
-          {["player_name" -> tostr(person)], actor}));
+        const inspected = this:_as_player($llm_inspection_tools, "inspect_object", {["object" -> tostr(target)], actor});
+        const social = parse_json(this:_as_player($llm_social_tools, "player_info", {["player_name" -> tostr(person)], actor}));
         const text = social["description"];
         $test_utils:assert_eq(typeof(text), TYPE_STR, "Social inspection contains plain text, not a flyweight encoding");
         $test_utils:assert_true(index(inspected, text) > 0, "Object and social inspection use the same rendering");
@@ -1078,8 +1011,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
         if (typeof(content) == TYPE_STR)
           $test_utils:assert_eq(text, content, "Literal punctuation is never parsed as markup");
         elseif (typeof(content) == TYPE_LIST)
-          $test_utils:assert_true(index(text, "first paragraph") > 0 && index(text, "second paragraph") > 0,
-            "All structured paragraphs survive rendering");
+          $test_utils:assert_true(index(text, "first paragraph") > 0 && index(text, "second paragraph") > 0, "All structured paragraphs survive rendering");
         else
           $test_utils:assert_true(index(text, "description") > 0, "Authored content becomes readable text");
         endif
@@ -1113,18 +1045,16 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
           finished = true;
           break;
         endif
-        $test_utils:assert_false(page["next_cursor"] == `request["cursor"] ! E_RANGE => {}',
-          "Every continuation makes progress");
+        $test_utils:assert_false(page["next_cursor"] == `request["cursor"] ! E_RANGE => {}', "Every continuation makes progress");
         request["cursor"] = page["next_cursor"];
       endfor
       $test_utils:assert_true(finished, "The bounded traversal finishes");
       $test_utils:assert_eq(length(found), 4, "Every literal match appears once");
-      $test_utils:assert_eq({entry["line"] for entry in (found)}, {1, 2, 3, 1}, "Line origins survive pagination");
-      $test_utils:assert_eq({match["verb_index"] for match in (found)}, {1, 1, 1, 2}, "Aliases use native numeric indexes");
+      $test_utils:assert_eq({ entry["line"] for entry in (found) }, {1, 2, 3, 1}, "Line origins survive pagination");
+      $test_utils:assert_eq({ match["verb_index"] for match in (found) }, {1, 1, 1, 2}, "Aliases use native numeric indexes");
       $test_utils:assert_eq(found[1]["names"], "se*arch alias", "The result retains declared aliases");
       $test_utils:assert_eq(found[4]["text"], "return \"Needle.* four\";", "Literal punctuation remains in the snippet");
-      const absent = this:_as_player($llm_code_search, "search",
-        {["object" -> tostr(target), "pattern" -> "^Needle"], actor});
+      const absent = this:_as_player($llm_code_search, "search", {["object" -> tostr(target), "pattern" -> "^Needle"], actor});
       $test_utils:assert_eq(absent["matches"], {}, "Patterns are literals, not regular expressions");
     finally
       recycle(target);
@@ -1232,8 +1162,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const empty = this:_as_player($llm_verb_source, "read", {actor, child, "empty_source"});
       $test_utils:assert_eq(empty.lines, {}, "An empty verb remains a valid source snapshot");
       const empty_document = $event:mk_info(actor, empty:document()):resolve(actor);
-      $test_utils:assert_true(index($document:render(empty_document, 'text_plain)['body], "0 lines") > 0,
-        "Empty source has a useful range label");
+      $test_utils:assert_true(index($document:render(empty_document, 'text_plain)['body], "0 lines") > 0, "Empty source has a useful range label");
     finally
       recycle(child);
       recycle(parent);
@@ -1246,9 +1175,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     caller_perms().wizard || raise(E_PERM);
     const {actor, destination} = args;
     const room = this:_job_room();
-    const reply = ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "",
-      "tool_calls" -> {["id" -> "report", "type" -> "function", "function" -> ["name" -> "present_report",
-        "arguments" -> generate_json(["content" -> "private report"])]]}]]}];
+    const reply = ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "", "tool_calls" -> {["id" -> "report", "type" -> "function", "function" -> ["name" -> "present_report", "arguments" -> generate_json(["content" -> "private report"])]]}]]}];
     const client = this:_client({reply, ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}]});
     try
       room.llm_client = client;
@@ -1263,17 +1190,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method _delayed_room owner: ARCH_WIZARD
     "Create a room with a model barrier; tests must reset the room and recycle both objects.";
     caller == this && this == #90031 || raise(E_PERM);
     const room = this:_job_room();
     const client = this:_client({});
     add_property(client, "effects", 0, {#90102, ""});
-    set_verb_code(client, "chat", {
-      "this.requests = {@this.requests, caller_perms()};",
-      "task_recv(30);",
-      "this.effects = this.effects + 1;",
-      "return [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\", \"content\" -> \"done\"]]}];"});
+    set_verb_code(client, "chat", {"this.requests = {@this.requests, caller_perms()};", "task_recv(30);", "this.effects = this.effects + 1;", "return [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\", \"content\" -> \"done\"]]}];"});
     room.llm_client = client;
     return {room, client};
   endmethod
@@ -1444,8 +1368,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const complete = memory:snapshot();
       omitted = false;
       try
-        this:_as_player(memory, "apply_compaction", {complete,
-          {["subject" -> "person", "fact" -> "first fact only", "sources" -> {1}]}});
+        this:_as_player(memory, "apply_compaction", {complete, {["subject" -> "person", "fact" -> "first fact only", "sources" -> {1}]}});
       except (E_INVARG)
         omitted = true;
       endtry
@@ -1481,11 +1404,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     let worker = 0;
     try
       add_property(result, "outcome", 'waiting, {$arch_wizard, ""});
-      set_verb_code(client, "chat", {
-        "this.requests = {@this.requests, args[1]};",
-        "task_recv(20);",
-        "return [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\",",
-        "  \"content\" -> generate_json({[\"subject\" -> \"person\", \"fact\" -> \"combined\", \"sources\" -> {1, 2}]})]]}];"});
+      set_verb_code(client, "chat", {"this.requests = {@this.requests, args[1]};", "task_recv(20);", "return [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\",", "  \"content\" -> generate_json({[\"subject\" -> \"person\", \"fact\" -> \"combined\", \"sources\" -> {1, 2}]})]]}];"});
       memory:remember("person", "first fact");
       memory:remember("person", "second fact");
       for change in ({'append, 'owner})
@@ -1538,17 +1457,9 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     move(device, actor);
     actor.wearing = {@actor.wearing, device};
     device:configure();
-    device.agent.client = this:_client({["choices" -> {["message" ->
-      ["role" -> "assistant", "content" -> "private interaction result"]]}]});
+    device.agent.client = this:_client({["choices" -> {["message" -> ["role" -> "assistant", "content" -> "private interaction result"]]}]});
     add_verb(device, {$arch_wizard, "rxd", "start_probe"}, {"this", "none", "this"});
-    set_verb_code(device, "start_probe", {
-      "caller_perms().wizard || raise(E_PERM);",
-      "const {destination} = args;",
-      "fork worker (0)",
-      "  const session = $llm_wearable_session:open(this, this.owner, destination);",
-      "  session:interact();",
-      "endfork",
-      "return worker;"});
+    set_verb_code(device, "start_probe", {"caller_perms().wizard || raise(E_PERM);", "const {destination} = args;", "fork worker (0)", "  const session = $llm_wearable_session:open(this, this.owner, destination);", "  session:interact();", "endfork", "return worker;"});
     add_verb(device, {actor, "rxd", "remove_probe"}, {"this", "none", "this"});
     set_verb_code(device, "remove_probe", {"return this:do_remove(this.owner, true);"});
     return device;
@@ -1568,14 +1479,11 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const agent = device.agent;
       const descriptor = agent.tools["ask_user"];
       const project_tools = agent.tools["todo_write"].target_obj;
-      const written = this:_as_player(project_tools, "todo_write", {["todos" -> {
-        ["content" -> "captured task", "status" -> "pending"]}], actor});
+      const written = this:_as_player(project_tools, "todo_write", {["todos" -> {["content" -> "captured task", "status" -> "pending"]}], actor});
       $test_utils:assert_true(index(written, "captured task"), "Todo writes use the captured agent under actor authority");
       const todos = this:_as_player(project_tools, "get_todos", {[], actor});
       $test_utils:assert_true(index(todos, "captured task"), "Todo reads use the same captured agent");
-      for spec in ({{first, "_tool_explain", ["message" -> "foreign output"]},
-          {first, "_tool_ask_user", ["question" -> "foreign prompt"]},
-          {project_tools, "todo_write", ["todos" -> {}]}, {project_tools, "get_todos", []}})
+      for spec in ({{first, "_tool_explain", ["message" -> "foreign output"]}, {first, "_tool_ask_user", ["question" -> "foreign prompt"]}, {project_tools, "todo_write", ["todos" -> {}]}, {project_tools, "get_todos", []}})
         const {target, name, parameters} = spec;
         let denied = false;
         try
@@ -1609,11 +1517,9 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
         $test_utils:assert_true(denied, "Active interaction rejects " + action);
       endfor
       second = $llm_wearable_session:open(child, actor, 0);
-      $test_utils:assert_true(child.agent != agent && child.interaction != first,
-        "Inherited agents and interaction fields are not reused");
+      $test_utils:assert_true(child.agent != agent && child.interaction != first, "Inherited agents and interaction fields are not reused");
       second:close();
-      $test_utils:assert_true(first.active && device.agent == agent,
-        "Closing a descendant preserves its parent's interaction");
+      $test_utils:assert_true(first.active && device.agent == agent, "Closing a descendant preserves its parent's interaction");
       first:close();
       $test_utils:assert_eq(device.interaction, #-1, "The device releases its interaction");
       $test_utils:assert_eq(first.host, #-1, "The interaction releases its device");
@@ -1656,13 +1562,9 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       add_property(session, "reads", 0, {$arch_wizard, ""});
       add_property(session, "mutate", #-1, {$arch_wizard, ""});
       add_verb(session, {$arch_wizard, "rxd", "read_input"}, {"this", "none", "this"});
-      set_verb_code(session, "read_input", {
-        "this.reads = this.reads + 1;",
-        "if (valid(this.mutate)) this.mutate.value = \"changed\"; endif",
-        "return this.answer;"});
+      set_verb_code(session, "read_input", {"this.reads = this.reads + 1;", "if (valid(this.mutate)) this.mutate.value = \"changed\"; endif", "return this.answer;"});
       for iteration in [1..2]
-        $test_utils:assert_eq(provider:_approve(actor, 'set_property,
-          target, 'property, "value", ["value" -> "proposed"]), true, "Scoped approval authorizes its effect");
+        $test_utils:assert_eq(provider:_approve(actor, 'set_property, target, 'property, "value", ["value" -> "proposed"]), true, "Scoped approval authorizes its effect");
       endfor
       $test_utils:assert_eq(session.reads, 1, "The same effect and target reuse approval");
       provider:_approve(actor, 'delete_property, target, 'property, "value", ["value" -> "proposed"]);
@@ -1674,17 +1576,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       session.approvals = [];
       session.answer = "yes";
       session.mutate = target;
-      const stale = provider:_approve(actor, 'set_property,
-        target, 'property, "value", ["value" -> "proposed"]);
+      const stale = provider:_approve(actor, 'set_property, target, 'property, "value", ["value" -> "proposed"]);
       $test_utils:assert_eq(stale.status, 'waiting, "Changed previews require another decision");
       session.mutate = #-1;
       session.answer = "alternative: keep the current value";
-      const alternative = provider:_approve(actor, 'set_property,
-        target, 'property, "value", ["value" -> "proposed"]);
+      const alternative = provider:_approve(actor, 'set_property, target, 'property, "value", ["value" -> "proposed"]);
       $test_utils:assert_eq(alternative.status, 'waiting, "Alternatives are typed waiting outcomes");
       session.answer = "unrecognized answer";
-      const cancelled = provider:_approve(actor, 'set_property,
-        target, 'property, "value", ["value" -> "proposed"]);
+      const cancelled = provider:_approve(actor, 'set_property, target, 'property, "value", ["value" -> "proposed"]);
       $test_utils:assert_eq(cancelled.status, 'cancelled, "Unrecognized answers never authorize an effect");
       session:close();
       session = $llm_wearable_session:open(device, actor, 0);
@@ -1723,10 +1622,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       add_property(session, "probe_target", target, {$arch_wizard, ""});
       add_property(session, "replacement", other, {$arch_wizard, ""});
       add_verb(session, {$arch_wizard, "rxd", "read_input"}, {"this", "none", "this"});
-      set_verb_code(session, "read_input", {
-        "this.reads = this.reads + 1;",
-        "if (this.mutate) this.probe_target.probe = this.replacement; endif",
-        "return this.answer;"});
+      set_verb_code(session, "read_input", {"this.reads = this.reads + 1;", "if (this.mutate) this.probe_target.probe = this.replacement; endif", "return this.answer;"});
       const change = ["object" -> target, "property" -> "probe", "value" -> "new"];
       const cancelled = this:_as_programmer(provider, "set_property", {change, actor});
       $test_utils:assert_eq(cancelled.status, 'cancelled, "A declined mutation has a typed outcome");
@@ -1804,8 +1700,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       endfor
       target.name = "approval object";
       actor.wearing = {@previous, device};
-      $llm_building_tools:dig_passage(["source_room" -> first, "target_room" -> second,
-        "direction" -> "north", "oneway" -> true], actor);
+      $llm_building_tools:dig_passage(["source_room" -> first, "target_room" -> second, "direction" -> "north", "oneway" -> true], actor);
       const passages = $room:passages(first);
       const contents = area.contents;
       const inventory = actor.contents;
@@ -1821,44 +1716,29 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       add_property(session, "reads", 0, {$arch_wizard, ""});
       add_verb(session, {$arch_wizard, "rxd", "read_input"}, {"this", "none", "this"});
       set_verb_code(session, "read_input", {"this.reads = this.reads + 1; return this.answer;"});
-      const operations = {
-        {"build_room", ["name" -> "approved room", "area" -> area]},
-        {"dig_passage", ["source_room" -> first, "target_room" -> third, "direction" -> "east", "oneway" -> true]},
-        {"remove_passage", ["source_room" -> first, "target_room" -> second]},
-        {"set_passage_description", ["source_room" -> first, "direction" -> "north", "description" -> "approved passage"]},
-        {"create_object", ["parent" -> $thing, "name" -> "approved creation"]},
-        {"recycle_object", ["object" -> target]},
-        {"rename_object", ["object" -> target, "name" -> "approved object"]},
-        {"describe_object", ["object" -> target, "description" -> "approved description"]},
-        {"move_object", ["object" -> target, "destination" -> second]},
-        {"set_integrated_description", ["object" -> target, "integrated_description" -> "approved integration"]}
-      };
+      const operations = {{"build_room", ["name" -> "approved room", "area" -> area]}, {"dig_passage", ["source_room" -> first, "target_room" -> third, "direction" -> "east", "oneway" -> true]}, {"remove_passage", ["source_room" -> first, "target_room" -> second]}, {"set_passage_description", ["source_room" -> first, "direction" -> "north", "description" -> "approved passage"]}, {"create_object", ["parent" -> $thing, "name" -> "approved creation"]}, {"recycle_object", ["object" -> target]}, {"rename_object", ["object" -> target, "name" -> "approved object"]}, {"describe_object", ["object" -> target, "description" -> "approved description"]}, {"move_object", ["object" -> target, "destination" -> second]}, {"set_integrated_description", ["object" -> target, "integrated_description" -> "approved integration"]}};
       for operation in (operations)
         const result = this:_as_programmer(provider, operation[1], {operation[2], actor});
         $test_utils:assert_eq(result.status, 'cancelled, "Declined " + operation[1] + " returns a cancelled outcome");
       endfor
       $test_utils:assert_eq(session.reads, 10, "Every advertised building mutation asks for approval");
-      $test_utils:assert_true(length(area.contents) == length(contents)
-        && length({room for room in (area.contents) if !(room in contents)}) == 0, "Declined construction creates no room");
-      $test_utils:assert_true(length(actor.contents) == length(inventory)
-        && length({item for item in (actor.contents) if !(item in inventory)}) == 0, "Declined creation adds no object");
+      $test_utils:assert_true(length(area.contents) == length(contents) && length({ room for room in (area.contents) if !(room in contents) }) == 0, "Declined construction creates no room");
+      $test_utils:assert_true(length(actor.contents) == length(inventory) && length({ item for item in (actor.contents) if !(item in inventory) }) == 0, "Declined creation adds no object");
       $test_utils:assert_eq($room:passages(first), passages, "Declined passage changes preserve the connection");
-      $test_utils:assert_eq({target.name, target.description, target.integrated_description, target.location},
-        {"approval object", description, integrated, #-1}, "Declined object changes preserve native state");
+      $test_utils:assert_eq({target.name, target.description, target.integrated_description, target.location}, {"approval object", description, integrated, #-1}, "Declined object changes preserve native state");
       session.answer = "yes";
       for index in ({1, 2, 4, 5, 7, 8, 9, 10})
         const accepted = operations[index];
         const result = this:_as_programmer(provider, accepted[1], {accepted[2], actor});
         $test_utils:assert_true(typeof(result) == TYPE_STR, "Accepted " + accepted[1] + " succeeds");
       endfor
-      const rooms = {built_room for built_room in (area.contents) if built_room.name == "approved room"};
+      const rooms = { built_room for built_room in (area.contents) if built_room.name == "approved room" };
       $test_utils:assert_eq(length(rooms), 1, "One approved room is created");
       built = rooms[1];
-      const objects = {object for object in (actor.contents) if object.name == "approved creation"};
+      const objects = { object for object in (actor.contents) if object.name == "approved creation" };
       $test_utils:assert_eq(length(objects), 1, "One approved object enters the actor's inventory");
       created = objects[1];
-      $test_utils:assert_eq({target.name, target.description, target.integrated_description, target.location},
-        {"approved object", "approved description", "approved integration", second}, "Approved object changes take effect");
+      $test_utils:assert_eq({target.name, target.description, target.integrated_description, target.location}, {"approved object", "approved description", "approved integration", second}, "Approved object changes take effect");
       $test_utils:assert_eq(length($room:passages(first)), 2, "Approved digging creates a distinct connection");
       provider:remove_passage(operations[3][2], actor);
       $test_utils:assert_eq(length($room:passages(first)), 1, "Approved removal removes only the selected connection");
@@ -1894,22 +1774,18 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       first:set_owner(actor);
       second:set_owner(actor);
       actor.wearing = {@previous, device};
-      $llm_building_tools:dig_passage(["source_room" -> first, "target_room" -> second,
-        "direction" -> "north", "oneway" -> true], actor);
+      $llm_building_tools:dig_passage(["source_room" -> first, "target_room" -> second, "direction" -> "north", "oneway" -> true], actor);
       session = $llm_wearable_session:open(device, actor, 0);
       const provider = device.agent.tools["set_passage_description"].target_obj;
       add_property(session, "source_room", first, {$arch_wizard, ""});
       add_verb(session, {$arch_wizard, "rxd", "read_input"}, {"this", "none", "this"});
-      set_verb_code(session, "read_input", {
-        "$llm_building_tools:set_passage_description([\"source_room\" -> this.source_room, \"direction\" -> \"north\", \"description\" -> \"intervening edit\"], this.requester);",
-        "return \"yes_all\";"});
+      set_verb_code(session, "read_input", {"$llm_building_tools:set_passage_description([\"source_room\" -> this.source_room, \"direction\" -> \"north\", \"description\" -> \"intervening edit\"], this.requester);", "return \"yes_all\";"});
       const result = provider:set_passage_description(["source_room" -> first, "direction" -> "north", "description" -> "stale replacement"], actor);
       $test_utils:assert_eq(result.status, 'waiting, "Changed connection requires another decision");
       $test_utils:assert_true(index(toliteral($room:find_passage(first, "north")), "intervening edit"), "The intervening edit survives");
       $test_utils:assert_false(maphaskey(session.approvals[first], 'set_passage_description), "Stale yes-to-all approval is discarded");
       actor.is_builder = false;
-      $test_utils:assert_raises(E_PERM, provider, "rename_object", {["object" -> first, "name" -> "revoked builder"], actor},
-        "Builder revocation prevents another wearable mutation");
+      $test_utils:assert_raises(E_PERM, provider, "rename_object", {["object" -> first, "name" -> "revoked builder"], actor}, "Builder revocation prevents another wearable mutation");
       session:close();
       let denied = false;
       try
@@ -1939,8 +1815,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       set_verb_code(prototype, "moveto", {"return E_PERM;"});
       let denied = false;
       try
-        this:_as_programmer($llm_building_tools, "create_object",
-          {["parent" -> prototype, "name" -> "failed placement"], actor});
+        this:_as_programmer($llm_building_tools, "create_object", {["parent" -> prototype, "name" -> "failed placement"], actor});
       except (E_PERM)
         denied = true;
       endtry
@@ -1954,17 +1829,14 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const area = create($area, actor, 1);
       add_property(area, "started", false, {actor, ""});
       add_verb(area, {actor, "rxd", "make_room_in"}, {"this", "none", "this"});
-      set_verb_code(area, "make_room_in", {
-        "this.started = true; suspend(0); raise(E_PERM, \"Constructor failed after committing.\");"});
+      set_verb_code(area, "make_room_in", {"this.started = true; suspend(0); raise(E_PERM, \"Constructor failed after committing.\");"});
       denied = false;
       try
-        this:_as_programmer($llm_building_tools, "build_room",
-          {["name" -> "partial construction", "area" -> area], actor});
+        this:_as_programmer($llm_building_tools, "build_room", {["name" -> "partial construction", "area" -> area], actor});
       except (E_PERM)
         denied = true;
       endtry
-      $test_utils:assert_true(area.started && denied,
-        "A constructor error propagates after effects; it is not a preflight denial result");
+      $test_utils:assert_true(area.started && denied, "A constructor error propagates after effects; it is not a preflight denial result");
     finally
       valid(stubborn) && recycle(stubborn);
     endtry
@@ -1982,7 +1854,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       device:configure();
       const tool = $llm_programming_tools:get_eval_tool();
       device.agent:add_tool(tool.name, tool);
-      $test_utils:assert_false("eval" in {entry.name for entry in ($llm_programming_tools:get_tools())}, "The default programming catalog excludes eval");
+      $test_utils:assert_false("eval" in { entry.name for entry in ($llm_programming_tools:get_tools()) }, "The default programming catalog excludes eval");
       $test_utils:assert_raises(E_PERM, $llm_programming_tools, "evaluate", {["code" -> "return 1;"], actor}, "Unbound eval cannot bypass interactive confirmation");
       session = $llm_wearable_session:open(device, actor, 0);
       const provider = device.agent.tools["eval"].target_obj;
@@ -2014,10 +1886,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     const bag = create($msg_bag, $arch_wizard, 1);
     bag.entries = {$sub_utils:compile("original")};
     add_property(target, "shared_msgs", bag, {actor, ""});
-    for operation in ({
-        {"set_message_template", ["object" -> target, "property" -> "shared_msgs", "template" -> "changed"]},
-        {"add_message_template", ["object" -> target, "property" -> "shared_msgs", "template" -> "added"]},
-        {"delete_message_template", ["object" -> target, "property" -> "shared_msgs", "index" -> 1]}})
+    for operation in ({{"set_message_template", ["object" -> target, "property" -> "shared_msgs", "template" -> "changed"]}, {"add_message_template", ["object" -> target, "property" -> "shared_msgs", "template" -> "added"]}, {"delete_message_template", ["object" -> target, "property" -> "shared_msgs", "index" -> 1]}})
       let denied = false;
       try
         this:_as_programmer($llm_behavior_tools, operation[1], {operation[2], actor});
@@ -2033,12 +1902,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     const proxy = create($llm_wearable, actor, 1);
     add_verb(proxy, {actor, "rxd", "forward"}, {"this", "none", "this"});
     set_verb_code(proxy, "forward", {"const {name, values} = args; return $obj_utils:(name)(@values);"});
-    for operation in ({
-        {"set_compiled_message", {foreign, "protected_msgs", {"changed"}, actor}},
-        {"add_message_entry", {foreign, "protected_msgs", {"added"}, actor}},
-        {"add_message_entry", {foreign, "new_msgs", {"added"}, actor}},
-        {"remove_message_entry", {foreign, "protected_msgs", 1, actor}},
-        {"set_compiled_message", {foreign, "protected_msgs", {"forged"}, #90102}}})
+    for operation in ({{"set_compiled_message", {foreign, "protected_msgs", {"changed"}, actor}}, {"add_message_entry", {foreign, "protected_msgs", {"added"}, actor}}, {"add_message_entry", {foreign, "new_msgs", {"added"}, actor}}, {"remove_message_entry", {foreign, "protected_msgs", 1, actor}}, {"set_compiled_message", {foreign, "protected_msgs", {"forged"}, #90102}}})
       let denied = false;
       try
         this:_as_programmer(proxy, "forward", operation);
@@ -2050,25 +1914,19 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     $test_utils:assert_eq(foreign.protected_msgs:entries(), {"original"}, "Foreign target remains unchanged");
     $test_utils:assert_eq($obj_utils:property_key(foreign, "new_msgs"), E_PROPNF, "No foreign property is defined");
     set_property_info(bag, "entries", {actor, "r"});
-    this:_as_programmer($llm_behavior_tools, "add_message_template",
-      {["object" -> target, "property" -> "shared_msgs", "template" -> "authorized"], actor});
+    this:_as_programmer($llm_behavior_tools, "add_message_template", {["object" -> target, "property" -> "shared_msgs", "template" -> "authorized"], actor});
     $test_utils:assert_eq(length(bag.entries), 2, "The actual property owner can edit a referenced bag");
     set_property_info(foreign, "protected_msgs", {#90102, "rw"});
-    this:_as_programmer(proxy, "forward", {"add_message_entry",
-      {foreign, "protected_msgs", {"public entry"}, actor}});
-    $test_utils:assert_eq(length(foreign.protected_msgs:entries()), 2,
-      "An explicitly writable property remains editable without owning its object");
+    this:_as_programmer(proxy, "forward", {"add_message_entry", {foreign, "protected_msgs", {"public entry"}, actor}});
+    $test_utils:assert_eq(length(foreign.protected_msgs:entries()), 2, "An explicitly writable property remains editable without owning its object");
     const late = create($thing, actor, 1);
     late.r = 1;
     add_property(late, "late_msg", {"original"}, {actor, "r"});
     add_verb(late, {$arch_wizard, "rxd", "message_bindings"}, {"this", "none", "this"});
-    set_verb_code(late, "message_bindings", {
-      "this.owner = #90102; set_property_info(this, \"late_msg\", {#90102, \"r\"});",
-      "suspend(0); return false;"});
+    set_verb_code(late, "message_bindings", {"this.owner = #90102; set_property_info(this, \"late_msg\", {#90102, \"r\"});", "suspend(0); return false;"});
     let denied = false;
     try
-      this:_as_programmer($llm_behavior_tools, "set_message_template",
-        {["object" -> late, "property" -> "late_msg", "template" -> "stale write"], actor});
+      this:_as_programmer($llm_behavior_tools, "set_message_template", {["object" -> late, "property" -> "late_msg", "template" -> "stale write"], actor});
     except (E_PERM)
       denied = true;
     endtry
@@ -2097,14 +1955,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       add_property(session, "reads", 0, {$arch_wizard, ""});
       add_property(session, "mode", 'bag, {$arch_wizard, ""});
       add_verb(session, {$arch_wizard, "rxd", "read_input"}, {"this", "none", "this"});
-      set_verb_code(session, "read_input", {
-        "this.reads = this.reads + 1;",
-        "if (this.mode == 'bag)",
-        "  this.subject.replies_msgs.entries = {$sub_utils:compile(\"intervening\")};",
-        "elseif (this.mode == 'state)",
-        "  $reaction:declare_state(this.subject, 'intervening, 'integer, 1);",
-        "endif",
-        "suspend(0); return this.mode == 'bag ? \"yes_all\" | \"yes\";"});
+      set_verb_code(session, "read_input", {"this.reads = this.reads + 1;", "if (this.mode == 'bag)", "  this.subject.replies_msgs.entries = {$sub_utils:compile(\"intervening\")};", "elseif (this.mode == 'state)", "  $reaction:declare_state(this.subject, 'intervening, 'integer, 1);", "endif", "suspend(0); return this.mode == 'bag ? \"yes_all\" | \"yes\";"});
       const request = ["object" -> host, "property" -> "replies_msgs", "template" -> "added"];
       const stale = this:_as_programmer(provider, "add_message_template", {request, actor});
       $test_utils:assert_eq(stale.status, 'waiting, "Changed object-bag entries invalidate approval");
@@ -2114,14 +1965,12 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       $test_utils:assert_eq(session.reads, 2, "Stale yes-to-all approval is discarded");
       $test_utils:assert_eq(length(bag.entries), 2, "Fresh approval appends to the current bag");
       add_verb(host, {actor, "rxd", "message_bindings"}, {"this", "none", "this"});
-      set_verb_code(host, "message_bindings", {
-        "this.replies_msgs.entries = {$sub_utils:compile(\"compile changed\")}; suspend(0); return false;"});
+      set_verb_code(host, "message_bindings", {"this.replies_msgs.entries = {$sub_utils:compile(\"compile changed\")}; suspend(0); return false;"});
       const compiled = this:_as_programmer(provider, "set_message_template", {request, actor});
       $test_utils:assert_eq(compiled.status, 'waiting, "Compilation changes invalidate the precomputed proposal");
       $test_utils:assert_eq(session.reads, 2, "An already-stale proposal does not ask for approval");
       session.mode = 'state;
-      const authored = this:_as_programmer(provider, "author_reaction",
-        {["command" -> "state", "text" -> tostr(host) + " visits number 0"], actor});
+      const authored = this:_as_programmer(provider, "author_reaction", {["command" -> "state", "text" -> tostr(host) + " visits number 0"], actor});
       $test_utils:assert_eq(session.reads, 3, "Authoring invokes its confirmation callback");
       $test_utils:assert_true(maphaskey(host.reaction_state_fields, 'intervening), "The concurrent state edit actually ran");
       $test_utils:assert_eq(authored.status, 'waiting, "Changed authoring state invalidates approval");
@@ -2154,8 +2003,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       $test_utils:assert_eq(client.actor, observer, "The provider receives the NPC actor");
       $test_utils:assert_eq(client.purpose, 'triage, "The provider receives the triage purpose");
       for text in ({"IGNORE", "IGNORE then ENGAGE", "ENGAGEMENT", "<think>ENGAGE</think>", ""})
-        const reply = ["choices" -> {["message" -> ["role" -> "assistant", "content" -> text,
-          "reasoning_content" -> "ENGAGE"]]}];
+        const reply = ["choices" -> {["message" -> ["role" -> "assistant", "content" -> text, "reasoning_content" -> "ENGAGE"]]}];
         $test_utils:assert_false($llm_observer_policy:decision(reply), "Only an explicit visible decision engages");
       endfor
       $test_utils:assert_false($llm_observer_policy:decision([]), "Malformed replies decline");
@@ -2217,12 +2065,9 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       $test_utils:assert_eq($llm_observer_speech:mk("<think>private reasoning</think> Hello.").text, "Hello.", "Reasoning blocks are excluded");
       $test_utils:assert_eq($llm_observer_speech:mk("<think>unfinished").text, "", "Unfinished reasoning is silent");
       $test_utils:assert_eq($llm_observer_speech:mk("SILENT").text, "", "Explicit silence is preserved");
-      $test_utils:assert_eq($llm_observer_speech:mk("\"Le Spleen it is.\"").text, "Le Spleen it is.",
-        "A reply wrapped in quotes is not quoted twice");
-      $test_utils:assert_eq($llm_observer_speech:mk("\u201CGood evening.\u201D").text, "Good evening.",
-        "Curly wrapping quotes are removed too");
-      $test_utils:assert_eq($llm_observer_speech:mk("\"Yes,\" he said, \"go.\"").text, "\"Yes,\" he said, \"go.\"",
-        "Quotes inside the reply are kept");
+      $test_utils:assert_eq($llm_observer_speech:mk("\"Le Spleen it is.\"").text, "Le Spleen it is.", "A reply wrapped in quotes is not quoted twice");
+      $test_utils:assert_eq($llm_observer_speech:mk("“Good evening.”").text, "Good evening.", "Curly wrapping quotes are removed too");
+      $test_utils:assert_eq($llm_observer_speech:mk("\"Yes,\" he said, \"go.\"").text, "\"Yes,\" he said, \"go.\"", "Quotes inside the reply are kept");
       let large = "x";
       for width in [1..14]
         large = large + large;
@@ -2306,8 +2151,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       for target in ({$llm_observer_policy, $llm_observation})
         denied = false;
         try
-          this:_as_programmer(target, target == $llm_observer_policy ? "ready" | "event",
-            target == $llm_observer_policy ? {observer} | {observer, event});
+          this:_as_programmer(target, target == $llm_observer_policy ? "ready" | "event", target == $llm_observer_policy ? {observer} | {observer, event});
         except (E_PERM)
           denied = true;
         endtry
@@ -2340,19 +2184,12 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     agent.client = client;
     add_property(client, "blocked", false, {#90102, ""});
     add_property(client, "actors", {}, {#90102, ""});
-    set_verb_code(client, "chat", {
-      "this.requests = {@this.requests, args[1]};",
-      "this.actors = {@this.actors, caller_perms()};",
-      "while (this.blocked) suspend(0.1); endwhile",
-      "return this.replies[1];"});
+    set_verb_code(client, "chat", {"this.requests = {@this.requests, args[1]};", "this.actors = {@this.actors, caller_perms()};", "while (this.blocked) suspend(0.1); endwhile", "return this.replies[1];"});
     add_property(room, "events", {}, {#90102, ""});
     add_property(room, "blocked", false, {#90102, ""});
     add_property(room, "entered", false, {#90102, ""});
     add_verb(room, {#90102, "rxd", "announce"}, {"this", "none", "this"});
-    set_verb_code(room, "announce", {
-      "this.entered = true;",
-      "while (this.blocked) suspend(0.1); endwhile",
-      "this.events = {@this.events, args[1]};"});
+    set_verb_code(room, "announce", {"this.entered = true;", "while (this.blocked) suspend(0.1); endwhile", "this.events = {@this.events, args[1]};"});
     move(observer, room);
     return {observer, room, client, agent};
   endmethod
@@ -2486,6 +2323,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_observer_partial_effect_requires_recovery owner: ARCH_WIZARD
     "Cancelling a suspended mutation retains its unknown outcome and prevents automatic replay.";
     const {observer, room, client, agent} = this:_observer_fixture();
@@ -2526,21 +2364,12 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
       const {observer, room, client, agent} = this:_observer_fixture($mr_welcome);
       try
         observer:_setup_agent(agent);
-        client.replies = {
-          ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {
-            ["id" -> "say", "type" -> "function", "function" -> ["name" -> "emote",
-              "arguments" -> ["action" -> "Good evening."]]]
-          }]]}],
-          ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "\"" + reply + "\""]]}]
-        };
-        set_verb_code(client, "chat", {
-          "const reply = this.replies[1];",
-          "if (length(this.replies) > 1) this.replies = listdelete(this.replies, 1); endif",
-          "return reply;"});
+        client.replies = {["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {["id" -> "say", "type" -> "function", "function" -> ["name" -> "emote", "arguments" -> ["action" -> "Good evening."]]]}]]}], ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "\"" + reply + "\""]]}]};
+        set_verb_code(client, "chat", {"const reply = this.replies[1];", "if (length(this.replies) > 1) this.replies = listdelete(this.replies, 1); endif", "return reply;"});
         const job = this:_as_player(observer, "request_response", {"greet the room"});
         this:_await_observer(job);
         $test_utils:assert_eq(job.state, 'complete, "The turn completes");
-        const lines = {event for event in (room.events) if (index(toliteral(event), "Good evening.") || index(toliteral(event), reply))};
+        const lines = { event for event in (room.events) if index(toliteral(event), "Good evening.") || index(toliteral(event), reply) };
         $test_utils:assert_eq(length(lines), spoken, "Reply " + toliteral(reply) + " reaches the room the expected number of times");
       finally
         recycle(observer);
@@ -2556,21 +2385,8 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     const {observer, room, client, agent} = this:_observer_fixture($mr_welcome);
     try
       observer:_setup_agent(agent);
-      client.replies = {
-        ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {
-          ["id" -> "social", "type" -> "function", "function" -> ["name" -> "emote",
-            "arguments" -> ["action" -> "waves in greeting."]]],
-          ["id" -> "memory", "type" -> "function", "function" -> ["name" -> "remember_fact",
-            "arguments" -> ["subject" -> "visitor", "fact" -> "likes the garden"]]]
-        }]]}],
-        ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "SILENT"]]}]
-      };
-      set_verb_code(client, "chat", {
-        "this.requests = {@this.requests, args[1]};",
-        "this.actors = {@this.actors, caller_perms()};",
-        "const reply = this.replies[1];",
-        "if (length(this.replies) > 1) this.replies = listdelete(this.replies, 1); endif",
-        "return reply;"});
+      client.replies = {["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {["id" -> "social", "type" -> "function", "function" -> ["name" -> "emote", "arguments" -> ["action" -> "waves in greeting."]]], ["id" -> "memory", "type" -> "function", "function" -> ["name" -> "remember_fact", "arguments" -> ["subject" -> "visitor", "fact" -> "likes the garden"]]]}]]}], ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "SILENT"]]}]};
+      set_verb_code(client, "chat", {"this.requests = {@this.requests, args[1]};", "this.actors = {@this.actors, caller_perms()};", "const reply = this.replies[1];", "if (length(this.replies) > 1) this.replies = listdelete(this.replies, 1); endif", "return reply;"});
       const job = this:_as_player(observer, "request_response", {"greet and remember"});
       this:_await_observer(job);
       $test_utils:assert_eq(job.state, 'complete, "Shared social tools finish through the actual model loop");

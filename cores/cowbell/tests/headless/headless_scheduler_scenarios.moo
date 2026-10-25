@@ -6,8 +6,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Native schedule lifecycle scenarios for housekeeping.";
-  override import_export_id = "headless_scheduler_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Native schedule lifecycle scenarios for housekeeping.";
 
   method test_headless_housekeeping_native_lifecycle owner: ARCH_WIZARD
     "Housekeeping starts once, remains recurring after empty sweeps, and cancels future firings.";
@@ -93,16 +92,14 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     operation == "housekeeping_stop" && return housekeeping:stop();
     raise(E_PERM);
   endmethod
+
   method _recording_player owner: ARCH_WIZARD
     "Create a test-only player that records current output without a network connection.";
     caller == this && this == #90001 || raise(E_PERM);
     const recipient = create($player, $arch_wizard, 2);
     add_property(recipient, "recorded_events", {}, {$arch_wizard, "r"});
     add_verb(recipient, {$arch_wizard, "rxd", "inform_current"}, {"this", "none", "this"});
-    set_verb_code(recipient, "inform_current", {
-      "const {event} = args;",
-      "this.recorded_events = {@this.recorded_events, event};",
-      "return true;"});
+    set_verb_code(recipient, "inform_current", {"const {event} = args;", "this.recorded_events = {@this.recorded_events, event};", "return true;"});
     return recipient;
   endmethod
 
@@ -117,12 +114,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
       add_property(room, "housekeeper", housekeeping, {$arch_wizard, "r"});
       add_property(room, "housekeeping_events", {}, {$arch_wizard, "r"});
       add_verb(room, {$arch_wizard, "rxd", "announce"}, {"this", "none", "this"});
-      set_verb_code(room, "announce", {
-        "const {event} = args;",
-        "if (event.actor == this.housekeeper)",
-        "  this.housekeeping_events = {@this.housekeeping_events, event};",
-        "endif",
-        "return true;"});
+      set_verb_code(room, "announce", {"const {event} = args;", "if (event.actor == this.housekeeper)", "  this.housekeeping_events = {@this.housekeeping_events, event};", "endif", "return true;"});
       housekeeping.idle_threshold = 1;
       for participant in ({first, second})
         set_player_flag(participant, 1);
@@ -156,10 +148,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     const roles = {player.wizard, player.programmer};
     add_property(player, "recorded_events", {}, {$arch_wizard, "r"});
     add_verb(player, {$arch_wizard, "rxd", "inform_current"}, {"this", "none", "this"});
-    set_verb_code(player, "inform_current", {
-      "const {event} = args;",
-      "this.recorded_events = {@this.recorded_events, event};",
-      "return true;"});
+    set_verb_code(player, "inform_current", {"const {event} = args;", "this.recorded_events = {@this.recorded_events, event};", "return true;"});
     player.wizard = false;
     player.programmer = true;
     return {player, roles};
@@ -230,8 +219,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
       "Commit registrations before reading runtime diagnostics.";
       suspend(0);
       const rows = this:_schedule_rows_as(owner);
-      $test_utils:assert_eq({row[1] for row in (rows)}, {tostr(id) for id in (ids[1..3])},
-        "ordinary programmers see only their schedules");
+      $test_utils:assert_eq({ row[1] for row in (rows) }, { tostr(id) for id in (ids[1..3]) }, "ordinary programmers see only their schedules");
       $test_utils:assert_eq(rows[1][4], "once", "one-shot timing is distinct");
       $test_utils:assert_true(index(rows[2][4], "every"), "fixed recurrence is visible");
       $test_utils:assert_true(index(rows[3][4], "adaptive"), "adaptive recurrence is visible");
@@ -244,7 +232,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
         $test_utils:assert_true(index(output, "Running task"), name + " labels firing task IDs");
       endfor
       owner.wizard = true;
-      const all_ids = {visible_row[1] for visible_row in (this:_schedule_rows_as(owner))};
+      const all_ids = { visible_row[1] for visible_row in (this:_schedule_rows_as(owner)) };
       $test_utils:assert_true(tostr(foreign) in all_ids, "wizards see other owners' schedules");
     finally
       for id in (ids)
@@ -272,14 +260,11 @@ object HEADLESS_SCHEDULER_SCENARIOS [
       const output = this:_schedule_command(owner, "@schedule", tostr(id));
       $test_utils:assert_true(index(output, "_schedule_command_firing"), "details include the callback");
       $test_utils:assert_true(index(output, "Runs / faults"), "details include diagnostics");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(foreign)),
-        "Permission denied"), "foreign diagnostics remain private");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(foreign)),
-        "Permission denied"), "foreign cancellation is denied");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(foreign)), "Permission denied"), "foreign diagnostics remain private");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(foreign)), "Permission denied"), "foreign cancellation is denied");
       for invalid in ({"", "0", "-1", "1.5", "1junk", "1 2", "9999999999999999999999999999999"})
         for name in ({"@schedule", "@stop-schedule"})
-          $test_utils:assert_true(index(this:_schedule_command(owner, name, invalid), "Usage:"),
-            "malformed IDs must not select another schedule");
+          $test_utils:assert_true(index(this:_schedule_command(owner, name, invalid), "Usage:"), "malformed IDs must not select another schedule");
         endfor
       endfor
       owner.programmer = false;
@@ -287,23 +272,17 @@ object HEADLESS_SCHEDULER_SCENARIOS [
       $test_utils:assert_eq(denied, E_PERM, "feature access does not grant programmer authority");
       owner.programmer = true;
       $test_utils:assert_true(schedule_valid(id) && schedule_valid(foreign), "denials leave schedules live");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(id)),
-        "Stopped schedule"), "owner may stop recurrence");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(id)), "Stopped schedule"), "owner may stop recurrence");
       "Commit the stop before checking runtime state.";
       suspend(0);
       $test_utils:assert_false(schedule_valid(id), "owner cancellation reaches the scheduler");
       $test_utils:assert_true(schedule_valid(foreign), "foreign schedule remains live");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(id)),
-        "No live schedule"), "repeated stops are harmless");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(id)),
-        "No such schedule"), "removed IDs have a useful diagnostic");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedules"), "(none)"),
-        "empty schedule list is explicit");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@stop-schedule", tostr(id)), "No live schedule"), "repeated stops are harmless");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(id)), "No such schedule"), "removed IDs have a useful diagnostic");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedules"), "(none)"), "empty schedule list is explicit");
       owner.wizard = true;
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(foreign)),
-        "_schedule_command_firing"), "wizard may inspect another owner's schedule");
-      $test_utils:assert_true(index(this:_schedule_command(owner, "@kill-schedule", tostr(foreign)),
-        "Stopped schedule"), "wizard may use the stop alias for another owner");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@schedule", tostr(foreign)), "_schedule_command_firing"), "wizard may inspect another owner's schedule");
+      $test_utils:assert_true(index(this:_schedule_command(owner, "@kill-schedule", tostr(foreign)), "Stopped schedule"), "wizard may use the stop alias for another owner");
       "Commit wizard cancellation before checking runtime state.";
       suspend(0);
       $test_utils:assert_false(schedule_valid(foreign), "wizard cancellation reaches the scheduler");
@@ -342,8 +321,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
       $test_utils:assert_true(valid_task(firing), "current firing survives recurrence cancellation");
       "The fixture callback is wizard-owned; killing its task requires wizard authority.";
       actor.wizard = true;
-      $test_utils:assert_true(index(this:_schedule_command(actor, "@kill", tostr(firing)),
-        "Killed task"), "existing task command controls the firing");
+      $test_utils:assert_true(index(this:_schedule_command(actor, "@kill", tostr(firing)), "Killed task"), "existing task command controls the firing");
     finally
       schedule_stop(id);
       firing && `kill_task(firing) ! E_INVARG';
@@ -351,5 +329,4 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     endtry
     return true;
   endmethod
-
 endobject

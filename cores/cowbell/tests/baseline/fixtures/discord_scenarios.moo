@@ -31,7 +31,7 @@ object DISCORD_SCENARIOS [
   method _setup owner: ARCH_WIZARD
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
-    let saved = ["listeners" -> #0.presence_listeners, "location" -> this.location];
+    let saved = ["listeners" -> $presence_listeners, "location" -> this.location];
     for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
       saved[key] = bridge.(key);
     endfor
@@ -60,15 +60,14 @@ object DISCORD_SCENARIOS [
     for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
       bridge.(key) = saved[key];
     endfor
-    #0.presence_listeners = saved["listeners"];
+    $presence_listeners = saved["listeners"];
     move(this, saved["location"]);
   endmethod
 
   method _message owner: ARCH_WIZARD
     "A channel message as Discord's API returns it.";
     const {id, author_id, name, text, ?extra = []} = args;
-    let message = ["id" -> id, "type" -> 0, "channel_id" -> "5", "content" -> text,
-      "author" -> ["id" -> author_id, "username" -> name, "global_name" -> name, "avatar" -> "abc123"]];
+    let message = ["id" -> id, "type" -> 0, "channel_id" -> "5", "content" -> text, "author" -> ["id" -> author_id, "username" -> name, "global_name" -> name, "avatar" -> "abc123"]];
     for key in (mapkeys(extra))
       message[key] = extra[key];
     endfor
@@ -130,15 +129,10 @@ object DISCORD_SCENARIOS [
       $test_utils:assert_eq(this.reads[1][2], {{"Authorization", "Bot bot-token-0123456789abcdef0123456789"}}, "as the bot");
       const escape = parse_json("\"\\u001b\"");
       "Discord lists the newest first.";
-      this.channel = {this:_message("1000", "42", "alice", "second"),
-        this:_message("999", "43", "relay", "from a bot", ["author" -> ["id" -> "43", "username" -> "relay", "bot" -> true]]),
-        this:_message("998", "44", "hook", "from a webhook", ["webhook_id" -> "7"]),
-        this:_message("997", "42", "alice", "pinned a message", ["type" -> 6]),
-        this:_message("101", "42", "alice", "hi" + escape + "[31m there")};
+      this.channel = {this:_message("1000", "42", "alice", "second"), this:_message("999", "43", "relay", "from a bot", ["author" -> ["id" -> "43", "username" -> "relay", "bot" -> true]]), this:_message("998", "44", "hook", "from a webhook", ["webhook_id" -> "7"]), this:_message("997", "42", "alice", "pinned a message", ["type" -> 6]), this:_message("101", "42", "alice", "hi" + escape + "[31m there")};
       $test_utils:assert_eq($discord_bridge:_poll(), 2, "two messages are spoken");
       $test_utils:assert_eq(this.reads[2][1], "https://discord.com/api/v10/channels/5/messages?limit=50&after=100", "reads after the cursor");
-      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): hi [31m there", "Bakelite radio: alice (Discord): second"},
-        "oldest first, control characters removed, marked as from Discord");
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): hi [31m there", "Bakelite radio: alice (Discord): second"}, "oldest first, control characters removed, marked as from Discord");
       $test_utils:assert_eq($discord_bridge.cursor, "1000", "the cursor moves to the newest");
       $test_utils:assert_eq($discord_bridge.outbox, {}, "the speaker does not relay its own words");
     finally

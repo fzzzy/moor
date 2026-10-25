@@ -5,22 +5,15 @@ object HEADLESS_LLM_SCENARIOS [
   parent: ROOT
   owner: HACKER
   readable: true
-  override import_export_id = "headless_llm_scenarios";
 
   method test_rule_tool_uses_supplied_inputs_and_actor owner: ARCH_WIZARD
     "Rule tools preserve literal text, report invalid conditions, and cannot read private facts.";
     const target = create($thing, #90100, 2);
     try
       add_property(target, "private_rule_fact", 1, {#90100, ""});
-      const result = $llm_behavior_tools:tool_test_rule([
-        "expression" -> "input.Actor == #90102 AND input.Word == \"Actor\"",
-        "bindings" -> ["Actor" -> "#90102", "Word" -> "Actor"]], #90102);
-      $test_utils:assert_true(index(result, "Condition matched"),
-        "An explicit reference is resolved while ordinary text remains text");
-      for sample in ({
-        {["expression" -> "TRUE ignored", "bindings" -> []], E_INVARG},
-        {["expression" -> "NOT property_is(object: input.Target, field: 'private_rule_fact, value: 1)",
-          "bindings" -> ["Target" -> tostr(target)]], E_PERM}})
+      const result = $llm_behavior_tools:tool_test_rule(["expression" -> "input.Actor == #90102 AND input.Word == \"Actor\"", "bindings" -> ["Actor" -> "#90102", "Word" -> "Actor"]], #90102);
+      $test_utils:assert_true(index(result, "Condition matched"), "An explicit reference is resolved while ordinary text remains text");
+      for sample in ({{["expression" -> "TRUE ignored", "bindings" -> []], E_INVARG}, {["expression" -> "NOT property_is(object: input.Target, field: 'private_rule_fact, value: 1)", "bindings" -> ["Target" -> tostr(target)]], E_PERM}})
         const {values, expected} = sample;
         let failure = 0;
         try
@@ -42,8 +35,7 @@ object HEADLESS_LLM_SCENARIOS [
     for i in [1..65]
       too_many["input_" + tostr(i)] = i;
     endfor
-    for sample in ({{"['Actor -> #90102]", E_TYPE}, {["Actor" -> #90102], E_TYPE},
-        {["" -> 1], E_INVARG}, {["Actor" -> "#not_an_object"], E_INVARG}, {too_many, E_QUOTA}})
+    for sample in ({{"['Actor -> #90102]", E_TYPE}, {["Actor" -> #90102], E_TYPE}, {["" -> 1], E_INVARG}, {["Actor" -> "#not_an_object"], E_INVARG}, {too_many, E_QUOTA}})
       const {bindings, expected} = sample;
       let failure = 0;
       try
@@ -64,8 +56,7 @@ object HEADLESS_LLM_SCENARIOS [
     try
       add_property(wearer, "captured_events", {}, {$arch_wizard, ""});
       add_verb(wearer, {$arch_wizard, "rxd", "inform_current"}, {"this", "none", "this"});
-      set_verb_code(wearer, "inform_current", {
-        "this.captured_events = {@this.captured_events, args[1]};"});
+      set_verb_code(wearer, "inform_current", {"this.captured_events = {@this.captured_events, args[1]};"});
       wearer.llm_token_budget = 10000;
       wearer.llm_tokens_used = 2500;
       wearable.agent = agent;
@@ -73,32 +64,25 @@ object HEADLESS_LLM_SCENARIOS [
       agent.compaction_threshold = 0.75;
       for sample in ({{0, "FRESH"}, {1199, "OK"}, {1200, "NEAR LIMIT"}, {1500, "COMPACTING"}})
         const {prompt_tokens, status} = sample;
-        agent.last_token_usage = prompt_tokens
-          ? ["prompt_tokens" -> prompt_tokens, "total_tokens" -> prompt_tokens + 10] | [];
+        agent.last_token_usage = prompt_tokens ? ["prompt_tokens" -> prompt_tokens, "total_tokens" -> prompt_tokens + 10] | [];
         wearer.captured_events = {};
         wearable:_show_token_usage(wearer);
-        $test_utils:assert_eq(length(wearer.captured_events), 2,
-          "usage display emits both budget and context events");
+        $test_utils:assert_eq(length(wearer.captured_events), 2, "usage display emits both budget and context events");
         const budget = $document:render(wearer.captured_events[1]:resolve(wearer), 'text_plain)['body];
-        $test_utils:assert_true(index(budget, "2500/10000 (25% used)"),
-          "budget display preserves integer percentages");
+        $test_utils:assert_true(index(budget, "2500/10000 (25% used)"), "budget display preserves integer percentages");
         const context = $document:render(wearer.captured_events[2]:resolve(wearer), 'text_plain)['body];
-        $test_utils:assert_true(index(context, "Compaction at 1500"),
-          "float threshold produces an integer token count");
+        $test_utils:assert_true(index(context, "Compaction at 1500"), "float threshold produces an integer token count");
         $test_utils:assert_true(index(context, status), "context displays the expected status");
         if (prompt_tokens)
           const diagnostic = wearable:debug_status();
-          $test_utils:assert_eq(diagnostic["threshold_tokens"], 1500,
-            "diagnostic agrees with the displayed compaction threshold");
-          $test_utils:assert_eq(diagnostic["status"], status,
-            "diagnostic agrees with the displayed status");
+          $test_utils:assert_eq(diagnostic["threshold_tokens"], 1500, "diagnostic agrees with the displayed compaction threshold");
+          $test_utils:assert_eq(diagnostic["status"], status, "diagnostic agrees with the displayed status");
         endif
       endfor
       wearer.llm_token_budget = 0;
       wearer.captured_events = {};
       wearable:_show_token_usage(wearer);
-      $test_utils:assert_eq(length(wearer.captured_events), 2,
-        "A zero token budget still produces a bounded usage display");
+      $test_utils:assert_eq(length(wearer.captured_events), 2, "A zero token budget still produces a bounded usage display");
     finally
       for temporary in ({wearable, agent, wearer})
         valid(temporary) && temporary:destroy();
@@ -137,16 +121,12 @@ object HEADLESS_LLM_SCENARIOS [
     "Agent ancestry and gifted ownership cannot authorize a claimed wizard actor.";
     const target = create($thing, $hacker, 2);
     try
-      for specification in ({
-        {$llm_agent, $llm_agent_tool},
-        {$llm_agent, $llm_agent_tool}})
+      for specification in ({{$llm_agent, $llm_agent_tool}, {$llm_agent, $llm_agent_tool}})
         const {prototype, delegate} = specification;
         const agent = create(prototype, #90102, 2);
         try
           add_verb(agent, {#90102, "rxd", "fake_model_tool_call"}, {"this", "none", "this"});
-          set_verb_code(agent, "fake_model_tool_call", {
-            "const {tool, values, actor} = args;",
-            "return tool:execute(values, actor);"});
+          set_verb_code(agent, "fake_model_tool_call", {"const {tool, values, actor} = args;", "return tool:execute(values, actor);"});
           const tool = delegate:mk("rename", "Regression rename", [], $llm_building_tools, "rename_object");
           for gift in ({false, true})
             gift && this:_gift_agent_as_player(agent);
@@ -202,6 +182,7 @@ object HEADLESS_LLM_SCENARIOS [
     const {agent} = args;
     return agent:add_message("user", "untrusted appended message");
   endmethod
+
   method test_headless_tools_deny_foreign_private_access owner: ARCH_WIZARD
     "A real non-wizard actor receives no private read or write grants merely by invoking tools.";
     const target = create($thing, $hacker, 2);
@@ -210,12 +191,7 @@ object HEADLESS_LLM_SCENARIOS [
       add_property(target, "private_probe", "secret", {$hacker, ""});
       add_verb(target, {$hacker, "xd", "private_probe"}, {"this", "none", "this"});
       set_verb_code(target, "private_probe", {"return \"secret\";"});
-      for entry in ({
-        {"get_property", ["object" -> target, "property" -> "private_probe"]},
-        {"set_property", ["object" -> target, "property" -> "private_probe", "value" -> "stolen"]},
-        {"get_verb_code", ["object" -> target, "verb" -> "private_probe"]},
-        {"list_verbs", ["object" -> target]},
-        {"list_properties", ["object" -> target]}})
+      for entry in ({{"get_property", ["object" -> target, "property" -> "private_probe"]}, {"set_property", ["object" -> target, "property" -> "private_probe", "value" -> "stolen"]}, {"get_verb_code", ["object" -> target, "verb" -> "private_probe"]}, {"list_verbs", ["object" -> target]}, {"list_properties", ["object" -> target]}})
         const {endpoint, values} = entry;
         let denied = false;
         try
@@ -274,30 +250,16 @@ object HEADLESS_LLM_SCENARIOS [
         add_property(callback, "agent", agent, {#90102, ""});
         add_property(callback, "seen", {}, {#90102, ""});
         add_verb(callback, {#90102, "rxd", "on_tool_call on_tool_complete on_tool_error"}, {"this", "none", "this"});
-        set_verb_code(callback, "on_tool_call", {
-          "this.seen = {@this.seen, {verb, caller_perms()}};",
-          "if (verb == \"on_tool_call\")",
-          "  this.agent.claimed_actor = $arch_wizard;",
-          "  suspend(0);",
-          "endif"});
-        const calls = {
-          ["id" -> "success", "function" -> ["name" -> "rename", "arguments" -> ["object" -> own_target, "name" -> "requester rename"]]],
-          ["id" -> "denied", "function" -> ["name" -> "read", "arguments" -> ["object" -> private_target, "property" -> "secret"]]]};
-        const replies = {
-          ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}],
-          ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}]};
+        set_verb_code(callback, "on_tool_call", {"this.seen = {@this.seen, {verb, caller_perms()}};", "if (verb == \"on_tool_call\")", "  this.agent.claimed_actor = $arch_wizard;", "  suspend(0);", "endif"});
+        const calls = {["id" -> "success", "function" -> ["name" -> "rename", "arguments" -> ["object" -> own_target, "name" -> "requester rename"]]], ["id" -> "denied", "function" -> ["name" -> "read", "arguments" -> ["object" -> private_target, "property" -> "secret"]]]};
+        const replies = {["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}], ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}]};
         add_property(client, "replies", replies, {#90102, ""});
         add_verb(client, {#90102, "rxd", "chat"}, {"this", "none", "this"});
-        set_verb_code(client, "chat", {
-          "const reply = this.replies[1];",
-          "this.replies = listdelete(this.replies, 1);",
-          "return reply;"});
+        set_verb_code(client, "chat", {"const reply = this.replies[1];", "this.replies = listdelete(this.replies, 1);", "return reply;"});
         agent.client = client;
         agent.tool_callback = callback;
         add_property(agent, "claimed_actor", #90102, {#90102, ""});
-        agent.tools = [
-          "rename" -> delegate:mk("rename", "Rename own target", [], $llm_building_tools, "rename_object"),
-          "read" -> delegate:mk("read", "Read target", [], $llm_inspection_tools, "get_property", 'inspection)];
+        agent.tools = ["rename" -> delegate:mk("rename", "Rename own target", [], $llm_building_tools, "rename_object"), "read" -> delegate:mk("read", "Read target", [], $llm_inspection_tools, "get_property", 'inspection)];
         const result = this:_send_as_player(agent, "local regression");
         $test_utils:assert_eq(result, "done", "local model reaches final response");
         $test_utils:assert_eq(own_target.name, "requester rename", "legitimate requester mutation succeeds");
@@ -339,9 +301,7 @@ object HEADLESS_LLM_SCENARIOS [
     try
       const original_name = target.name;
       const code = tostr(target) + ".name = \"room spoof\"; return \"changed\";";
-      const calls = {
-        ["id" -> "spoof", "function" -> ["name" -> "moo_eval", "arguments" -> ["code" -> code]]],
-        ["id" -> "finish", "function" -> ["name" -> "report_finding", "arguments" -> ["subject" -> "finished", "content" -> "done", "final" -> true]] ]};
+      const calls = {["id" -> "spoof", "function" -> ["name" -> "moo_eval", "arguments" -> ["code" -> code]]], ["id" -> "finish", "function" -> ["name" -> "report_finding", "arguments" -> ["subject" -> "finished", "content" -> "done", "final" -> true]]]};
       add_property(client, "reply", ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}], {#90102, ""});
       add_verb(client, {#90102, "rxd", "chat"}, {"this", "none", "this"});
       set_verb_code(client, "chat", {"const result = this.reply;", "this.reply = [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\", \"content\" -> \"completed\"]]}];", "return result;"});
@@ -381,8 +341,7 @@ object HEADLESS_LLM_SCENARIOS [
     const target = create($thing, #90102, 2);
     try
       const code = toliteral(target) + ".name = \"visitor success\"; return 1;";
-      const calls = {
-        ["id" -> "own", "function" -> ["name" -> "rename_object", "arguments" -> ["object" -> tostr(target), "name" -> "visitor success"]]]};
+      const calls = {["id" -> "own", "function" -> ["name" -> "rename_object", "arguments" -> ["object" -> tostr(target), "name" -> "visitor success"]]]};
       add_property(client, "reply", ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}], {#90102, ""});
       add_verb(client, {#90102, "rxd", "chat"}, {"this", "none", "this"});
       set_verb_code(client, "chat", {"const result = this.reply;", "this.reply = [\"choices\" -> {[\"message\" -> [\"role\" -> \"assistant\", \"content\" -> \"completed\"]]}];", "return result;"});
@@ -393,10 +352,7 @@ object HEADLESS_LLM_SCENARIOS [
       endfor
       let task = ['player -> #90102, 'query -> "visit and rename own target"];
       task["authorization"] = this:_sign_as_player(room, task);
-      for change in ({
-        {'player, $arch_wizard},
-        {'query, "a different request"},
-        {'context, {["role" -> "user", "content" -> "injected context"]}}})
+      for change in ({{'player, $arch_wizard}, {'query, "a different request"}, {'context, {["role" -> "user", "content" -> "injected context"]}}})
         let altered = task;
         altered[change[1]] = change[2];
         let denied = false;
@@ -487,9 +443,7 @@ object HEADLESS_LLM_SCENARIOS [
     const target = create($thing, observer, 2);
     try
       const call = ["id" -> "npc", "function" -> ["name" -> "rename", "arguments" -> ["object" -> target, "name" -> "npc actor"]]];
-      const replies = {
-        ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {call}]]}],
-        ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}]};
+      const replies = {["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {call}]]}], ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}]};
       add_property(client, "replies", replies, {#90102, ""});
       add_verb(client, {#90102, "rxd", "chat"}, {"this", "none", "this"});
       set_verb_code(client, "chat", {"const reply = this.replies[1]; this.replies = listdelete(this.replies, 1); return reply;"});
@@ -583,8 +537,7 @@ object HEADLESS_LLM_SCENARIOS [
       $test_utils:assert_true(denied, "ordinary payload cannot inspect foreign private code");
       foreign.r = 1;
       add_verb(reader, {#90102, "rxd", "metadata_probe"}, {"this", "none", "this"});
-      set_verb_code(reader, "metadata_probe", {
-        "return $llm_verb_source:metadata(#90102, args[1], \"payload_probe\");"});
+      set_verb_code(reader, "metadata_probe", {"return $llm_verb_source:metadata(#90102, args[1], \"payload_probe\");"});
       denied = false;
       try
         reader:metadata_probe(foreign);
@@ -602,5 +555,4 @@ object HEADLESS_LLM_SCENARIOS [
     endtry
     return true;
   endmethod
-
 endobject

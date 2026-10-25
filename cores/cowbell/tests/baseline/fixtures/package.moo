@@ -10,7 +10,9 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
-package "fixtures" [objdef_version -> 2];
+package "fixtures" [
+  objdef_version -> 2
+];
 
 define RUNTIME_WIZARD = #90100;
 define RUNTIME_PROGRAMMER = #90101;

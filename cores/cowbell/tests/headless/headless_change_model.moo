@@ -6,18 +6,18 @@ object HEADLESS_CHANGE_MODEL [
   owner: ARCH_WIZARD
   readable: true
 
-  property phase (owner: ARCH_WIZARD, flags: "rc") = -1;
-  property seen (owner: ARCH_WIZARD, flags: "rc") = {};
-  property review (owner: ARCH_WIZARD, flags: "rc") = 0;
-  property generation (owner: ARCH_WIZARD, flags: "rc") = 0;
-  property member (owner: ARCH_WIZARD, flags: "rc") = "";
   property backend (owner: ARCH_WIZARD, flags: "rc") = "";
   property expect_denied (owner: ARCH_WIZARD, flags: "rc") = false;
-  property revoke_before_apply (owner: ARCH_WIZARD, flags: "rc") = false;
+  property generation (owner: ARCH_WIZARD, flags: "rc") = 0;
+  property inspect_only (owner: ARCH_WIZARD, flags: "rc") = false;
+  property member (owner: ARCH_WIZARD, flags: "rc") = "";
+  property package (owner: ARCH_WIZARD, flags: "rc") = "";
+  property phase (owner: ARCH_WIZARD, flags: "rc") = -1;
   property recover_after_edit (owner: ARCH_WIZARD, flags: "rc") = false;
   property recovered (owner: ARCH_WIZARD, flags: "rc") = false;
-  property inspect_only (owner: ARCH_WIZARD, flags: "rc") = false;
-  property package (owner: ARCH_WIZARD, flags: "rc") = "";
+  property review (owner: ARCH_WIZARD, flags: "rc") = 0;
+  property revoke_before_apply (owner: ARCH_WIZARD, flags: "rc") = false;
+  property seen (owner: ARCH_WIZARD, flags: "rc") = {};
   property source (owner: ARCH_WIZARD, flags: "rc") = {};
 
   method chat owner: ARCH_WIZARD
@@ -156,7 +156,7 @@ object HEADLESS_CHANGE_MODEL [
       task["authorization"] = $agent_room:_authorize_task(room, task);
       room:execute_fixture(task);
       !recover || model.recovered || raise(E_INVARG, "Room did not recover its saved draft.", {model.phase, model.seen[$]});
-      const expected = (inspect_only || revoke) ? 1 | {"#9500", 42};
+      const expected = inspect_only || revoke ? 1 | {"#9500", 42};
       #9500:probe() == expected || raise(E_INVARG, "Room did not preserve the requested effects.", room.history);
       length(model.seen) >= (inspect_only ? 2 | revoke ? 7 | 8) || raise(E_INVARG, "Room bypassed tool workflow.", room.history);
       if (inspect_only || revoke)
@@ -172,6 +172,7 @@ object HEADLESS_CHANGE_MODEL [
       valid(model) && recycle(model);
     endtry
   endmethod
+
   method restore_requester owner: ARCH_WIZARD
     "Restore the isolated fixture requester even if its room execution failed.";
     caller == this || raise(E_PERM);

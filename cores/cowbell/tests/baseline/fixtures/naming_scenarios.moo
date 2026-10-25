@@ -6,14 +6,14 @@ object NAMING_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
 
-  property require_secret (owner: ARCH_WIZARD, flags: "rc") = false;
-  property secret_label (owner: ARCH_WIZARD, flags: "") = "private";
+  property collective (owner: ARCH_WIZARD, flags: "rc") = false;
+  property count_phrases (owner: ARCH_WIZARD, flags: "rc") = false;
+  property extra_match_name (owner: ARCH_WIZARD, flags: "rc") = "";
   property keeper (owner: ARCH_WIZARD, flags: "rc") = #-1;
   property keeper_phrase (owner: ARCH_WIZARD, flags: "rc") = "the box you left here";
-  property collective (owner: ARCH_WIZARD, flags: "rc") = false;
-  property extra_match_name (owner: ARCH_WIZARD, flags: "rc") = "";
-  property count_phrases (owner: ARCH_WIZARD, flags: "rc") = false;
   property phrase_calls (owner: ARCH_WIZARD, flags: "rc") = [];
+  property require_secret (owner: ARCH_WIZARD, flags: "rc") = false;
+  property secret_label (owner: ARCH_WIZARD, flags: "") = "private";
 
   method noun_phrase owner: ARCH_WIZARD
     "Customize one phrase while retaining the inherited forms and listing dispatch.";
@@ -66,15 +66,7 @@ object NAMING_SCENARIOS [
     "Count, mass, complete names, and pronunciation overrides produce the intended phrases.";
     const item = create($thing);
     try
-      for example in ({
-        {"prototype box", 'count, 'singular, "", "a prototype box", "the prototype box"},
-        {"apple", 'count, 'singular, "", "an apple", "the apple"},
-        {"boots", 'count, 'plural, "", "some boots", "the boots"},
-        {"water", 'mass, 'singular, "", "some water", "the water"},
-        {"Henri", 'name, 'singular, "", "Henri", "Henri"},
-        {"Ada's mailbox", 'name, 'singular, "", "Ada's mailbox", "Ada's mailbox"},
-        {"The Who", 'name, 'plural, "", "The Who", "The Who"},
-        {"MRI scanner", 'count, 'singular, "an", "an MRI scanner", "the MRI scanner"}})
+      for example in ({{"prototype box", 'count, 'singular, "", "a prototype box", "the prototype box"}, {"apple", 'count, 'singular, "", "an apple", "the apple"}, {"boots", 'count, 'plural, "", "some boots", "the boots"}, {"water", 'mass, 'singular, "", "some water", "the water"}, {"Henri", 'name, 'singular, "", "Henri", "Henri"}, {"Ada's mailbox", 'name, 'singular, "", "Ada's mailbox", "Ada's mailbox"}, {"The Who", 'name, 'plural, "", "The Who", "The Who"}, {"MRI scanner", 'count, 'singular, "an", "an MRI scanner", "the MRI scanner"}})
         const {label, kind, number, article, indefinite, definite} = example;
         item.name = label;
         item:set_grammar(['kind -> kind, 'number -> number, 'article -> article]);
@@ -86,8 +78,7 @@ object NAMING_SCENARIOS [
         $test_utils:assert_eq(item:noun_phrase('definite, item), "you", "Viewer perspective");
         $test_utils:assert_eq(item:noun_phrase('label, item), label, "Viewer's literal label");
       endfor
-      for example in ({{"hour", "an"}, {"honest answer", "an"}, {"user", "a"},
-        {"unusual object", "an"}, {"unicycle", "a"}})
+      for example in ({{"hour", "an"}, {"honest answer", "an"}, {"user", "a"}, {"unusual object", "an"}, {"unicycle", "a"}})
         $test_utils:assert_eq(example[1]:indefinite_article(), example[2], "Shared pronunciation");
       endfor
     finally
@@ -104,8 +95,7 @@ object NAMING_SCENARIOS [
       item.name = "box";
       item.keeper = #90102;
       item:set_grammar(['listing -> 'definite]);
-      $test_utils:assert_eq(item:noun_phrase('listing, #90102), "the box you left here",
-        "Listing calls the descendant's definite form");
+      $test_utils:assert_eq(item:noun_phrase('listing, #90102), "the box you left here", "Listing calls the descendant's definite form");
       $test_utils:assert_eq(item:noun_phrase('definite, #90101), "the box", "Other viewer");
       $test_utils:assert_eq(item:noun_phrase('label, #90102), "box", "Literal name is separate");
       item.collective = true;
@@ -113,10 +103,8 @@ object NAMING_SCENARIOS [
       $test_utils:assert_eq(item.noun_number, 'singular, "Query does not change stored number");
       $test_utils:assert_eq(item:noun_phrase('indefinite, #90102), "some box", "Uses grammar verb");
       utility.name = "Object Matching Utilities";
-      $test_utils:assert_eq(utility:noun_phrase('listing, #90102), utility.name,
-        "Utility needs no listing property");
-      $test_utils:assert_eq(`utility.listing_form ! E_PROPNF => E_PROPNF', E_PROPNF,
-        "Listing does not create state");
+      $test_utils:assert_eq(utility:noun_phrase('listing, #90102), utility.name, "Utility needs no listing property");
+      $test_utils:assert_eq(`utility.listing_form ! E_PROPNF => E_PROPNF', E_PROPNF, "Listing does not create state");
     finally
       recycle(item);
       recycle(utility);
@@ -133,12 +121,9 @@ object NAMING_SCENARIOS [
       $test_utils:assert_eq(item:noun_grammar(#90102)['kind], 'mass, "Inherited setting");
       this:_set_as(item, #90101, ['kind -> 'count, 'number -> 'plural]);
       $test_utils:assert_eq(prototype.noun_kind, 'mass, "Instance edit preserves prototype");
-      $test_utils:assert_raises(E_INVARG, this, "_set_as",
-        {item, #90101, ['kind -> 'name, 'number -> 'several]},
-        "Validate all fields before writing");
+      $test_utils:assert_raises(E_INVARG, this, "_set_as", {item, #90101, ['kind -> 'name, 'number -> 'several]}, "Validate all fields before writing");
       $test_utils:assert_eq(item.noun_kind, 'count, "Invalid edit has no partial effects");
-      $test_utils:assert_raises(E_PERM, this, "_set_as",
-        {item, #90102, ['kind -> 'name]}, "Unrelated player cannot edit");
+      $test_utils:assert_raises(E_PERM, this, "_set_as", {item, #90102, ['kind -> 'name]}, "Unrelated player cannot edit");
       const capability = item:issue_capability(item, {'set_grammar});
       this:_set_as(capability, #90102, ['kind -> 'name]);
       $test_utils:assert_eq(item.noun_kind, 'name, "Bearer grant permits a grammar edit");
@@ -162,32 +147,28 @@ object NAMING_SCENARIOS [
       item.collective = true;
       item.count_phrases = true;
       const template = "{The d} {agree d name:are|is} here; {the same}.";
-      const event = $event:mk_test(#90101, @$sub_utils:compile(template))
-        :with_dobj(item):with_object_binding('same, item);
+      const event = $event:mk_test(#90101, @$sub_utils:compile(template)):with_dobj(item):with_object_binding('same, item);
       const document = event:resolve(#90102);
-      $test_utils:assert_eq($document:render(document, 'text_plain)['body],
-        "The guards you hired are here; the guards you hired.", "Object phrase and agreement");
+      $test_utils:assert_eq($document:render(document, 'text_plain)['body], "The guards you hired are here; the guards you hired.", "Object phrase and agreement");
       $test_utils:assert_eq(item.phrase_calls['definite], 1, "Bindings share a captured answer");
       item.name = "changed label";
       item.keeper_phrase = "changed phrase";
       const html = $document:render(document, 'text_html);
-      $test_utils:assert_true(index(html['body], "guards you hired") > 0,
-        "A second format consumes captured text");
+      $test_utils:assert_true(index(html['body], "guards you hired") > 0, "A second format consumes captured text");
       $test_utils:assert_true(length(html['annotations]) > 0, "Object interaction survives");
       $test_utils:assert_eq(item.phrase_calls['definite], 1, "Formatting does not call the object");
       event:resolve(#90102);
       $test_utils:assert_eq(item.phrase_calls['definite], 2, "A new resolution captures new answers");
       item.name = "guards";
-      const bindings = ['actor -> ['kind -> 'object, 'example -> 'actor],
-        'dobj -> ['kind -> 'object, 'example -> 'host]];
+      const bindings = ['actor -> ['kind -> 'object, 'example -> 'actor], 'dobj -> ['kind -> 'object, 'example -> 'host]];
       const preview = $sub_utils:preview("{The d} {agree d name:are|is} here.", bindings, item);
-      $test_utils:assert_true(index(preview:join("\n"), "The guards are here.") > 0,
-        "Preview calls the host's computed grammar, not a copy of its stored number");
+      $test_utils:assert_true(index(preview:join("\n"), "The guards are here.") > 0, "Preview calls the host's computed grammar, not a copy of its stored number");
     finally
       recycle(item);
     endtry
     return true;
   endmethod
+
   method test_article_matching_and_command_structure owner: ARCH_WIZARD
     "Shared matching preserves exact names, ordinals, explicit scopes, and raw command spans.";
     const box = create(this);
@@ -229,13 +210,10 @@ object NAMING_SCENARIOS [
       const ambiguous = $match:parse_command("get a box", {box, second}, #90102, 0.0);
       $test_utils:assert_eq(ambiguous['ambiguous_dobj], {box, second}, "Command ambiguity retained");
       const ordinary = $match:object_suggestions({box});
-      $test_utils:assert_eq(length($match:rank_suggestions(ordinary, "the enchanted", 10)["items"]), 1,
-        "Completion uses the prototype's matching names");
+      $test_utils:assert_eq(length($match:rank_suggestions(ordinary, "the enchanted", 10)["items"]), 1, "Completion uses the prototype's matching names");
       const suggestions = $match:object_suggestions(restricted);
-      $test_utils:assert_eq(length($match:rank_suggestions(suggestions, "the public h", 10)["items"]), 1,
-        "Completion accepts articles around explicit keys");
-      $test_utils:assert_eq(length($match:rank_suggestions(suggestions, "enchanted", 10)["items"]), 0,
-        "Completion does not expose omitted names");
+      $test_utils:assert_eq(length($match:rank_suggestions(suggestions, "the public h", 10)["items"]), 1, "Completion accepts articles around explicit keys");
+      $test_utils:assert_eq(length($match:rank_suggestions(suggestions, "enchanted", 10)["items"]), 0, "Completion does not expose omitted names");
     finally
       recycle(box);
       recycle(second);
@@ -243,6 +221,7 @@ object NAMING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_world_lists_and_stock_messages owner: ARCH_WIZARD
     "Room, clothing, and action prose use phrases, plural agreement, and complete reference nodes.";
     const room = create($room);
@@ -261,11 +240,9 @@ object NAMING_SCENARIOS [
       boots.noun_number = 'plural;
       actor.wearing = {boots};
       const emote = actor:mk_emote_event("wave.");
-      $test_utils:assert_eq($document:render(emote:resolve(actor), 'text_plain)['body],
-        "The guards wave.", "An emote retains third-person grammar for its author");
+      $test_utils:assert_eq($document:render(emote:resolve(actor), 'text_plain)['body], "The guards wave.", "An emote retains third-person grammar for its author");
       const mixed = $event:mk_info(actor, $sub:attribution(actor), " / ", $sub:the('actor));
-      $test_utils:assert_eq($document:render(mixed:resolve(actor), 'text_plain)['body],
-        "The guards / you", "Neutral attribution and viewer references have separate captures");
+      $test_utils:assert_eq($document:render(mixed:resolve(actor), 'text_plain)['body], "The guards / you", "Neutral attribution and viewer references have separate captures");
       move(actor, room);
       move(item, room);
       const view = room:look_self():capture(#90102);
@@ -281,25 +258,19 @@ object NAMING_SCENARIOS [
       $test_utils:assert_true(length(described['annotations]) > 0, "Clothing keeps object links");
       for example in ({{$container.open_msg, "open"}, {$wearable.wear_msg, "put on"}, {$note.read_msg, "read"}})
         const event = $event:mk_info(actor, @example[1]):with_dobj(boots);
-        $test_utils:assert_eq($document:render(event:resolve(#90102), 'text_plain)['body],
-          "The guards " + example[2] + " the boots.", "Observer sees collective subject");
-        $test_utils:assert_eq($document:render(event:resolve(actor), 'text_plain)['body],
-          "You " + example[2] + " the boots.", "Actor perspective remains second person");
+        $test_utils:assert_eq($document:render(event:resolve(#90102), 'text_plain)['body], "The guards " + example[2] + " the boots.", "Observer sees collective subject");
+        $test_utils:assert_eq($document:render(event:resolve(actor), 'text_plain)['body], "You " + example[2] + " the boots.", "Actor perspective remains second person");
       endfor
       const denied = $event:mk_error(actor, @$container.already_closed_msg):with_dobj(boots);
-      $test_utils:assert_eq($document:render(denied:resolve(actor), 'text_plain)['body],
-        "The boots are already closed.", "Denials agree with the item, not the actor");
+      $test_utils:assert_eq($document:render(denied:resolve(actor), 'text_plain)['body], "The boots are already closed.", "Denials agree with the item, not the actor");
       room.name = "courtyard";
       room.noun_kind = 'count;
       const message = $dm:mk(actor, #90102, "Reporting for duty.");
       const received = message:display_event(#90102);
-      $test_utils:assert_true(index(received.tts_text, "Direct message from the guards in the courtyard") == 1,
-        "Spoken attribution uses noun phrases");
-      $test_utils:assert_true(index($document:render(received:resolve(#90102), 'text_plain)['body],
-        "guards (in the courtyard)") == 1, "Sender heading stays literal; location is a phrase");
+      $test_utils:assert_true(index(received.tts_text, "Direct message from the guards in the courtyard") == 1, "Spoken attribution uses noun phrases");
+      $test_utils:assert_true(index($document:render(received:resolve(#90102), 'text_plain)['body], "guards (in the courtyard)") == 1, "Sender heading stays literal; location is a phrase");
       const reply = $dm:mk(#90102, actor, "Thank you."):sender_echo_event();
-      $test_utils:assert_true(index(reply.tts_text, "Message sent to the guards") == 1,
-        "Spoken receipt names its recipient grammatically");
+      $test_utils:assert_true(index(reply.tts_text, "Message sent to the guards") == 1, "Spoken receipt names its recipient grammatically");
     finally
       recycle(boots);
       recycle(item);
@@ -349,6 +320,7 @@ object NAMING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method _query_as owner: ARCH_WIZARD
     "Exercise naming queries with a principal different from the viewer.";
     const {principal, target, query} = args;
@@ -366,8 +338,7 @@ object NAMING_SCENARIOS [
       item.name = "box";
       item.require_secret = true;
       for query in ({'parse, 'render})
-        $test_utils:assert_raises(E_PERM, this, "_query_as", {#90102, item, query},
-          "Naming query retains its caller's permissions");
+        $test_utils:assert_raises(E_PERM, this, "_query_as", {#90102, item, query}, "Naming query retains its caller's permissions");
       endfor
       item.require_secret = false;
       const result = this:_query_as(#90102, item, 'parse);

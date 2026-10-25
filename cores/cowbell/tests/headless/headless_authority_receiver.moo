@@ -7,7 +7,6 @@ object HEADLESS_AUTHORITY_RECEIVER [
   parent: EVENT_RECEIVER
   owner: fixtures::RUNTIME_PROGRAMMER
   readable: true
-  override import_export_id = "headless_authority_receiver";
 
   method probe_notify owner: fixtures::RUNTIME_PROGRAMMER
     "Attempt to send output through an inherited wizard helper to a foreign connection.";

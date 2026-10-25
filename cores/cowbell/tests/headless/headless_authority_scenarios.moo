@@ -7,7 +7,6 @@ object HEADLESS_AUTHORITY_SCENARIOS [
   parent: ROOT
   owner: fixtures::RUNTIME_WIZARD
   readable: true
-  override import_export_id = "headless_authority_scenarios";
 
   method test_hostile_root_permission_override owner: fixtures::RUNTIME_WIZARD
     "Root mutation rejects an untrusted permission checker override.";
@@ -74,7 +73,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     const original = #90102.last_connected;
     try
       #90102.last_connected = 0;
-      #0:user_reconnected(#90102);
+      $user_reconnected(#90102);
       $test_utils:assert_true(#90102.last_connected > 0, "Reconnect must update last_connected");
     finally
       #90102.last_connected = original;
@@ -165,6 +164,7 @@ object HEADLESS_AUTHORITY_SCENARIOS [
     const {target} = args;
     return target:_do_walk({{target.location, 0}});
   endmethod
+
   method test_login_setup_requires_wizard owner: fixtures::RUNTIME_WIZARD
     "Ordinary callers must not create a welcome mailbox for a wizard-owned player.";
     const original_letter = $login.new_player_letter;

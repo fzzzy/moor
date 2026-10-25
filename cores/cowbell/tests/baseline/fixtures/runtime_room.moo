@@ -16,6 +16,6 @@ object RUNTIME_ROOM [
   parent: ROOM
   owner: RUNTIME_WIZARD
   readable: true
-  override description = "A room for isolated Cowbell runtime tests.";
-  override import_export_id = "runtime_room";
+
+  override description (owner: RUNTIME_WIZARD, flags: "rc") = "A room for isolated Cowbell runtime tests.";
 endobject

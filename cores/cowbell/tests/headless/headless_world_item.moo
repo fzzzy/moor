@@ -5,7 +5,6 @@ object HEADLESS_WORLD_ITEM [
 ]
   name: "Runtime World Item"
   parent: THING
-  owner: fixtures::RUNTIME_PLAYER
   location: fixtures::RUNTIME_PLAYER
-
+  owner: fixtures::RUNTIME_PLAYER
 endobject

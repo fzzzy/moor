@@ -1,6 +1,5 @@
 // Copyright (C) 2026 The mooR Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
-
 object HEADLESS_RULE_AUTHORITY_SCENARIOS [
   import_export_id -> "headless_rule_authority_scenarios"
 ]
@@ -8,7 +7,6 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
   parent: ROOT
   owner: fixtures::RUNTIME_WIZARD
   readable: true
-  override import_export_id = "headless_rule_authority_scenarios";
 
   method test_foreign_reaction_mutation_denied owner: fixtures::RUNTIME_WIZARD
     "A direct generic effect must preserve the invoking programmer's principal.";
@@ -230,16 +228,13 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
 
   method test_rule_predicate_preserves_caller owner: fixtures::RUNTIME_WIZARD
     "Nested engine and flyweight entries must pass the original caller to predicates.";
-    $rule_engine:register_predicate('audit_principal,
-      ['description -> "Observe the incoming principal.", 'inputs -> [],
-        'outputs -> ['principal -> 'object]], this, "query_principal");
+    $rule_engine:register_predicate('audit_principal, ['description -> "Observe the incoming principal.", 'inputs -> [], 'outputs -> ['principal -> 'object]], this, "query_principal");
     try
       const rule = $rule_engine:parse_expression("audit_principal() -> (principal: Principal)");
       for entry in ({"engine", "rule"})
         const result = this:_evaluate_as_programmer(entry, rule);
         $test_utils:assert_true(result['success], "Principal predicate must succeed");
-        $test_utils:assert_eq(result['bindings]['Principal], #90101,
-          "Predicate caller must be the invoking programmer");
+        $test_utils:assert_eq(result['bindings]['Principal], #90101, "Predicate caller must be the invoking programmer");
       endfor
     finally
       $rule_engine:unregister_predicate('audit_principal);
@@ -249,21 +244,15 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
 
   method test_rule_cartesian_alternatives owner: fixtures::RUNTIME_WIZARD
     "Independent two-valued predicates retain all four conjunction bindings.";
-    $rule_engine:register_predicate('audit_numbers,
-      ['description -> "Two numbers.", 'inputs -> [], 'outputs -> ['value -> 'integer]],
-      this, "query_numbers");
-    $rule_engine:register_predicate('audit_letters,
-      ['description -> "Two letters.", 'inputs -> [], 'outputs -> ['value -> 'string]],
-      this, "query_letters");
+    $rule_engine:register_predicate('audit_numbers, ['description -> "Two numbers.", 'inputs -> [], 'outputs -> ['value -> 'integer]], this, "query_numbers");
+    $rule_engine:register_predicate('audit_letters, ['description -> "Two letters.", 'inputs -> [], 'outputs -> ['value -> 'string]], this, "query_letters");
     try
-      const rule = $rule_engine:parse_expression(
-        "audit_numbers() -> (value: N) AND audit_letters() -> (value: L)");
+      const rule = $rule_engine:parse_expression("audit_numbers() -> (value: N) AND audit_letters() -> (value: L)");
       const result = $rule_engine:evaluate(rule);
       $test_utils:assert_true(result['success], "A conjunction solution exists");
       const rows = {result['bindings], @result['alternatives]};
       $test_utils:assert_eq(length(rows), 4, "All conjunction combinations remain available");
-      for expected in ({['N -> 1, 'L -> "a"], ['N -> 1, 'L -> "b"],
-        ['N -> 2, 'L -> "a"], ['N -> 2, 'L -> "b"]})
+      for expected in ({['N -> 1, 'L -> "a"], ['N -> 1, 'L -> "b"], ['N -> 2, 'L -> "a"], ['N -> 2, 'L -> "b"]})
         $test_utils:assert_true(expected in rows, "Each independent combination is present");
       endfor
     finally
@@ -311,27 +300,21 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
 
   method test_invalid_conditions_fail_closed owner: fixtures::RUNTIME_WIZARD
     "Unknown predicates fail authoring, and failed queries cannot satisfy negation.";
-    $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT audit_missing()"},
-      "An unknown predicate cannot become an installed condition");
-    $rule_engine:register_predicate('audit_broken,
-      ['description -> "An implementation error.", 'inputs -> [], 'outputs -> []],
-      this, "query_broken");
+    $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT audit_missing()"}, "An unknown predicate cannot become an installed condition");
+    $rule_engine:register_predicate('audit_broken, ['description -> "An implementation error.", 'inputs -> [], 'outputs -> []], this, "query_broken");
     try
       const rule = $rule_engine:parse_expression("NOT audit_broken()");
-      $test_utils:assert_raises(E_VERBNF, $rule_engine, "evaluate", {rule},
-        "Negation must not turn an evaluation error into success");
+      $test_utils:assert_raises(E_VERBNF, $rule_engine, "evaluate", {rule}, "Negation must not turn an evaluation error into success");
     finally
       $rule_engine:unregister_predicate('audit_broken);
     endtry
     const valid_rule = $rule_engine:parse_expression("NOT FALSE");
     $test_utils:assert_true($rule_engine:evaluate(valid_rule)['success], "An ordinary false result supports negation");
     for condition in ({valid_rule, {}, [], false, 1, ""})
-      $test_utils:assert_raises(E_INVARG, $reaction, "mk", {'probe, condition, {}},
-        "Unsupported conditions must not produce unconditional reactions");
+      $test_utils:assert_raises(E_INVARG, $reaction, "mk", {'probe, condition, {}}, "Unsupported conditions must not produce unconditional reactions");
     endfor
     for expression in ({"TRUE garbage", "TRUE)", "TRUE FALSE"})
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {expression},
-        "The parser must consume the complete condition");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {expression}, "The parser must consume the complete condition");
     endfor
     return true;
   endmethod

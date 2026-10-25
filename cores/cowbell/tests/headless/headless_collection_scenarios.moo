@@ -21,10 +21,8 @@ object HEADLESS_COLLECTION_SCENARIOS [
     try
       foreign.entries = {"private"};
       set_property_info(foreign, "entries", {$arch_wizard, ""});
-      for operation in ({{"add", "injected"}, {"remove", 1}, {"set_entry", 1, "changed"},
-          {"list"}, {"entries"}, {"pick"}})
-        $test_utils:assert_raises(E_PERM, this, "_as_hacker", {foreign, @operation},
-          "Foreign bag operation must fail");
+      for operation in ({{"add", "injected"}, {"remove", 1}, {"set_entry", 1, "changed"}, {"list"}, {"entries"}, {"pick"}})
+        $test_utils:assert_raises(E_PERM, this, "_as_hacker", {foreign, @operation}, "Foreign bag operation must fail");
       endfor
       $test_utils:assert_eq(foreign.entries, {"private"}, "Denied calls preserve the bag");
       this:_as_hacker(own, "add", "first");
@@ -33,7 +31,6 @@ object HEADLESS_COLLECTION_SCENARIOS [
       $test_utils:assert_eq(this:_as_hacker(own, "entries"), {"changed"}, "Entries alias");
       this:_as_hacker(own, "remove", 1);
       $test_utils:assert_eq(this:_as_hacker(own, "pick"), E_RANGE, "Empty bag sentinel");
-
       const original = $msg_bag:mk("first");
       const added = original:add("second");
       const replaced = added:set_entry(1, "changed");
@@ -57,12 +54,12 @@ object HEADLESS_COLLECTION_SCENARIOS [
     "Attempt a protected write from a non-wizard callback.";
     const {operation} = args;
     if (operation == "reduce")
-      return {1}:reduce({acc, item} => (#90100.runtime_probe = 99), 0);
+      return {1}:reduce({acc, item} => #90100.runtime_probe = 99, 0);
     endif
     if (operation in {"map_chars", "filter_chars"})
-      return "a":(operation)({char} => (#90100.runtime_probe = 99));
+      return "a":(operation)({char} => #90100.runtime_probe = 99);
     endif
-    return {1}:(operation)({item} => (#90100.runtime_probe = 99));
+    return {1}:(operation)({item} => #90100.runtime_probe = 99);
   endmethod
 
   method test_callback_write_permissions owner: ARCH_WIZARD
@@ -70,10 +67,8 @@ object HEADLESS_COLLECTION_SCENARIOS [
     const saved = #90100.runtime_probe;
     try
       #90100.runtime_probe = 42;
-      for operation in ({"map", "filter", "reduce", "find", "find_index", "any", "all",
-          "group_by", "map_chars", "filter_chars"})
-        $test_utils:assert_raises(E_PERM, this, "_callback_write", {operation},
-          "Callback must not write a foreign property");
+      for operation in ({"map", "filter", "reduce", "find", "find_index", "any", "all", "group_by", "map_chars", "filter_chars"})
+        $test_utils:assert_raises(E_PERM, this, "_callback_write", {operation}, "Callback must not write a foreign property");
         $test_utils:assert_eq(#90100.runtime_probe, 42, "Denied callback preserves state");
       endfor
     finally

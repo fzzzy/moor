@@ -6,8 +6,7 @@ object HEADLESS_REACTION_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Headless runtime scenarios for reaction state mutation, thresholds, and trigger chaining.";
-  override import_export_id = "headless_reaction_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for reaction state mutation, thresholds, and trigger chaining.";
 
   method test_named_timers_and_declared_state owner: ARCH_WIZARD
     "An owner can replace or cancel a timer; its condition uses current declared state when it wakes.";
@@ -18,8 +17,7 @@ object HEADLESS_REACTION_SCENARIOS [
       $reaction:change(host, 'level, 'increment, 1);
       $test_utils:assert_eq(host.level, 2.0, "A decimal counter can use the default whole-number increment");
       $reaction:declare_state(host, 'mode, 'string, "armed", {"armed", "idle"});
-      const reaction = $reaction:mk('start, "state.mode == \"armed\"",
-        {{'schedule, 'alarm, 1, {'increment, 'count}}}, $reaction:state_types(host));
+      const reaction = $reaction:mk('start, "state.mode == \"armed\"", {{'schedule, 'alarm, 1, {'increment, 'count}}}, $reaction:state_types(host));
       $reaction:install(host, "alarm_reaction", reaction);
       this:_timer_as_owner(host, "start");
       this:_timer_as_owner(host, "start");
@@ -56,18 +54,14 @@ object HEADLESS_REACTION_SCENARIOS [
     const host = create($thing, $hacker, 2);
     try
       $reaction:declare_state(host, 'count, 'integer, 0);
-      $reaction:install(host, "loop_reaction", $reaction:mk('loop, 0,
-        {{'increment, 'count}, {'trigger, host, 'loop}}));
+      $reaction:install(host, "loop_reaction", $reaction:mk('loop, 0, {{'increment, 'count}, {'trigger, host, 'loop}}));
       $test_utils:assert_raises(E_QUOTA, host, "fire_trigger", {'loop}, "A reaction loop has a fixed limit");
       $test_utils:assert_eq(host.count, 4, "The chain stops after four completed steps");
       for i in [1..16]
-        $reaction:execute_effect({'schedule, tosym("timer_" + tostr(i)), 60, {'increment, 'count}},
-          ['Actor -> player, 'This -> host], host);
+        $reaction:execute_effect({'schedule, tosym("timer_" + tostr(i)), 60, {'increment, 'count}}, ['Actor -> player, 'This -> host], host);
       endfor
       $test_utils:assert_eq(length($reaction:timers(host)), 16, "The configured pending timer limit is available");
-      $test_utils:assert_raises(E_QUOTA, $reaction, "execute_effect",
-        {{'schedule, 'overflow, 60, {'increment, 'count}}, ['Actor -> player, 'This -> host], host},
-        "Another timer is rejected without scheduling it");
+      $test_utils:assert_raises(E_QUOTA, $reaction, "execute_effect", {{'schedule, 'overflow, 60, {'increment, 'count}}, ['Actor -> player, 'This -> host], host}, "Another timer is rejected without scheduling it");
     finally
       for name in (mapkeys($reaction:timers(host)))
         $reaction:cancel_timer(host, name);
@@ -108,8 +102,7 @@ object HEADLESS_REACTION_SCENARIOS [
       $reaction:install(first, "alarm_reaction", disabled);
       move(second, #90103);
       suspend(2);
-      $test_utils:assert_eq({first.count, second.count}, {0, 0},
-        "Re-enabling does not revive a timer; a changed location does not reuse its old scope");
+      $test_utils:assert_eq({first.count, second.count}, {0, 0}, "Re-enabling does not revive a timer; a changed location does not reuse its old scope");
     finally
       for host in ({first, second})
         $reaction:cancel_timer(host, 'alarm);
@@ -119,15 +112,15 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  verb _fixture (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _fixture owner: ARCH_WIZARD
     "Create a named thing fixture for reaction state scenarios.";
     {name} = args;
     fixture = create($thing);
     fixture:set_name_aliases(name, {});
     return fixture;
-  endverb
+  endmethod
 
-  verb test_headless_reaction_trigger_mutates_state (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_reaction_trigger_mutates_state owner: ARCH_WIZARD
     "Runtime scenario: fire_trigger runs enabled reaction effects and skips disabled ones.";
     target = #-1;
     actor = #-1;
@@ -149,9 +142,9 @@ object HEADLESS_REACTION_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_reaction_threshold_fires_during_mutation (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_reaction_threshold_fires_during_mutation owner: ARCH_WIZARD
     "Runtime scenario: mutation effects fire threshold reactions when a property crosses its boundary.";
     target = #-1;
     actor = #-1;
@@ -172,9 +165,9 @@ object HEADLESS_REACTION_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_reaction_trigger_chains_context (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_reaction_trigger_chains_context owner: ARCH_WIZARD
     "Runtime scenario: trigger effects chain into another object's reactions while preserving actor context.";
     source = #-1;
     receiver = #-1;
@@ -190,9 +183,7 @@ object HEADLESS_REACTION_SCENARIOS [
       add_property(receiver, "chain_this", #-1, {this.owner, "r"});
       add_verb(handler, {$arch_wizard, "rxd", "action_record_context"}, {"this", "none", "this"});
       set_verb_code(handler, "action_record_context", {"set_task_perms(caller_perms());", "const {values, context} = args;", "values['target].chain_actor = values['actor];", "values['target].chain_this = values['target];", "return ['status -> 'applied];"});
-      $reaction:register_action('record_context,
-        ['description -> "Record the trigger participants.", 'inputs -> ['target -> 'object, 'actor -> 'object]],
-        handler, "action_record_context");
+      $reaction:register_action('record_context, ['description -> "Record the trigger participants.", 'inputs -> ['target -> 'object, 'actor -> 'object]], handler, "action_record_context");
       $reaction:install(source, "source_trigger_reaction", $reaction:mk('on_first, 0, {{'trigger, receiver, 'on_second}}));
       $reaction:install(receiver, "receiver_trigger_reaction", $reaction:mk('on_second, 0, {{'increment, 'chain_count, 1}, {'action, 'record_context, ['target -> ['kind -> 'input, 'name -> 'This], 'actor -> ['kind -> 'input, 'name -> 'Actor]]}}));
       source:fire_trigger('on_first, ['Actor -> actor]);
@@ -207,7 +198,8 @@ object HEADLESS_REACTION_SCENARIOS [
       valid(source) && source:destroy();
     endtry
     return true;
-  endverb
+  endmethod
+
   method test_item_entry_and_exit_use_surrounding_room owner: ARCH_WIZARD
     "Movement events on a character identify that character and its surrounding room.";
     const room = create($room, #90100, 2);
@@ -217,20 +209,15 @@ object HEADLESS_REACTION_SCENARIOS [
       move(host, room);
       $reaction:declare_state(host, 'arrivals, 'integer, 0);
       $reaction:declare_state(host, 'departures, 'integer, 0);
-      const condition = "input.This == " + toliteral(host) + " AND input.Who == "
-        + toliteral(item) + " AND input.Location == " + toliteral(room);
-      $reaction:install(host, "arrive_reaction", $reaction:mk('on_enter, condition,
-        {{'increment, 'arrivals}}, $reaction:state_types(host)));
-      $reaction:install(host, "leave_reaction", $reaction:mk('on_exit, condition,
-        {{'increment, 'departures}}, $reaction:state_types(host)));
+      const condition = "input.This == " + toliteral(host) + " AND input.Who == " + toliteral(item) + " AND input.Location == " + toliteral(room);
+      $reaction:install(host, "arrive_reaction", $reaction:mk('on_enter, condition, {{'increment, 'arrivals}}, $reaction:state_types(host)));
+      $reaction:install(host, "leave_reaction", $reaction:mk('on_exit, condition, {{'increment, 'departures}}, $reaction:state_types(host)));
       host:enterfunc(item);
       host:exitfunc(item);
-      $test_utils:assert_eq({host.arrivals, host.departures}, {0, 0},
-        "Calling movement hooks directly cannot forge events");
+      $test_utils:assert_eq({host.arrivals, host.departures}, {0, 0}, "Calling movement hooks directly cannot forge events");
       move(item, host);
       move(item, room);
-      $test_utils:assert_eq({host.arrivals, host.departures}, {1, 1},
-        "Both completed movements identify the surrounding room");
+      $test_utils:assert_eq({host.arrivals, host.departures}, {1, 1}, "Both completed movements identify the surrounding room");
     finally
       recycle(item);
       recycle(host);

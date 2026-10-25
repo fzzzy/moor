@@ -14,24 +14,28 @@ object RUNTIME_PLAYER [
 ]
   name: "RUNTIME_PLAYER"
   parent: PLAYER
-  owner: RUNTIME_PLAYER
   location: RUNTIME_ROOM
+  owner: RUNTIME_PLAYER
   player: true
   readable: true
-  override import_export_id = "runtime_player";
-  override home = RUNTIME_ROOM;
+
+  property runtime_probe (owner: RUNTIME_PLAYER, flags: "r") = 0;
+
+  override home (owner: RUNTIME_PLAYER, flags: "rc") = RUNTIME_ROOM;
+
   verb "runtime-test-raise" (none none none) owner: RUNTIME_WIZARD flags: "rd"
     "Raise an uncaught error to verify command exception handling.";
     raise(E_INVARG, "cowbell harness command exception");
   endverb
-  property runtime_probe (owner: RUNTIME_PLAYER, flags: "r") = 0;
-  verb permission_probe (this none this) owner: RUNTIME_PLAYER flags: "rxd"
+
+  method permission_probe owner: RUNTIME_PLAYER
     "Prove own writes succeed and report a protected foreign write.";
     this.runtime_probe = 1;
     const own_result = this.runtime_probe;
-    const foreign_result = `(#90100.runtime_probe = 2) ! E_PERM => E_PERM';
+    const foreign_result = `#90100.runtime_probe = 2 ! E_PERM => E_PERM';
     return {own_result, foreign_result};
-  endverb
+  endmethod
+
   verb "runtime-test-denial" (none none none) owner: RUNTIME_PLAYER flags: "rd"
     "Emit an ordinary denial without an exception.";
     this:inform_current($event:mk_error(this, "Fixture denial"));

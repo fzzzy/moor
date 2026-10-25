@@ -14,19 +14,21 @@ object RUNTIME_PROGRAMMER [
 ]
   name: "RUNTIME_PROGRAMMER"
   parent: PLAYER
-  owner: RUNTIME_PROGRAMMER
   location: RUNTIME_ROOM
+  owner: RUNTIME_PROGRAMMER
   player: true
   programmer: true
   readable: true
-  override import_export_id = "runtime_programmer";
-  override home = RUNTIME_ROOM;
+
   property runtime_probe (owner: RUNTIME_PROGRAMMER, flags: "r") = 0;
-  verb permission_probe (this none this) owner: RUNTIME_PROGRAMMER flags: "rxd"
+
+  override home (owner: RUNTIME_PROGRAMMER, flags: "rc") = RUNTIME_ROOM;
+
+  method permission_probe owner: RUNTIME_PROGRAMMER
     "Prove own writes succeed and report a protected foreign write.";
     this.runtime_probe = 1;
     const own_result = this.runtime_probe;
-    const foreign_result = `(#90100.runtime_probe = 2) ! E_PERM => E_PERM';
+    const foreign_result = `#90100.runtime_probe = 2 ! E_PERM => E_PERM';
     return {own_result, foreign_result};
-  endverb
+  endmethod
 endobject
