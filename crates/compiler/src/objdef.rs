@@ -24,8 +24,41 @@ use std::path::{Path, PathBuf};
 /// verb-call recursion limit exposed to MOO as `E_MAXREC`.
 pub(crate) const MAX_LITERAL_NESTING: usize = 64;
 
+/// Separates a package name from one of its constants: `minecraft::WORLD`.
+pub const NAMESPACE_SEPARATOR: &str = "::";
+
+/// A package's declaration, `package "name" [key -> value, ...];`, at the top of `package.moo`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PackageDeclaration {
+    pub name: String,
+    pub attributes: Vec<(Symbol, Var)>,
+}
+
+impl PackageDeclaration {
+    /// The value of one declared attribute, such as `depends` or `objdef_version`.
+    pub fn attribute(&self, key: &str) -> Option<&Var> {
+        self.attributes
+            .iter()
+            .find(|(name, _)| name.as_arc_str().as_str() == key)
+            .map(|(_, value)| value)
+    }
+}
+
+/// Whether a name can be a package name, and so qualify a constant.
+pub fn is_package_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .is_some_and(|first| first == '_' || first.is_ascii_alphabetic())
+        && chars.all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+}
+
 pub struct ObjFileContext {
     constants: HashMap<Symbol, Var>,
+    /// The package whose files are being read. Its constants are stored qualified, and bare
+    /// names resolve to them before global ones.
+    namespace: Option<String>,
+    declaration: Option<PackageDeclaration>,
     base_path: Option<PathBuf>,
     /// Root directory used as the security boundary for `include!` / `include_bin!`.
     /// Paths that escape this directory are rejected. Falls back to `base_path` if unset.
@@ -42,6 +75,8 @@ impl ObjFileContext {
     pub fn new() -> Self {
         Self {
             constants: HashMap::new(),
+            namespace: None,
+            declaration: None,
             base_path: None,
             root_path: None,
         }
@@ -49,6 +84,46 @@ impl ObjFileContext {
 
     pub fn add_constant(&mut self, name: Symbol, value: Var) {
         self.constants.insert(name, value);
+    }
+
+    /// Read the following sources as files of `package`, or with None, as global sources.
+    pub fn set_namespace(&mut self, package: Option<&str>) {
+        self.namespace = package.map(str::to_string);
+    }
+
+    pub fn namespace(&self) -> Option<&str> {
+        self.namespace.as_deref()
+    }
+
+    /// The name a constant defined now is stored under: qualified inside a package.
+    pub fn qualified(&self, name: &str) -> Symbol {
+        match &self.namespace {
+            Some(package) => Symbol::mk(&format!("{package}{NAMESPACE_SEPARATOR}{name}")),
+            None => Symbol::mk(name),
+        }
+    }
+
+    /// Resolve a constant reference. A qualified name is looked up as written; a bare one
+    /// names the current package's constant if there is one, and a global one otherwise.
+    pub fn lookup_constant(&self, name: &str) -> Option<&Var> {
+        if !name.contains(NAMESPACE_SEPARATOR)
+            && let Some(package) = &self.namespace
+        {
+            let qualified = Symbol::mk(&format!("{package}{NAMESPACE_SEPARATOR}{name}"));
+            if let Some(value) = self.constants.get(&qualified) {
+                return Some(value);
+            }
+        }
+        self.constants.get(&Symbol::mk(name))
+    }
+
+    /// The package declaration read so far, if any.
+    pub fn declaration(&self) -> Option<&PackageDeclaration> {
+        self.declaration.as_ref()
+    }
+
+    pub(crate) fn set_declaration(&mut self, declaration: PackageDeclaration) {
+        self.declaration = Some(declaration);
     }
 
     pub fn constants(&self) -> &HashMap<Symbol, Var> {
@@ -161,6 +236,8 @@ pub enum ObjDefParseError {
     IncludeError(String, String),
     #[error("Duplicate constant '{0}': already defined as {1}")]
     DuplicateConstant(String, String),
+    #[error("Invalid package declaration: {0}")]
+    InvalidPackageDeclaration(String),
     #[error("Object definition literal nesting exceeds maximum depth of {max_depth}")]
     LiteralNestingTooDeep { max_depth: usize },
     #[error(
@@ -258,6 +335,14 @@ pub(crate) fn offset_compile_error(error: CompileError, line_offset: usize) -> C
 pub fn parse_literal_value(literal_str: &str) -> Result<Var, ObjDefParseError> {
     let mut context = ObjFileContext::new();
     objdef_literal::parse_literal_value(literal_str, &mut context)
+}
+
+/// Read the package declaration that opens `source`, if it has one, without compiling the rest.
+/// Its attribute values may not use constants, since none are known yet.
+pub fn parse_package_declaration(
+    source: &str,
+) -> Result<Option<PackageDeclaration>, ObjDefParseError> {
+    objdef_literal::parse_package_declaration(source)
 }
 
 /// Compile an object-definition file into object definitions.
@@ -1276,5 +1361,106 @@ mod tests {
             VerbFlag::rxd(),
             "flags = 42; is body code, not a header attribute"
         );
+    }
+
+    #[test]
+    fn package_constants_are_qualified_and_resolve_locally_first() {
+        let mut context = ObjFileContext::new();
+        context.add_constant(Symbol::mk("ROOT"), v_obj(Obj::mk_id(1)));
+        context.add_constant(Symbol::mk("WORLD"), v_obj(Obj::mk_id(99)));
+        compile_object_definitions(
+            r#"package "minecraft" [objdef_version -> 2, depends -> {"core"}];
+            define WORLD = #6000;"#,
+            &CompileOptions::default(),
+            &mut context,
+        )
+        .unwrap();
+        let declaration = context.declaration().unwrap();
+        assert_eq!(declaration.name, "minecraft");
+        assert_eq!(declaration.attribute("objdef_version"), Some(&v_int(2)));
+        assert_eq!(
+            context.constants().get(&Symbol::mk("minecraft::WORLD")),
+            Some(&v_obj(Obj::mk_id(6000)))
+        );
+        assert_eq!(
+            context.lookup_constant("WORLD"),
+            Some(&v_obj(Obj::mk_id(6000)))
+        );
+        assert_eq!(context.lookup_constant("ROOT"), Some(&v_obj(Obj::mk_id(1))));
+
+        // Another package's files see the first by its qualified name.
+        context.set_namespace(Some("village"));
+        let objects = compile_object_definitions(
+            r#"object HALL
+              parent: minecraft::WORLD
+              name: "Hall"
+            endobject
+            define HALL = #6100;"#,
+            &CompileOptions::default(),
+            &mut context,
+        );
+        assert!(
+            matches!(objects, Err(ObjDefParseError::ConstantNotFound(ref name)) if name == "HALL"),
+            "a constant is defined before use"
+        );
+        let objects = compile_object_definitions(
+            r#"define HALL = #6100;
+            object HALL
+              parent: minecraft::WORLD
+              name: "Hall"
+            endobject"#,
+            &CompileOptions::default(),
+            &mut context,
+        )
+        .unwrap();
+        assert_eq!(objects[0].oid, Obj::mk_id(6100));
+        assert_eq!(objects[0].parent, Obj::mk_id(6000));
+        assert_eq!(
+            context.lookup_constant("WORLD"),
+            Some(&v_obj(Obj::mk_id(99)))
+        );
+    }
+
+    #[test]
+    fn package_declarations_are_checked() {
+        let compile = |source: &str| {
+            let mut context = ObjFileContext::new();
+            compile_object_definitions(source, &CompileOptions::default(), &mut context)
+        };
+        assert!(matches!(
+            compile(r#"define A = 1; package "late";"#),
+            Err(ObjDefParseError::InvalidPackageDeclaration(_))
+        ));
+        assert!(matches!(
+            compile(r#"package "cowbell-core";"#),
+            Err(ObjDefParseError::InvalidPackageDeclaration(_))
+        ));
+        let mut context = ObjFileContext::new();
+        context.set_namespace(Some("one"));
+        assert!(matches!(
+            compile_object_definitions(
+                r#"package "two";"#,
+                &CompileOptions::default(),
+                &mut context
+            ),
+            Err(ObjDefParseError::InvalidPackageDeclaration(_))
+        ));
+    }
+
+    #[test]
+    fn a_declaration_reads_without_the_rest_of_the_file() {
+        let declaration = parse_package_declaration(
+            r#"// The village.
+            package "village" [depends -> {"minecraft"}];
+            define HALL = minecraft::WORLD;"#,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(declaration.name, "village");
+        assert_eq!(
+            declaration.attribute("depends"),
+            Some(&v_list(&[v_str("minecraft")]))
+        );
+        assert_eq!(parse_package_declaration("define A = 1;").unwrap(), None);
     }
 }

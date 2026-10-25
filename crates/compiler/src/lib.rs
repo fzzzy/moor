@@ -56,8 +56,9 @@ pub use crate::{
     frontend::parser::{parse_to_cst, parse_to_syntax_node},
     lexer::{Token, lex},
     objdef::{
-        ObjDefParseError, ObjFileContext, ObjPropDef, ObjPropOverride, ObjVerbDef,
-        ObjectDefinition, compile_object_definitions, parse_literal_value,
+        NAMESPACE_SEPARATOR, ObjDefParseError, ObjFileContext, ObjPropDef, ObjPropOverride,
+        ObjVerbDef, ObjectDefinition, PackageDeclaration, compile_object_definitions,
+        is_package_name, parse_literal_value, parse_package_declaration,
     },
     precedence::{PrecedenceLevel, expr_precedence_level},
     syntax_kind::SyntaxKind,

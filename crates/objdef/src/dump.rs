@@ -11,7 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{import_export_hierarchy, import_export_id};
+use crate::{
+    import_export_hierarchy, import_export_id,
+    package::{
+        OBJDEF_VERSION, declarations_from_value, package_key, packages_key,
+        unpackaged_directory_key,
+    },
+};
 use moor_common::model::{
     HasUuid, Named, ObjFlag, ValSet, WorldStateError,
     loader::{
@@ -19,10 +25,11 @@ use moor_common::model::{
         SnapshotInterface,
     },
 };
-use moor_compiler::{ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition};
-#[cfg(test)]
-use moor_var::Symbol;
-use moor_var::{NOTHING, Obj, Var};
+use moor_compiler::{
+    NAMESPACE_SEPARATOR, ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition,
+    PackageDeclaration,
+};
+use moor_var::{NOTHING, Obj, SYSTEM_OBJECT, Symbol, Var, v_int};
 use std::{
     collections::{HashMap, HashSet},
     fs::{File, OpenOptions},
@@ -292,6 +299,8 @@ struct ObjectExportIdentity {
     parent: Obj,
     export_id: Option<String>,
     hierarchy: Vec<String>,
+    /// The package that defines the object, if it came from one.
+    package: Option<String>,
 }
 
 impl ObjectExportIdentity {
@@ -302,6 +311,7 @@ impl ObjectExportIdentity {
             parent: definition.parent,
             export_id: metadata_string(definition, import_export_id()),
             hierarchy: extract_hierarchy_path(definition),
+            package: metadata_string(definition, package_key()),
         }
     }
 
@@ -317,11 +327,17 @@ impl ObjectExportIdentity {
             .find(|(key, _)| *key == import_export_hierarchy())
             .map(|(_, value)| hierarchy_path_from_value(value))
             .unwrap_or_default();
+        let package = metadata
+            .values
+            .iter()
+            .find(|(key, _)| *key == package_key())
+            .and_then(|(_, value)| string_or_symbol_to_string(value));
         Self {
             oid: metadata.oid,
             parent: metadata.parent,
             export_id,
             hierarchy,
+            package,
         }
     }
 }
@@ -347,18 +363,30 @@ fn extract_object_constants_from_identities(
     let mut index_names = HashMap::new();
     let mut file_names = HashMap::new();
 
-    // First pass: collect all import_export_id values.
+    // First pass: collect all import_export_id values. A package's IDs only need to be unique
+    // within it, so each is keyed by its package's name and the ID.
     let mut id_values: HashMap<Obj, String> = HashMap::new();
+    let mut packages: HashMap<Obj, &str> = HashMap::new();
     for identity in identities {
         if let Some(id) = &identity.export_id {
             id_values.insert(identity.oid, id.clone());
         }
+        if let Some(package) = &identity.package {
+            packages.insert(identity.oid, package.as_str());
+        }
     }
+    let qualify = |oid: &Obj, id: &str| match packages.get(oid) {
+        Some(package) => format!("{package}{NAMESPACE_SEPARATOR}{id}"),
+        None => id.to_string(),
+    };
 
     // Count occurrences of each value to detect duplicates
-    let mut value_counts: HashMap<&str, Vec<Obj>> = HashMap::new();
+    let mut value_counts: HashMap<String, Vec<Obj>> = HashMap::new();
     for (oid, id_str) in &id_values {
-        value_counts.entry(id_str.as_str()).or_default().push(*oid);
+        value_counts
+            .entry(qualify(oid, id_str))
+            .or_default()
+            .push(*oid);
     }
 
     // Log duplicates
@@ -380,7 +408,7 @@ fn extract_object_constants_from_identities(
 
         // Skip if not unique
         if value_counts
-            .get(id_str.as_str())
+            .get(&qualify(&identity.oid, id_str))
             .map(|v| v.len())
             .unwrap_or(0)
             > 1
@@ -390,6 +418,7 @@ fn extract_object_constants_from_identities(
 
         // Skip if same as parent's import_export_id (inherited without meaningful override)
         if identity.parent != NOTHING
+            && packages.get(&identity.parent) == packages.get(&identity.oid)
             && id_values
                 .get(&identity.parent)
                 .is_some_and(|parent_id| parent_id == id_str)
@@ -403,7 +432,7 @@ fn extract_object_constants_from_identities(
             continue;
         }
 
-        let constant_name = id_str.to_ascii_uppercase();
+        let constant_name = qualify(&identity.oid, &id_str.to_ascii_uppercase());
         let file_name = id_str.to_lowercase();
         index_names.insert(identity.oid, constant_name);
         file_names.insert(identity.oid, file_name);
@@ -473,7 +502,8 @@ fn collect_snapshot_identities(export: &dyn SnapshotExportSession) -> Vec<Object
 pub fn collect_index_names(
     loader: &dyn SnapshotInterface,
 ) -> Result<HashMap<Obj, String>, ObjectDumpError> {
-    let export = loader.begin_export(&[import_export_id(), import_export_hierarchy()])?;
+    let export =
+        loader.begin_export(&[import_export_id(), import_export_hierarchy(), package_key()])?;
     let identities = collect_snapshot_identities(export.as_ref());
     Ok(extract_object_constants_from_identities(&identities).0)
 }
@@ -494,6 +524,10 @@ pub fn collect_transaction_index_names(
                 .find(|(key, _)| *key == import_export_id())
                 .and_then(|(_, value)| string_or_symbol_to_string(value)),
             hierarchy: Vec::new(),
+            package: metadata
+                .iter()
+                .find(|(key, _)| *key == package_key())
+                .and_then(|(_, value)| string_or_symbol_to_string(value)),
         });
     }
     Ok(extract_object_constants_from_identities(&identities).0)
@@ -526,15 +560,29 @@ struct ObjectDumpSink<'a> {
 }
 
 impl<'a> ObjectDumpSink<'a> {
+    /// A sink writing into `directory_path`: a package's directory, with its `package.moo`, when
+    /// `declaration` is given, and otherwise a plain directory with `constants.moo`.
+    #[allow(clippy::too_many_arguments)]
     fn new(
         directory_path: &'a Path,
+        declaration: Option<&PackageDeclaration>,
         index_names: &'a HashMap<Obj, String>,
+        constants: &HashMap<Obj, String>,
         file_names: &'a HashMap<Obj, String>,
         hierarchies: &'a HashMap<Obj, Vec<String>>,
         options: ObjectDumpOptions,
     ) -> Result<Self, ObjectDumpError> {
         std::fs::create_dir_all(directory_path)?;
-        crate::write::generate_constants_file(index_names, hierarchies, directory_path)?;
+        match declaration {
+            Some(declaration) => crate::write::generate_package_file(
+                declaration,
+                index_names,
+                constants,
+                hierarchies,
+                directory_path,
+            )?,
+            None => crate::write::generate_constants_file(constants, hierarchies, directory_path)?,
+        }
         let mut directories = HashMap::new();
         directories.insert(Vec::new(), directory_path.to_path_buf());
         Ok(Self {
@@ -598,6 +646,102 @@ impl<'a> ObjectDumpSink<'a> {
     }
 }
 
+/// One output directory of an export.
+struct ExportTarget {
+    directory: PathBuf,
+    declaration: Option<PackageDeclaration>,
+    /// Object names as written in this directory: bare for its own objects.
+    index_names: HashMap<Obj, String>,
+    /// The constants this directory defines: its own objects' names.
+    constants: HashMap<Obj, String>,
+}
+
+/// The directories an export writes, keyed by package, None for objects from no package.
+struct ExportLayout {
+    targets: HashMap<Option<String>, ExportTarget>,
+}
+
+/// The plain directory, beside the package directories, that holds objects from no package, when
+/// the world records no name for it.
+const UNPACKAGED_DIRECTORY: &str = "unpackaged";
+
+impl ExportLayout {
+    fn new(
+        directory_path: &Path,
+        identities: &[ObjectExportIdentity],
+        declared: &[PackageDeclaration],
+        unpackaged_directory: Option<&str>,
+        index_names: &HashMap<Obj, String>,
+    ) -> Self {
+        let mut targets = HashMap::new();
+        let packages = identities
+            .iter()
+            .filter_map(|identity| identity.package.clone())
+            .collect::<HashSet<_>>();
+        if packages.is_empty() {
+            targets.insert(
+                None,
+                ExportTarget {
+                    directory: directory_path.to_path_buf(),
+                    declaration: None,
+                    index_names: index_names.clone(),
+                    constants: index_names.clone(),
+                },
+            );
+            return Self { targets };
+        }
+        for package in packages {
+            let declaration = declared
+                .iter()
+                .find(|declaration| declaration.name == package)
+                .cloned()
+                .unwrap_or_else(|| PackageDeclaration {
+                    name: package.clone(),
+                    attributes: vec![(Symbol::mk("objdef_version"), v_int(OBJDEF_VERSION))],
+                });
+            let prefix = format!("{package}{NAMESPACE_SEPARATOR}");
+            let names = index_names
+                .iter()
+                .map(|(obj, name)| {
+                    let name = name.strip_prefix(&prefix).unwrap_or(name).to_string();
+                    (*obj, name)
+                })
+                .collect();
+            let constants = index_names
+                .iter()
+                .filter_map(|(obj, name)| Some((*obj, name.strip_prefix(&prefix)?.to_string())))
+                .collect();
+            targets.insert(
+                Some(package.clone()),
+                ExportTarget {
+                    directory: directory_path.join(&package),
+                    declaration: Some(declaration),
+                    index_names: names,
+                    constants,
+                },
+            );
+        }
+        if identities.iter().any(|identity| identity.package.is_none()) {
+            targets.insert(
+                None,
+                ExportTarget {
+                    directory: directory_path
+                        .join(unpackaged_directory.unwrap_or(UNPACKAGED_DIRECTORY)),
+                    declaration: None,
+                    index_names: index_names.clone(),
+                    // Only the global constants: a package's objects are defined in its own file.
+                    constants: index_names
+                        .iter()
+                        .filter(|(_, name)| !name.contains(NAMESPACE_SEPARATOR))
+                        .map(|(obj, name)| (*obj, name.clone()))
+                        .collect(),
+                },
+            );
+        }
+        Self { targets }
+    }
+}
+
 /// Export one stable snapshot without retaining all property and verb payloads in memory.
 ///
 /// The preliminary pass retains only object naming and hierarchy data. The write pass releases each
@@ -620,8 +764,27 @@ pub fn dump_snapshot_object_definitions_with_options(
     options: ObjectDumpOptions,
 ) -> Result<ObjectDumpStats, ObjectDumpError> {
     let metadata_started = Instant::now();
-    let mut export = loader.begin_export(&[import_export_id(), import_export_hierarchy()])?;
+    let mut export = loader.begin_export(&[
+        import_export_id(),
+        import_export_hierarchy(),
+        package_key(),
+        packages_key(),
+        unpackaged_directory_key(),
+    ])?;
     let identities = collect_snapshot_identities(export.as_ref());
+    let system_metadata = |key: Symbol| {
+        export
+            .metadata()
+            .iter()
+            .find(|metadata| metadata.oid == SYSTEM_OBJECT)
+            .and_then(|metadata| metadata.values.iter().find(|(name, _)| *name == key))
+            .map(|(_, value)| value.clone())
+    };
+    let declared = system_metadata(packages_key())
+        .map(|value| declarations_from_value(&value))
+        .unwrap_or_default();
+    let unpackaged_directory = system_metadata(unpackaged_directory_key())
+        .and_then(|value| value.as_string().map(str::to_string));
     let metadata_elapsed = metadata_started.elapsed();
 
     let (index_names, file_names) = extract_object_constants_from_identities(&identities);
@@ -630,13 +793,35 @@ pub fn dump_snapshot_object_definitions_with_options(
         .map(|identity| (identity.oid, identity.hierarchy.clone()))
         .collect::<HashMap<_, _>>();
 
-    let mut sink = ObjectDumpSink::new(
+    // Where each object is written: a world without packages is one plain directory, as always;
+    // otherwise each package gets its own directory, and objects from no package go to a plain
+    // directory beside them.
+    let package_of = identities
+        .iter()
+        .map(|identity| (identity.oid, identity.package.clone()))
+        .collect::<HashMap<_, _>>();
+    let layout = ExportLayout::new(
         directory_path,
+        &identities,
+        &declared,
+        unpackaged_directory.as_deref(),
         &index_names,
-        &file_names,
-        &hierarchies,
-        options,
-    )?;
+    );
+    let mut sinks = HashMap::new();
+    for (package, target) in &layout.targets {
+        sinks.insert(
+            package.clone(),
+            ObjectDumpSink::new(
+                &target.directory,
+                target.declaration.as_ref(),
+                &target.index_names,
+                &target.constants,
+                &file_names,
+                &hierarchies,
+                options,
+            )?,
+        );
+    }
 
     let started = Instant::now();
     let mut regular_count = 0;
@@ -647,6 +832,10 @@ pub fn dump_snapshot_object_definitions_with_options(
 
     while let Some(object) = export.next_object()? {
         let definition = collect_export_object(object)?;
+        let package = package_of.get(&definition.oid).cloned().flatten();
+        let sink = sinks
+            .get_mut(&package)
+            .expect("every exported object's package has a sink");
         sink.write_object(&definition)?;
 
         verb_count += definition.verbs.len();
@@ -715,6 +904,8 @@ pub(crate) fn dump_object_definitions(
     let anonymous_count = object_defs.len() - regular_count;
     let mut sink = ObjectDumpSink::new(
         directory_path,
+        None,
+        &index_names,
         &index_names,
         &file_names,
         &hierarchies,
@@ -790,6 +981,110 @@ mod tests {
 
     fn system_permissions() -> TaskPermissions {
         TaskPermissions::new(SYSTEM_OBJECT, BitEnum::new())
+    }
+
+    fn import_directories(directories: &[PathBuf]) -> Arc<TxDB> {
+        let (db, _) = TxDB::try_open(None, DatabaseConfig::default()).unwrap();
+        let db = Arc::new(db);
+        let set =
+            crate::ObjDefSet::read_directories(&CompileOptions::default(), directories).unwrap();
+        let mut loader = db.loader_client().unwrap();
+        ObjectDefinitionLoader::new(loader.as_mut())
+            .load_objdef_set(set, Default::default())
+            .unwrap();
+        assert!(matches!(loader.commit(), Ok(CommitResult::Success { .. })));
+        db
+    }
+
+    #[test]
+    fn packages_export_to_their_own_directories_and_round_trip() {
+        let object = |constant: &str, id: &str, parent: &str| {
+            format!(
+                "object {constant} [\n  import_export_id -> \"{id}\"\n]\n  name: \"{id}\"\n  parent: {parent}\n  owner: #-1\n  location: #-1\n  readable: true\nendobject\n"
+            )
+        };
+        let source = tempfile::tempdir().unwrap();
+        let core = source.path().join("core");
+        let minecraft = source.path().join("minecraft");
+        std::fs::create_dir_all(&core).unwrap();
+        std::fs::create_dir_all(&minecraft).unwrap();
+        std::fs::write(
+            core.join("package.moo"),
+            "package \"core\" [objdef_version -> 2];\ndefine SYSOBJ = #0;\ndefine THING = #8;\n",
+        )
+        .unwrap();
+        std::fs::write(core.join("sysobj.moo"), object("SYSOBJ", "sysobj", "#-1")).unwrap();
+        std::fs::write(core.join("thing.moo"), object("THING", "thing", "#-1")).unwrap();
+        std::fs::write(
+            minecraft.join("package.moo"),
+            "package \"minecraft\" [objdef_version -> 2, depends -> {\"core\"}];\ndefine REGION = #6006;\n",
+        )
+        .unwrap();
+        // No id: the package infers its own from its constants, though core's objects have ids.
+        std::fs::write(
+            minecraft.join("region.moo"),
+            "object REGION\n  name: \"region\"\n  parent: core::THING\n  owner: LEGACY\n  location: #-1\n  readable: true\nendobject\n",
+        )
+        .unwrap();
+        // A plain directory beside the packages, with global constants.
+        let base = source.path().join("base");
+        std::fs::create_dir_all(&base).unwrap();
+        std::fs::write(base.join("constants.moo"), "define LEGACY = #50;\n").unwrap();
+        std::fs::write(base.join("legacy.moo"), object("LEGACY", "legacy", "#-1")).unwrap();
+
+        let db = import_directories(&[source.path().to_path_buf()]);
+        let first = tempfile::tempdir().unwrap();
+        dump_snapshot_object_definitions(db.create_snapshot().unwrap().as_ref(), first.path())
+            .unwrap();
+        let files = read_directory_tree(first.path());
+        let text = |path: &str| String::from_utf8(files[Path::new(path)].clone()).unwrap();
+        let mut paths = files
+            .keys()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>();
+        paths.sort();
+        assert_eq!(
+            paths,
+            [
+                "base/constants.moo",
+                "base/legacy.moo",
+                "core/package.moo",
+                "core/sysobj.moo",
+                "core/thing.moo",
+                "minecraft/package.moo",
+                "minecraft/region.moo",
+            ]
+        );
+        assert!(
+            text("minecraft/package.moo").starts_with(
+                "package \"minecraft\" [\n  objdef_version -> 2,\n  depends -> {\"core\"}\n];"
+            ),
+            "{}",
+            text("minecraft/package.moo")
+        );
+        assert!(text("minecraft/package.moo").contains("define REGION = #6006;"));
+        assert!(text("core/package.moo").contains("define THING = #8;"));
+        assert!(
+            !text("core/package.moo").contains("LEGACY")
+                && !text("minecraft/package.moo").contains("THING"),
+            "a package defines only its own constants"
+        );
+        assert_eq!(text("base/constants.moo"), "define LEGACY = #50;\n");
+        assert!(text("minecraft/region.moo").contains("parent: core::THING"));
+        assert!(text("minecraft/region.moo").contains("owner: LEGACY"));
+        assert!(text("minecraft/region.moo").starts_with("object REGION"));
+        assert!(!text("core/sysobj.moo").contains("objdef_packages"));
+        assert!(!text("minecraft/region.moo").contains("objdef_package"));
+
+        // The export is itself a world directory, read as its packages.
+        let reimported = import_directories(&[first.path().to_path_buf()]);
+        let second = tempfile::tempdir().unwrap();
+        dump_snapshot_object_definitions(
+            reimported.create_snapshot().unwrap().as_ref(),
+            second.path(),
+        )
+        .unwrap();
+        assert_eq!(files, read_directory_tree(second.path()));
     }
 
     #[test]

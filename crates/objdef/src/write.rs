@@ -16,8 +16,8 @@ use moor_common::model::{
     ObjFlag, PrepSpec, VerbArgsSpec, VerbFlag, prop_flags_string, verb_perms_string,
 };
 use moor_compiler::{
-    ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition, program_to_tree, to_literal,
-    to_literal_objsub, unparse,
+    ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition, PackageDeclaration, program_to_tree,
+    to_literal, to_literal_objsub, unparse,
 };
 use moor_var::{NOTHING, Obj, Symbol, Var, program::ProgramType, v_arc_str, v_str, v_string};
 use std::{collections::HashMap, io::Write, path::Path};
@@ -101,6 +101,43 @@ pub(crate) fn generate_constants_file(
     hierarchies: &HashMap<Obj, Vec<String>>,
     directory_path: &Path,
 ) -> Result<(), ObjectDumpError> {
+    let mut constants_file =
+        std::fs::File::create(directory_path.join(crate::package::CONSTANTS_FILE))?;
+    write_constant_groups(index_names, hierarchies, &mut constants_file)
+}
+
+/// Write a package's `package.moo`: its declaration, then the constants of the objects it owns,
+/// named without the package qualifier.
+pub(crate) fn generate_package_file(
+    declaration: &PackageDeclaration,
+    index_names: &HashMap<Obj, String>,
+    constants: &HashMap<Obj, String>,
+    hierarchies: &HashMap<Obj, Vec<String>>,
+    directory_path: &Path,
+) -> Result<(), ObjectDumpError> {
+    let mut file = std::fs::File::create(directory_path.join(crate::package::PACKAGE_FILE))?;
+    write!(file, "package {}", to_literal(&v_str(&declaration.name)))?;
+    let entries = metadata_entries(index_names, declaration.attributes.iter());
+    if !entries.is_empty() {
+        writeln!(file, " [")?;
+        for (idx, entry) in entries.iter().enumerate() {
+            let comma = if idx + 1 == entries.len() { "" } else { "," };
+            writeln!(file, "  {entry}{comma}")?;
+        }
+        write!(file, "]")?;
+    }
+    writeln!(file, ";")?;
+    if !constants.is_empty() {
+        writeln!(file)?;
+    }
+    write_constant_groups(constants, hierarchies, &mut file)
+}
+
+fn write_constant_groups<W: Write>(
+    index_names: &HashMap<Obj, String>,
+    hierarchies: &HashMap<Obj, Vec<String>>,
+    constants_file: &mut W,
+) -> Result<(), ObjectDumpError> {
     let mut grouped: HashMap<String, Vec<(Obj, String)>> = HashMap::new();
 
     for (obj, constant_name) in index_names.iter() {
@@ -117,7 +154,6 @@ pub(crate) fn generate_constants_file(
     let mut sorted_groups: Vec<_> = grouped.into_iter().collect();
     sorted_groups.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let mut constants_file = std::fs::File::create(directory_path.join("constants.moo"))?;
     let mut wrote_group = false;
 
     for (hierarchy_path, mut objects) in sorted_groups {
@@ -473,8 +509,16 @@ fn exported_metadata(
     metadata: &[(Symbol, Var)],
     options: ObjectDumpOptions,
 ) -> impl Iterator<Item = &(Symbol, Var)> {
+    // Which package an object belongs to is the directory it is written in, and the packages
+    // of a world are written as package.moo files, so neither belongs in an object's header.
+    let package = crate::package::package_key();
+    let packages = crate::package::packages_key();
+    let unpackaged = crate::package::unpackaged_directory_key();
     metadata.iter().filter(move |(key, _)| {
-        options.include_baselines || *key != Symbol::mk(crate::review::BASE_KEY)
+        (options.include_baselines || *key != Symbol::mk(crate::review::BASE_KEY))
+            && *key != package
+            && *key != packages
+            && *key != unpackaged
     })
 }
 

@@ -20,9 +20,15 @@
 //! Keep parsing, constants resolution, duplicate detection, and incoming identity derivation here.
 //! Keep database effects in `load.rs`.
 
-use crate::{Constants, ObjdefLoaderError};
-use moor_compiler::{CompileOptions, ObjFileContext, ObjectDefinition, compile_object_definitions};
-use moor_var::{Obj, Symbol, Var};
+use crate::{
+    Constants, ObjdefLoaderError,
+    package::{CONSTANTS_FILE, PACKAGE_FILE, SourceDirectory, package_key},
+};
+use moor_compiler::{
+    CompileOptions, ObjFileContext, ObjectDefinition, PackageDeclaration,
+    compile_object_definitions,
+};
+use moor_var::{Obj, Symbol, Var, v_map, v_str};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -113,13 +119,102 @@ impl ProposedObjectGraph {
 pub struct ObjDefSet {
     graph: ProposedObjectGraph,
     constants: HashMap<Symbol, Var>,
+    /// Declarations of the packages the set was read from, in import order.
+    packages: Vec<PackageDeclaration>,
+    /// Names of the plain directories read beside packages in a world.
+    plain_directories: Vec<String>,
 }
 
 impl ObjDefSet {
     /// Read a bulk source directory with the same constants and include rules as import.
+    ///
+    /// A directory with a `package.moo` is read as that package: its constants are qualified by
+    /// the package's name and its objects carry package metadata. A directory of packages, as
+    /// export writes a world built from them, is read as all of them. Any other directory is read
+    /// exactly as before.
     pub fn read_directory(
         compile_options: &CompileOptions,
         directory: &Path,
+    ) -> Result<Self, ObjdefLoaderError> {
+        if let Some(members) = crate::package::world_members(directory)? {
+            return Self::read_directories(compile_options, &members);
+        }
+        Self::read_directory_with_constants(compile_options, directory, None)
+    }
+
+    /// Read several source directories as one world. Directories without a package come first,
+    /// in the order given, then packages, each after those it depends on. Each directory sees
+    /// the constants of those read before it, and an object defined twice is refused.
+    pub fn read_directories(
+        compile_options: &CompileOptions,
+        directories: &[PathBuf],
+    ) -> Result<Self, ObjdefLoaderError> {
+        if let [directory] = directories {
+            return Self::read_directory(compile_options, directory);
+        }
+        let sources = directories
+            .iter()
+            .map(|path| {
+                Ok(SourceDirectory {
+                    path: path.clone(),
+                    declaration: crate::package::read_declaration(path)?,
+                })
+            })
+            .collect::<Result<Vec<_>, ObjdefLoaderError>>()?;
+        let mut merged: Option<Self> = None;
+        let mut plain_directories = Vec::new();
+        for source in crate::package::order(sources)? {
+            if source.declaration.is_none()
+                && let Some(name) = source.path.file_name()
+            {
+                plain_directories.push(name.to_string_lossy().into_owned());
+            }
+            let seen = merged.as_ref().map(|set| {
+                let entries = set
+                    .constants
+                    .iter()
+                    .map(|(name, value)| (v_str(&name.as_arc_str()), value.clone()))
+                    .collect::<Vec<_>>();
+                Constants::Map(v_map(&entries).as_map().unwrap().clone())
+            });
+            let set =
+                Self::read_directory_with_constants(compile_options, &source.path, seen.as_ref())?;
+            merged = Some(match merged {
+                None => set,
+                Some(earlier) => earlier.merge(set)?,
+            });
+        }
+        let mut merged = merged
+            .ok_or_else(|| ObjdefLoaderError::InvalidPackage("no source directories".into()))?;
+        merged.plain_directories = plain_directories;
+        Ok(merged)
+    }
+
+    /// Add a later directory's set to this one. Constants already include the earlier ones, since
+    /// the later set was read with them in scope.
+    fn merge(mut self, later: Self) -> Result<Self, ObjdefLoaderError> {
+        for (oid, (label, definition)) in later.graph.object_definitions {
+            if let Some((first, _)) = self.graph.object_definitions.get(&oid) {
+                return Err(ObjdefLoaderError::DuplicateObjectDefinition(
+                    label,
+                    oid,
+                    first.clone(),
+                ));
+            }
+            self.graph
+                .object_definitions
+                .insert(oid, (label, definition));
+        }
+        self.constants = later.constants;
+        self.packages.extend(later.packages);
+        self.graph.identities = derive_identities(&self.graph.object_definitions, &self.constants);
+        Ok(self)
+    }
+
+    fn read_directory_with_constants(
+        compile_options: &CompileOptions,
+        directory: &Path,
+        constants: Option<&Constants>,
     ) -> Result<Self, ObjdefLoaderError> {
         fn collect(path: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
             for entry in std::fs::read_dir(path)? {
@@ -141,10 +236,18 @@ impl ObjDefSet {
         collect(directory, &mut files)
             .map_err(|e| ObjdefLoaderError::ObjectFileReadError(directory.to_path_buf(), e))?;
         files.sort();
-        let constants = directory.join("constants.moo");
-        files.retain(|path| path.file_name().is_some_and(|name| name != "constants.moo"));
-        if constants.is_file() {
-            files.insert(0, constants);
+        // The declaration and constants come first: package.moo for a package, constants.moo
+        // for a plain directory. Reading the declaration also refuses a directory with both.
+        let declaration = crate::package::read_declaration(directory)?;
+        let first = if declaration.is_some() {
+            PACKAGE_FILE
+        } else {
+            CONSTANTS_FILE
+        };
+        let first = directory.join(first);
+        files.retain(|path| *path != first);
+        if first.is_file() {
+            files.insert(0, first);
         }
         let sources = files
             .into_iter()
@@ -156,7 +259,7 @@ impl ObjDefSet {
             .collect::<Result<Vec<_>, ObjdefLoaderError>>()?;
         let mut options = compile_options.clone();
         options.call_unsupported_builtins = true;
-        Self::parse_sources(&options, Some(directory), None, sources)
+        Self::parse_sources(&options, Some(directory), constants, sources)
     }
 
     /// Read deployment source, optionally preparing baselines from separate upstream history.
@@ -356,6 +459,18 @@ impl ObjDefSet {
             }
         }
 
+        let packages = context
+            .declaration()
+            .cloned()
+            .into_iter()
+            .collect::<Vec<_>>();
+        if let Some(package) = packages.first() {
+            let key = package_key();
+            for (_, definition) in object_definitions.values_mut() {
+                definition.metadata.retain(|(name, _)| *name != key);
+                definition.metadata.push((key, v_str(&package.name)));
+            }
+        }
         let constants = context.constants().clone();
         let identities = derive_identities(&object_definitions, &constants);
         Ok(Self {
@@ -364,7 +479,19 @@ impl ObjDefSet {
                 identities,
             },
             constants,
+            packages,
+            plain_directories: vec![],
         })
+    }
+
+    /// Declarations of the packages the set was read from, in import order.
+    pub fn packages(&self) -> &[PackageDeclaration] {
+        &self.packages
+    }
+
+    /// Names of the plain directories read beside packages, such as `cowbell` in a test world.
+    pub fn plain_directories(&self) -> &[String] {
+        &self.plain_directories
     }
 
     /// Proposed graph built from the incoming sources.
@@ -813,5 +940,164 @@ mod tests {
         .err()
         .expect("constants must use caller compile options");
         assert!(error.compile_error().is_some(), "{error}");
+    }
+
+    fn write(directory: &std::path::Path, name: &str, contents: &str) {
+        std::fs::create_dir_all(directory).unwrap();
+        std::fs::write(directory.join(name), contents).unwrap();
+    }
+
+    fn object(constant: &str, id: &str, parent: &str) -> String {
+        format!(
+            r#"object {constant} [
+                import_export_id -> "{id}"
+            ]
+                name: "{id}"
+                owner: #-1
+                parent: {parent}
+                location: #-1
+                readable: true
+            endobject
+            "#
+        )
+    }
+
+    #[test]
+    fn packages_read_in_dependency_order_with_qualified_constants() {
+        let root = tempfile::tempdir().unwrap();
+        let core = root.path().join("core");
+        let minecraft = root.path().join("minecraft");
+        write(
+            &core,
+            "package.moo",
+            r#"package "core" [objdef_version -> 2];
+            define ROOT = #1;
+            define THING = #8;"#,
+        );
+        write(&core, "root.moo", &object("ROOT", "root", "#-1"));
+        write(&core, "thing.moo", &object("THING", "thing", "ROOT"));
+        write(
+            &minecraft,
+            "package.moo",
+            r#"package "minecraft" [objdef_version -> 2, depends -> {"core"}];
+            define REGION = #6006;"#,
+        );
+        write(
+            &minecraft,
+            "region.moo",
+            &object("REGION", "region", "core::THING"),
+        );
+
+        let set = ObjDefSet::read_directories(
+            &CompileOptions::default(),
+            &[minecraft.clone(), core.clone()],
+        )
+        .unwrap();
+        let names = set
+            .packages()
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(names, ["core", "minecraft"]);
+        let definitions = set.graph().object_definitions();
+        let (_, region) = &definitions[&Obj::mk_id(6006)];
+        assert_eq!(region.parent, Obj::mk_id(8));
+        let package = region
+            .metadata
+            .iter()
+            .find(|(key, _)| *key == crate::package::package_key())
+            .map(|(_, value)| value.clone());
+        assert_eq!(package, Some(moor_var::v_str("minecraft")));
+        assert!(
+            set.constants().contains_key(&Symbol::mk("core::THING"))
+                && set
+                    .constants()
+                    .contains_key(&Symbol::mk("minecraft::REGION"))
+        );
+    }
+
+    #[test]
+    fn package_mistakes_are_refused() {
+        let root = tempfile::tempdir().unwrap();
+        let read = |dirs: &[std::path::PathBuf]| {
+            ObjDefSet::read_directories(&CompileOptions::default(), dirs)
+        };
+
+        let both = root.path().join("both");
+        write(
+            &both,
+            "package.moo",
+            r#"package "both" [objdef_version -> 2];"#,
+        );
+        write(&both, "constants.moo", "define ROOT = #1;");
+        assert!(matches!(
+            read(&[both]),
+            Err(ObjdefLoaderError::InvalidPackage(_))
+        ));
+
+        let future = root.path().join("future");
+        write(
+            &future,
+            "package.moo",
+            r#"package "future" [objdef_version -> 99];"#,
+        );
+        assert!(matches!(
+            read(&[future]),
+            Err(ObjdefLoaderError::InvalidPackage(_))
+        ));
+
+        let first = root.path().join("first");
+        let second = root.path().join("second");
+        write(
+            &first,
+            "package.moo",
+            r#"package "first" [objdef_version -> 2]; define A = #1;"#,
+        );
+        write(&first, "a.moo", &object("A", "a", "#-1"));
+        write(
+            &second,
+            "package.moo",
+            r#"package "second" [objdef_version -> 2]; define B = #2;"#,
+        );
+        write(&second, "b.moo", &object("first::A", "b", "#-1"));
+        assert!(
+            matches!(
+                read(&[first.clone(), second.clone()]),
+                Err(ObjdefLoaderError::DuplicateObjectDefinition(..))
+            ),
+            "an object defined in two packages is refused"
+        );
+    }
+
+    #[test]
+    fn a_missing_directory_is_reported_by_name() {
+        let root = tempfile::tempdir().unwrap();
+        let missing = root.path().join("missing-base");
+        let Err(error) = ObjDefSet::read_directory(&CompileOptions::default(), &missing) else {
+            panic!("a missing directory was read");
+        };
+        assert!(
+            matches!(&error, ObjdefLoaderError::DirectoryNotFound(path) if path == &missing),
+            "{error}"
+        );
+        assert!(error.to_string().contains("missing-base"), "{error}");
+    }
+
+    #[test]
+    fn a_plain_directory_reads_as_before() {
+        let root = tempfile::tempdir().unwrap();
+        let plain = root.path().join("plain");
+        write(&plain, "constants.moo", "define ROOT = #1;");
+        write(&plain, "root.moo", &object("ROOT", "root", "#-1"));
+        let set = ObjDefSet::read_directories(&CompileOptions::default(), &[plain]).unwrap();
+        assert!(set.packages().is_empty());
+        let (_, root_object) = &set.graph().object_definitions()[&Obj::mk_id(1)];
+        assert!(
+            !root_object
+                .metadata
+                .iter()
+                .any(|(key, _)| *key == crate::package::package_key())
+        );
+        assert!(set.constants().contains_key(&Symbol::mk("ROOT")));
     }
 }

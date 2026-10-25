@@ -31,8 +31,8 @@ use moor_common::model::{
 };
 #[cfg(test)]
 use moor_compiler::ObjFileContext;
-use moor_compiler::{CompileOptions, ObjectDefinition};
-use moor_var::{NOTHING, Obj, Symbol, Var};
+use moor_compiler::{CompileOptions, ObjectDefinition, PackageDeclaration};
+use moor_var::{NOTHING, Obj, SYSTEM_OBJECT, Symbol, Var};
 use std::{collections::HashMap, path::Path, time::Instant};
 use tracing::info;
 
@@ -238,6 +238,8 @@ impl<'a> ObjectDefinitionLoader<'a> {
         }
         self.restore_tracking = true;
         let constant_count = objdef_set.constants().len();
+        let packages = objdef_set.packages().to_vec();
+        let plain_directories = objdef_set.plain_directories().to_vec();
         self.stage_objdef_set(objdef_set, &options)?;
 
         info!(
@@ -268,6 +270,7 @@ impl<'a> ObjectDefinitionLoader<'a> {
 
         // Create import_export_id metadata from constants when the input has no explicit IDs.
         self.create_import_export_ids_if_needed()?;
+        self.record_packages(&packages, &plain_directories)?;
 
         Ok(ObjDefLoaderResults {
             commit: true,
@@ -848,37 +851,103 @@ impl<'a> ObjectDefinitionLoader<'a> {
         })
     }
 
+    /// Keep the declarations of the imported packages on `#0`, so export can write them back, and
+    /// the name of a single plain directory imported beside them, so its objects go back there.
+    fn record_packages(
+        &mut self,
+        packages: &[PackageDeclaration],
+        plain_directories: &[String],
+    ) -> Result<(), ObjdefLoaderError> {
+        if packages.is_empty() {
+            return Ok(());
+        }
+        let mut entries = vec![(
+            crate::package::packages_key(),
+            crate::package::declarations_value(packages),
+        )];
+        if let [directory] = plain_directories {
+            entries.push((
+                crate::package::unpackaged_directory_key(),
+                moor_var::v_str(directory),
+            ));
+        }
+        for (key, value) in entries {
+            self.loader
+                .set_object_metadata(&SYSTEM_OBJECT, key, value)
+                .map_err(|wse| {
+                    ObjdefLoaderError::CouldNotSetObjectMetadata(
+                        "<packages>".to_string(),
+                        SYSTEM_OBJECT,
+                        key.to_string(),
+                        wse,
+                    )
+                })?;
+        }
+        Ok(())
+    }
+
     /// Create import_export_id metadata from constants when the input declares no explicit IDs.
     fn create_import_export_ids_if_needed(&mut self) -> Result<(), ObjdefLoaderError> {
         use moor_var::v_string;
 
         let import_export_id_sym = crate::import_export_id();
-
-        // If any object has explicit naming metadata, do not infer IDs from constants.
-        let any_have_id = self.object_definitions.values().any(|(_, def)| {
+        let package_of = |def: &ObjectDefinition| {
             def.metadata
                 .iter()
-                .any(|(key, _)| *key == import_export_id_sym)
-        });
+                .find(|(key, _)| *key == crate::package::package_key())
+                .and_then(|(_, value)| value.as_string().map(str::to_string))
+        };
 
-        // If any object has it, assume the import has explicit naming and do not infer IDs.
-        if any_have_id {
-            return Ok(());
-        }
+        // Each package, and the objects from no package, decide for themselves: if any of their
+        // objects has explicit naming metadata, none of theirs are inferred from constants.
+        let named = self
+            .object_definitions
+            .values()
+            .filter(|(_, def)| {
+                def.metadata
+                    .iter()
+                    .any(|(key, _)| *key == import_export_id_sym)
+            })
+            .map(|(_, def)| package_of(def))
+            .collect::<std::collections::HashSet<_>>();
 
-        // Extract the constant names from the context (these come from constants.moo).
+        // Extract the constant names from the context (constants.moo or package.moo).
         for (name, value) in self.parsed_constants.iter() {
             let Some(obj) = value.as_object() else {
                 continue;
             };
-            if !self.object_definitions.contains_key(&obj) {
+            let Some((_, def)) = self.object_definitions.get(&obj) else {
+                continue;
+            };
+            let package = package_of(def);
+            if named.contains(&package) {
+                continue;
+            }
+            // Only the object's own package names it: a bare constant for an object from no
+            // package, `package::NAME` for a package's object.
+            let name = name.to_string();
+            let own = match (
+                &package,
+                name.split_once(moor_compiler::NAMESPACE_SEPARATOR),
+            ) {
+                (Some(package), Some((qualifier, _))) => qualifier == package,
+                (None, None) => true,
+                _ => false,
+            };
+            if !own {
                 continue;
             }
             self.loader
                 .set_object_metadata(
                     &obj,
                     import_export_id_sym,
-                    v_string(name.to_string().to_lowercase()),
+                    // A package's constants are qualified; the ID is the bare name.
+                    v_string(
+                        name.rsplit(moor_compiler::NAMESPACE_SEPARATOR)
+                            .next()
+                            .unwrap_or_default()
+                            .to_lowercase(),
+                    ),
                 )
                 .map_err(|wse| {
                     ObjdefLoaderError::CouldNotSetObjectMetadata(
