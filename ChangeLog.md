@@ -423,6 +423,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Maps with symbol keys iterate in the same order in every server process and after a restart, and
+  objdef exports write them in that order. Symbols used to order by when the running server first
+  saw each name. The order is otherwise unspecified, and is not alphabetical.
 - Decompiled code, exports and `@changes` write a `fn ... endfn` lambda of more than one line as an
   indented block, as it would be written by hand, instead of running its statements together on one
   line.
