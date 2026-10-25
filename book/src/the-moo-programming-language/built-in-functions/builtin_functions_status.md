@@ -87,30 +87,31 @@ open an issue on the [mooR GitHub issue tracker](https://github.com/timbran-proj
 
 ### Objects
 
-| Name                                                                       | Complete | Notes                                               |
-| -------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
-| [`toobj`](objects.md#toobj)                                                | &check;  |                                                     |
-| [`typeof`](values.md#typeof)                                               | &check;  |                                                     |
-| [`create`](objects.md#create)                                              | &check;  | Quota support not implemented yet.                  |
-| [`recycle`](objects.md#recycle)                                            | &check;  |                                                     |
-| [`valid`](objects.md#valid)                                                | &check;  |                                                     |
-| [`parent`](objects.md#parent)                                              | &check;  |                                                     |
-| [`children`](objects.md#children)                                          | &check;  |                                                     |
-| [`chparent`](objects.md#chparent)                                          | &check;  |                                                     |
-| [`max_object`](objects.md#max_object)                                      | &check;  |                                                     |
-| [`players`](objects.md#players)                                            | &check;  | Potentially slow in a large DB.                     |
-| [`objects`](objects.md#objects)                                            | &check;  | mooR extension. Wizard only.                        |
-| [`is_player`](objects.md#is_player)                                        | &check;  |                                                     |
-| [`set_player_flag`](objects.md#set_player_flag)                            | &check;  |                                                     |
-| [`is_anonymous`](objects.md#is_anonymous)                                  | &check;  |                                                     |
-| [`is_uuobjid`](objects.md#is_uuobjid)                                      | &check;  |                                                     |
-| [`move`](objects.md#move)                                                  | &check;  |                                                     |
-| [`parse_command`](objects.md#parse_command)                                | &check;  | mooR extension.                                     |
-| [`find_command_verb`](objects.md#find_command_verb)                        | &check;  | mooR extension. Enables custom command dispatching. |
-| [`dispatch_command_verb`](objects.md#dispatch_command_verb)                | &check;  | mooR extension. Wizard only.                        |
-| [`object_metadata`](../../the-database/entity-metadata.md#object-metadata) | &check;  | mooR extension.                                     |
-| [`object_attrs_hash`](objects.md#object_attrs_hash)                        | &check;  | mooR extension.                                     |
-| [`object_metadata_hash`](objects.md#object_metadata_hash)                  | &check;  | mooR extension.                                     |
+| Name                                                                                         | Complete | Notes                                               |
+| -------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| [`toobj`](objects.md#toobj)                                                                  | &check;  |                                                     |
+| [`typeof`](values.md#typeof)                                                                 | &check;  |                                                     |
+| [`create`](objects.md#create)                                                                | &check;  | Quota support not implemented yet.                  |
+| [`recycle`](objects.md#recycle)                                                              | &check;  |                                                     |
+| [`valid`](objects.md#valid)                                                                  | &check;  |                                                     |
+| [`parent`](objects.md#parent)                                                                | &check;  |                                                     |
+| [`children`](objects.md#children)                                                            | &check;  |                                                     |
+| [`chparent`](objects.md#chparent)                                                            | &check;  |                                                     |
+| [`max_object`](objects.md#max_object)                                                        | &check;  |                                                     |
+| [`players`](objects.md#players)                                                              | &check;  | Potentially slow in a large DB.                     |
+| [`objects`](objects.md#objects)                                                              | &check;  | mooR extension. Wizard only.                        |
+| [`is_player`](objects.md#is_player)                                                          | &check;  |                                                     |
+| [`set_player_flag`](objects.md#set_player_flag)                                              | &check;  |                                                     |
+| [`is_anonymous`](objects.md#is_anonymous)                                                    | &check;  |                                                     |
+| [`is_uuobjid`](objects.md#is_uuobjid)                                                        | &check;  |                                                     |
+| [`move`](objects.md#move)                                                                    | &check;  |                                                     |
+| [`parse_command`](objects.md#parse_command)                                                  | &check;  | mooR extension.                                     |
+| [`find_command_verb`](objects.md#find_command_verb)                                          | &check;  | mooR extension. Enables custom command dispatching. |
+| [`dispatch_command_verb`](objects.md#dispatch_command_verb)                                  | &check;  | mooR extension. Wizard only.                        |
+| [`object_metadata`](../../the-database/entity-metadata.md#object-metadata)                   | &check;  | mooR extension.                                     |
+| [`object_attrs_hash`](objects.md#object_attrs_hash)                                          | &check;  | mooR extension.                                     |
+| [`object_metadata_hash`](objects.md#object_metadata_hash)                                    | &check;  | mooR extension.                                     |
+| [`objects_with_metadata`](../../the-database/entity-metadata.md#finding-objects-by-metadata) | &check;  | mooR extension.                                     |
 
 ### Properties
 

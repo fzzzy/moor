@@ -137,6 +137,7 @@ map object_metadata(obj object)
 any object_metadata(obj object, str|sym key)
 none set_object_metadata(obj object, str|sym key, value)
 none clear_object_metadata(obj object, str|sym key)
+list objects_with_metadata(str|sym key [, value])
 ```
 
 For example, an editor could mark which tool last touched an object:
@@ -162,6 +163,21 @@ clear_object_metadata($lobby, "last_editor");
 ```
 
 Clearing a key that is not present is harmless.
+
+### Finding Objects by Metadata
+
+`objects_with_metadata()` returns the objects that have a metadata key, in object order. Given a
+value as well, it returns only the objects whose value for the key equals it, compared as `==`
+compares, so strings match regardless of case:
+
+```moo
+edited = objects_with_metadata("last_editor");
+from_web = objects_with_metadata("last_editor", "web-client");
+```
+
+Objects the caller may not read are left out, as `object_metadata()` would refuse them. The call
+looks through all object metadata in the database, so it suits occasional work, such as setup at
+startup, rather than code that runs on every command.
 
 ## Property Metadata
 
@@ -301,7 +317,8 @@ For writes:
 
 For reads:
 
-- Object metadata follows object visibility.
+- Object metadata follows object visibility. `objects_with_metadata()` leaves out objects the caller
+  may not read.
 - Property metadata follows property-info visibility.
 - Verb metadata follows verb-info visibility.
 

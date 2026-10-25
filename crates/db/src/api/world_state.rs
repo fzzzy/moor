@@ -763,6 +763,34 @@ impl WorldState for DbWorldState {
         self.get_tx_mut().set_object_metadata(obj, key, value)
     }
 
+    fn objects_with_metadata(
+        &self,
+        permissions: &TaskPermissions,
+        key: Symbol,
+        value: Option<&Var>,
+    ) -> Result<Vec<Obj>, WorldStateError> {
+        let auth = self.auth_context(permissions)?;
+        let mut readable = Vec::new();
+        for obj in self.get_tx().objects_with_metadata(key, value)? {
+            if !self.valid(&obj)? {
+                continue;
+            }
+            let (flags, owner) = (self.flags_of(&obj)?, self.owner_of(&obj)?);
+            if auth
+                .require(AuthRule::object_allows(
+                    &obj,
+                    &owner,
+                    flags,
+                    ObjFlag::Read.into(),
+                ))
+                .is_ok()
+            {
+                readable.push(obj);
+            }
+        }
+        Ok(readable)
+    }
+
     fn clear_object_metadata(
         &mut self,
         permissions: &TaskPermissions,

@@ -31,6 +31,30 @@ E_PROPNF
 ; return eval("return verb_metadata($metadata_obj, \"look\", \"modified_by\");");
 E_VERBNF
 
+; add_property($system, "metadata_other", create($nothing), {player, "rwc"});
+; set_object_metadata($metadata_other, "package", "mail"); return 1;
+1
+
+; return objects_with_metadata("package") == {$metadata_obj, $metadata_other} || objects_with_metadata("package") == {$metadata_other, $metadata_obj};
+1
+
+; return objects_with_metadata("package", "mail") == {$metadata_other};
+1
+
+; return objects_with_metadata("package", "MAIL") == {$metadata_other};
+1
+
+; return objects_with_metadata("package", "none");
+{}
+
+; return objects_with_metadata("nobody_sets_this");
+{}
+
+; recycle($metadata_other);
+; delete_property($system, "metadata_other");
+; return objects_with_metadata("package", "mail");
+{}
+
 ; recycle($metadata_obj);
 ; delete_property($system, "metadata_obj");
 ; return 1;

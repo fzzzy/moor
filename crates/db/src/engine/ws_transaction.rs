@@ -1309,6 +1309,28 @@ impl WorldStateTransaction {
             .map_err(|e| WorldStateError::DatabaseError(format!("Error getting metadata: {e:?}")))
     }
 
+    /// The objects with object metadata `key`, optionally only those whose value equals `value`.
+    pub fn objects_with_metadata(
+        &self,
+        key: Symbol,
+        value: Option<&Var>,
+    ) -> Result<Vec<Obj>, WorldStateError> {
+        let mut objects = self
+            .entity_metadata
+            .scan(&|metadata_key, found| {
+                metadata_key.is_object()
+                    && metadata_key.key() == key
+                    && value.is_none_or(|value| found == value)
+            })
+            .map_err(|e| WorldStateError::DatabaseError(format!("Error scanning metadata: {e:?}")))?
+            .into_iter()
+            .map(|(metadata_key, _)| metadata_key.obj())
+            .collect::<Vec<_>>();
+        objects.sort();
+        objects.dedup();
+        Ok(objects)
+    }
+
     pub fn set_object_metadata(
         &mut self,
         obj: &Obj,

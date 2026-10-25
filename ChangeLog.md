@@ -14,6 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `objects_with_metadata(key [, value])` returns the objects that have an object metadata key, or
+  that have it set to a given value, leaving out objects the caller may not read.
 - Objdef directories can be packages. A `package.moo`, declaring the package's name, its
   `objdef_version` and the packages it depends on, replaces `constants.moo`; the package's constants
   are then written bare inside it and as `package::NAME` from other packages. A directory holding
