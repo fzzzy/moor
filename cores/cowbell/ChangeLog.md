@@ -121,6 +121,10 @@ Cowbell entries.
 
 ### Changed
 
+- Cowbell's source is an objdef package: `src/package.moo`, declaring `package "cowbell"`, replaces
+  `src/constants.moo`. Cowbell's own files are unchanged. Packages built on Cowbell refer to its
+  objects as `cowbell::THING`, `cowbell::ARCH_WIZARD` and so on, as the test fixtures now do.
+  `@changes` skips `package.moo` in fetched source, as it skips `constants.moo`.
 - LLM agents retain failure counters only for registered tools and cap them at the retry limit.
   Removing a tool releases its counter. Invented tool names no longer grow retained failure state
   across interactions; each unknown call still returns an explicit tool error.

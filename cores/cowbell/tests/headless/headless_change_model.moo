@@ -2,25 +2,25 @@ object HEADLESS_CHANGE_MODEL [
   import_export_id -> "headless_change_model"
 ]
   name: "Deterministic change-tool model fixture"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  parent: cowbell::ROOT
+  owner: cowbell::ARCH_WIZARD
   readable: true
 
-  property backend (owner: ARCH_WIZARD, flags: "rc") = "";
-  property expect_denied (owner: ARCH_WIZARD, flags: "rc") = false;
-  property generation (owner: ARCH_WIZARD, flags: "rc") = 0;
-  property inspect_only (owner: ARCH_WIZARD, flags: "rc") = false;
-  property member (owner: ARCH_WIZARD, flags: "rc") = "";
-  property package (owner: ARCH_WIZARD, flags: "rc") = "";
-  property phase (owner: ARCH_WIZARD, flags: "rc") = -1;
-  property recover_after_edit (owner: ARCH_WIZARD, flags: "rc") = false;
-  property recovered (owner: ARCH_WIZARD, flags: "rc") = false;
-  property review (owner: ARCH_WIZARD, flags: "rc") = 0;
-  property revoke_before_apply (owner: ARCH_WIZARD, flags: "rc") = false;
-  property seen (owner: ARCH_WIZARD, flags: "rc") = {};
-  property source (owner: ARCH_WIZARD, flags: "rc") = {};
+  property backend (owner: cowbell::ARCH_WIZARD, flags: "rc") = "";
+  property expect_denied (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
+  property generation (owner: cowbell::ARCH_WIZARD, flags: "rc") = 0;
+  property inspect_only (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
+  property member (owner: cowbell::ARCH_WIZARD, flags: "rc") = "";
+  property package (owner: cowbell::ARCH_WIZARD, flags: "rc") = "";
+  property phase (owner: cowbell::ARCH_WIZARD, flags: "rc") = -1;
+  property recover_after_edit (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
+  property recovered (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
+  property review (owner: cowbell::ARCH_WIZARD, flags: "rc") = 0;
+  property revoke_before_apply (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
+  property seen (owner: cowbell::ARCH_WIZARD, flags: "rc") = {};
+  property source (owner: cowbell::ARCH_WIZARD, flags: "rc") = {};
 
-  method chat owner: ARCH_WIZARD
+  method chat owner: cowbell::ARCH_WIZARD
     "Return deterministic model messages. Drive all changes through the advertised tools.";
     const {context, ?opts = false, ?model = false, ?stream = false, ?tools = {}, ?purpose = 'conversation} = args;
     let last = [];
@@ -122,7 +122,7 @@ object HEADLESS_CHANGE_MODEL [
     return ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> {["id" -> tostr(phase), "type" -> "function", "function" -> ["name" -> name, "arguments" -> generate_json(input)]]}]]}];
   endmethod
 
-  method run_scenario owner: ARCH_WIZARD
+  method run_scenario owner: cowbell::ARCH_WIZARD
     "Exercise actual room orchestration with a deterministic model and no external credentials.";
     const {backend, inspect_only, ?revoke = false, ?recover = false} = args;
     player.wizard || raise(E_PERM);
@@ -173,13 +173,13 @@ object HEADLESS_CHANGE_MODEL [
     endtry
   endmethod
 
-  method restore_requester owner: ARCH_WIZARD
+  method restore_requester owner: cowbell::ARCH_WIZARD
     "Restore the isolated fixture requester even if its room execution failed.";
     caller == this || raise(E_PERM);
     args[1].wizard = true;
   endmethod
 
-  method run_denied owner: ARCH_WIZARD
+  method run_denied owner: cowbell::ARCH_WIZARD
     "Room and model ownership must not grant their requester administrator permissions.";
     const {backend} = args;
     const room = create(backend == "base" ? $agent_room | $llm_coding_room, $arch_wizard, 2);

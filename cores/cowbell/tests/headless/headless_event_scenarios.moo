@@ -4,20 +4,20 @@ object HEADLESS_EVENT_SCENARIOS [
   import_export_id -> "headless_event_scenarios"
 ]
   name: "Headless Event Runtime Scenarios"
-  parent: ROOT
-  owner: HACKER
+  parent: cowbell::ROOT
+  owner: cowbell::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for pure event and substitution rendering.";
+  override description (owner: cowbell::HACKER, flags: "rc") = "Headless runtime scenarios for pure event and substitution rendering.";
 
-  method _descriptor owner: ARCH_WIZARD
+  method _descriptor owner: cowbell::ARCH_WIZARD
     "Read a reference through its public document and render contracts.";
     const {reference} = args;
     const result = $document:render($event:mk_info(player, reference):resolve(player), 'text_djot);
     return mapvalues(result['annotations])[1];
   endmethod
 
-  method _fixtures owner: ARCH_WIZARD
+  method _fixtures owner: cowbell::ARCH_WIZARD
     "Create actor, observer, room, and item fixtures for rendering scenarios.";
     room = create($room);
     actor = create($thing);
@@ -33,7 +33,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return {actor, observer, room, item};
   endmethod
 
-  method _destroy_fixtures owner: ARCH_WIZARD
+  method _destroy_fixtures owner: cowbell::ARCH_WIZARD
     "Destroy valid persistent fixtures in reverse containment order.";
     {actor, observer, room, item} = args;
     valid(item) && item:destroy();
@@ -43,7 +43,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_event_perspective_rendering owner: ARCH_WIZARD
+  method test_headless_event_perspective_rendering owner: cowbell::ARCH_WIZARD
     "Runtime scenario: event substitution renders actor and observer perspectives without delivery.";
     actor = observer = (room = (item = #-1));
     try
@@ -58,7 +58,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_event_message_bag_template_rendering owner: ARCH_WIZARD
+  method test_headless_event_message_bag_template_rendering owner: cowbell::ARCH_WIZARD
     "Runtime scenario: message bag entries can be compiled, picked, and rendered through events.";
     actor = observer = (room = (item = #-1));
     try
@@ -78,7 +78,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_event_message_bag_mutation owner: ARCH_WIZARD
+  method test_headless_event_message_bag_mutation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: message bag flyweight mutation preserves compiled template rendering.";
     actor = observer = (room = (item = #-1));
     try
@@ -99,7 +99,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_semantic_annotation_composition owner: ARCH_WIZARD
+  method test_semantic_annotation_composition owner: cowbell::ARCH_WIZARD
     const label = "A [brass] key <&> | *bright*";
     const object = $format.annotation:object(player, label);
     const paragraph = $format.paragraph:mk({object, " and ", object});
@@ -124,7 +124,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_semantic_annotation_cells owner: ARCH_WIZARD
+  method test_semantic_annotation_cells owner: cowbell::ARCH_WIZARD
     const object = $format.annotation:object(player, "player");
     const table = $format.table:mk({object}, {{object}});
     const definitions = $format.deflist:mk({{object, object}});
@@ -137,7 +137,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_annotation_delivery_bundle owner: ARCH_WIZARD
+  method test_annotation_delivery_bundle owner: cowbell::ARCH_WIZARD
     const receiver = create($event_receiver, player, 2);
     try
       add_verb(receiver, {player, "rxd", "render_test"}, {"this", "none", "this"});
@@ -160,7 +160,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_verb_annotations owner: ARCH_WIZARD
+  method test_help_verb_annotations owner: cowbell::ARCH_WIZARD
     "Help resolves real verbs, preserves code examples, and has plain text fallback.";
     const prose = $help_utils:annotate_prose($format.djot:blocks("Use `look` or `say <message>`. Keep `no_such_verb_123` and `` `look` `` intact."), $test_player);
     const event = $event:mk_info(player, prose);
@@ -203,7 +203,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_command_entries owner: ARCH_WIZARD
+  method test_command_entries owner: cowbell::ARCH_WIZARD
     "Command listings bind the receiver and reuse authored completion scope without executing anything.";
     const usage = this:_descriptor($help_utils:command_usage("get <thing>", player, {"this", "none", "none"}));
     $test_utils:assert_eq(usage["template"], "get {dobj}", "authored usage does not bind whichever object defines get nearby");
@@ -243,7 +243,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_argument_free_command_entries owner: ARCH_WIZARD
+  method test_argument_free_command_entries owner: cowbell::ARCH_WIZARD
     "Actual command signatures must not invent argument fields for ignored input.";
     const cases = {{$sittable, "sit", "none", "this", "sit on " + tostr($sittable)}, {$sittable, "stand", "none", "this", "stand from " + tostr($sittable)}, {$player, "inventory", "none", "none", "inventory"}, {$player, "dms", "none", "none", "dms"}, {$player, "listgag", "none", "none", "@listgag"}, {$prog_features, "@ps", "none", "none", "@ps"}, {$builder_features, "@schedules", "none", "none", "@schedules"}, {$prog_features, "@codepaste", "none", "none", "@codepaste"}, {$social_features, "frown", "none", "none", "frown"}, {$social_features, "applaud", "none", "none", "applaud"}};
     for example in (cases)
@@ -260,7 +260,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_action_semantics owner: ARCH_WIZARD
+  method test_action_semantics owner: cowbell::ARCH_WIZARD
     "Aliases share authored meanings; unknown commands do not acquire an icon by guesswork.";
     const give = $actor:command_action("hand", "Mr. Welcome");
     $test_utils:assert_eq(give, ["label" -> "Give", "title" -> "Give to Mr. Welcome", "arguments" -> ["dobj" -> "Item"]], "alias resolves the defining verb's authored action");

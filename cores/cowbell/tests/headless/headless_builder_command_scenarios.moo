@@ -2,14 +2,14 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
   import_export_id -> "headless_builder_command_scenarios"
 ]
   name: "Headless Builder Command Scenarios"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: ARCH_WIZARD
+  parent: cowbell::ROOT
+  location: cowbell::PROTOTYPE_BOX
+  owner: cowbell::ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Headless integration scenarios for builder command wrappers.";
+  override description (owner: cowbell::ARCH_WIZARD, flags: "rc") = "Headless integration scenarios for builder command wrappers.";
 
-  method test_headless_builder_commands_use_stored_grants owner: ARCH_WIZARD
+  method test_headless_builder_commands_use_stored_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: builder command verbs use stored capabilities for room and passage operations.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     test_area = #-1;
@@ -63,7 +63,7 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_builder_commands_missing_grants_deny_cleanly owner: ARCH_WIZARD
+  method test_headless_builder_commands_missing_grants_deny_cleanly owner: cowbell::ARCH_WIZARD
     "Security challenge: builder command wrappers deny missing grants without mutating the world.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     test_area = #-1;
@@ -116,7 +116,7 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_builder_commands_wizard_builds_without_grants owner: ARCH_WIZARD
+  method test_headless_builder_commands_wizard_builds_without_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: wizard builders can @build in an area without stored capability grants.";
     player == #90100 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90100.");
     test_area = #-1;
@@ -154,7 +154,7 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_builder_message_commands_dispatch_as_player owner: ARCH_WIZARD
+  method test_headless_builder_message_commands_dispatch_as_player owner: cowbell::ARCH_WIZARD
     "Runtime scenario: message builder commands run from non-wizard command frames and mutate through scoped helpers.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     fixture = #-1;
@@ -195,21 +195,21 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
     return true;
   endmethod
 
-  method _dispatch_builder_any owner: ARCH_WIZARD
+  method _dispatch_builder_any owner: cowbell::ARCH_WIZARD
     "Dispatch a builder command declared as any/any/any.";
     {verb_name, arg_string, command_args, ?prep_string = "", ?iobj_string = ""} = args;
     pc = ['verb -> verb_name, 'argstr -> arg_string, 'args -> command_args, 'dobj -> player, 'dobjstr -> command_args ? command_args[1] | arg_string, 'prep -> -2, 'prepstr -> prep_string, 'iobj -> player, 'iobjstr -> iobj_string];
     return dispatch_command_verb($builder_features, verb_name, pc);
   endmethod
 
-  method _dispatch_builder_dobj owner: ARCH_WIZARD
+  method _dispatch_builder_dobj owner: cowbell::ARCH_WIZARD
     "Dispatch a builder command declared as any/none/none.";
     {verb_name, dobj_string} = args;
     pc = ['verb -> verb_name, 'argstr -> dobj_string, 'args -> {dobj_string}, 'dobj -> player, 'dobjstr -> dobj_string, 'prep -> -1, 'prepstr -> "", 'iobj -> #-1, 'iobjstr -> ""];
     return dispatch_command_verb($builder_features, verb_name, pc);
   endmethod
 
-  method _find_room_named_in_area owner: ARCH_WIZARD
+  method _find_room_named_in_area owner: cowbell::ARCH_WIZARD
     "Return the first room in area with the given name.";
     {area, room_name} = args;
     for candidate in (area:contents())

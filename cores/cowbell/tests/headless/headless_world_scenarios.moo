@@ -4,11 +4,11 @@ object HEADLESS_WORLD_SCENARIOS [
   import_export_id -> "headless_world_scenarios"
 ]
   name: "World Boundary Scenarios"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  parent: cowbell::ROOT
+  owner: cowbell::ARCH_WIZARD
   readable: true
 
-  method test_view_and_take_policies_are_independent owner: ARCH_WIZARD
+  method test_view_and_take_policies_are_independent owner: cowbell::ARCH_WIZARD
     "An item-specific take rule does not break looking, and both take paths emit the same events.";
     const room = create($room, #90100, 2);
     const box = create($container, #90100, 2);
@@ -49,7 +49,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method test_named_actions_preserve_actor_authority owner: ARCH_WIZARD
+  method test_named_actions_preserve_actor_authority owner: cowbell::ARCH_WIZARD
     "Named key arguments work for an owner's NPC, and denial differs from an invalid request.";
     const npc = create($actor, #90102, 2);
     const box = create($container, #90100, 2);
@@ -81,7 +81,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method test_wear_and_remove_emit_completed_events owner: ARCH_WIZARD
+  method test_wear_and_remove_emit_completed_events owner: cowbell::ARCH_WIZARD
     "Wearing and removal authenticate the actor, emit one event, and preserve worn-item custody.";
     const npc = create($actor, #90102, 2);
     const item = create($wearable, #90100, 2);
@@ -112,7 +112,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return target:(method)(@parameters);
   endmethod
 
-  method test_passage_policy_has_explicit_sides_and_optional_keys owner: ARCH_WIZARD
+  method test_passage_policy_has_explicit_sides_and_optional_keys owner: cowbell::ARCH_WIZARD
     "A policy without Key works with an empty inventory; From and To keep their declared meaning.";
     const from = create($room, #90100, 2);
     const to = create($room, #90100, 2);
@@ -139,7 +139,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method test_foreign_area_cleanup_denied owner: ARCH_WIZARD
+  method test_foreign_area_cleanup_denied owner: cowbell::ARCH_WIZARD
     "Only authorized lifecycle code may remove another area's passages.";
     const area = create($area, $arch_wizard, 2);
     const room_a = create($room, $arch_wizard, 2);
@@ -161,7 +161,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method test_passage_foreign_movement_denied owner: ARCH_WIZARD
+  method test_passage_foreign_movement_denied owner: cowbell::ARCH_WIZARD
     "Public passage construction does not authorize moving another owner's object.";
     const room_a = create($room, $arch_wizard, 2);
     const room_b = create($room, $arch_wizard, 2);
@@ -197,7 +197,7 @@ object HEADLESS_WORLD_SCENARIOS [
     raise(E_INVARG);
   endmethod
 
-  method test_owner_area_and_room_lifecycle owner: ARCH_WIZARD
+  method test_owner_area_and_room_lifecycle owner: cowbell::ARCH_WIZARD
     "Nonwizard owners can initialize an area and recycle an owned room in a foreign area.";
     const owned_area = create($area, #90101, 2);
     const foreign_area = create($area, #90100, 2);
@@ -233,7 +233,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return target:(method)(@parameters);
   endmethod
 
-  method test_container_rejects_supplied_foreign_actor owner: ARCH_WIZARD
+  method test_container_rejects_supplied_foreign_actor owner: cowbell::ARCH_WIZARD
     "A programmer cannot select the owner's identity to open a restricted container.";
     const container = create($container, #90100, 2);
     const prior_location = #90100.location;
@@ -250,7 +250,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_container_put_rechecks_custody_after_acceptance_yield owner: ARCH_WIZARD
+  method test_container_put_rechecks_custody_after_acceptance_yield owner: cowbell::ARCH_WIZARD
     "A suspended acceptance callback cannot authorize moving an item that its actor no longer holds.";
     const container = create($container, #90100, 2);
     const item = create($thing, #90101, 2);
@@ -271,7 +271,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_container_public_actions_and_restricted_denial owner: ARCH_WIZARD
+  method test_container_public_actions_and_restricted_denial owner: cowbell::ARCH_WIZARD
     "Default public open and held-item actions succeed while configured denial preserves state.";
     const container = create($container, #90100, 2);
     const item = create($thing, #90101, 2);
@@ -298,7 +298,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_foreign_area_destroy_preserves_relation owner: ARCH_WIZARD
+  method test_foreign_area_destroy_preserves_relation owner: cowbell::ARCH_WIZARD
     "Check area recycle authority before touching its child relation.";
     const area = create($area, #90100, 2);
     const relation = area.passages_rel;
@@ -315,7 +315,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_passage_failed_accept_preserves_actor_location owner: ARCH_WIZARD
+  method test_passage_failed_accept_preserves_actor_location owner: cowbell::ARCH_WIZARD
     "A real destination rejection propagates without moving the authorized traveler.";
     const from_room = create($room, #90100, 2);
     const to_room = create($room, #90100, 2);
@@ -337,7 +337,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_passage_helpers_reject_hostile_self_call owner: ARCH_WIZARD
+  method test_passage_helpers_reject_hostile_self_call owner: cowbell::ARCH_WIZARD
     "An ordinary child cannot choose a wizard principal for inherited relation helpers.";
     const area = create($area, #90101, 2);
     const room_a = create($room, #90100, 2);
@@ -355,7 +355,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_passage_authorization_overrides_cannot_grant owner: ARCH_WIZARD
+  method test_passage_authorization_overrides_cannot_grant owner: cowbell::ARCH_WIZARD
     "A foreign area's permission override cannot authorize raw passage creation.";
     const area = create($area, #90100, 2);
     const room_a = create($room, #90100, 2);
@@ -374,7 +374,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_passage_update_ignores_fake_existing_link owner: ARCH_WIZARD
+  method test_passage_update_ignores_fake_existing_link owner: cowbell::ARCH_WIZARD
     "Source digging authority cannot create a link through an overridden lookup.";
     const area = create($area, #90100, 2);
     const room_a = create($room, #90101, 2);
@@ -393,7 +393,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method call_as_test_player owner: ARCH_WIZARD
+  method call_as_test_player owner: cowbell::ARCH_WIZARD
     "Invoke an interaction with the test task player's permissions.";
     caller == this && this == #90014 || raise(E_PERM);
     const {target, method, @parameters} = args;
@@ -401,7 +401,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return target:(method)(@parameters);
   endmethod
 
-  method test_inspection_transfer_reachability owner: ARCH_WIZARD
+  method test_inspection_transfer_reachability owner: cowbell::ARCH_WIZARD
     "Old inspection actions must neither take remote items nor bypass container access.";
     const room = create($room, #90100, 2);
     const remote = create($room, #90100, 2);
@@ -459,7 +459,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_inspection_transfers_recheck_after_acceptance_yield owner: ARCH_WIZARD
+  method test_inspection_transfers_recheck_after_acceptance_yield owner: cowbell::ARCH_WIZARD
     "Transfer acceptance callbacks may suspend; final custody and reachability must be checked again.";
     const room = create($room, #90100, 2);
     const item = create($thing, #90100, 2);
@@ -489,7 +489,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_exit_command_annotations owner: ARCH_WIZARD
+  method test_exit_command_annotations owner: cowbell::ARCH_WIZARD
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
     const destination = create($room, #90100, 2);
@@ -519,7 +519,7 @@ object HEADLESS_WORLD_SCENARIOS [
     return true;
   endmethod
 
-  method test_travel_rechecks_after_pre_exit_yield owner: ARCH_WIZARD
+  method test_travel_rechecks_after_pre_exit_yield owner: cowbell::ARCH_WIZARD
     "A pre-exit callback cannot replace or close the checked passage before movement.";
     const who = player;
     const prior_location = who.location;
@@ -551,7 +551,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-  method test_contextual_suggestions owner: ARCH_WIZARD
+  method test_contextual_suggestions owner: cowbell::ARCH_WIZARD
     "Suggestions share scopes and command matching, preserve aliases, and never execute candidate verbs.";
     const prior = player.location;
     const prior_wearing = player.wearing;

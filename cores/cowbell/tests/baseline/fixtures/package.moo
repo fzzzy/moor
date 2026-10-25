@@ -11,7 +11,8 @@
 // this program. If not, see <https://www.gnu.org/licenses/>.
 
 package "fixtures" [
-  objdef_version -> 2
+  objdef_version -> 2,
+  depends -> {"cowbell"}
 ];
 
 define RUNTIME_WIZARD = #90100;

@@ -13,7 +13,7 @@ object RUNTIME_PLAYER [
   import_export_id -> "runtime_player"
 ]
   name: "RUNTIME_PLAYER"
-  parent: PLAYER
+  parent: cowbell::PLAYER
   location: RUNTIME_ROOM
   owner: RUNTIME_PLAYER
   player: true

@@ -2,18 +2,18 @@ object HEADLESS_CAPABILITY_SCENARIOS [
   import_export_id -> "headless_capability_scenarios"
 ]
   name: "Headless Capability Runtime Scenarios"
-  parent: ROOT
-  owner: HACKER
+  parent: cowbell::ROOT
+  owner: cowbell::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for capability issuance, grants, merges, revocation, and denial paths.";
+  override description (owner: cowbell::HACKER, flags: "rc") = "Headless runtime scenarios for capability issuance, grants, merges, revocation, and denial paths.";
 
-  method _test_key owner: ARCH_WIZARD
+  method _test_key owner: cowbell::ARCH_WIZARD
     "Return the deterministic PASETO key used by capability scenarios.";
     return "dGVzdHRlc3R0ZXN0dGVzdHRlc3R0ZXN0dGVzdHRlc3Q=";
   endmethod
 
-  method test_headless_llm_public_methods_deny_non_owner owner: ARCH_WIZARD
+  method test_headless_llm_public_methods_deny_non_owner owner: cowbell::ARCH_WIZARD
     "Public LLM-agent state methods reject a non-owner without wizard permissions.";
     agent = #-1;
     try
@@ -37,14 +37,14 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method _llm_public_call_as_player owner: PLAYER
+  method _llm_public_call_as_player owner: cowbell::PLAYER
     caller == this && this == #90005 || raise(E_PERM);
     {agent, method} = args;
     method in {"get_project", "get_task_status", "get_todos", "reset_tool_failures"} || raise(E_PERM);
     return agent:(method)();
   endmethod
 
-  method test_headless_capability_issue_and_deny owner: ARCH_WIZARD
+  method test_headless_capability_issue_and_deny owner: cowbell::ARCH_WIZARD
     "Runtime scenario: issued capabilities validate granted permissions and deny invalid requests.";
     key = this:_test_key();
     target = #-1;
@@ -78,7 +78,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_tampered_token_denies owner: ARCH_WIZARD
+  method test_headless_capability_tampered_token_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: capability validation rejects tampered token slots.";
     key = this:_test_key();
     target = #-1;
@@ -106,7 +106,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_grant_merge_and_revoke owner: ARCH_WIZARD
+  method test_headless_capability_grant_merge_and_revoke owner: cowbell::ARCH_WIZARD
     "Runtime scenario: stored grants merge capabilities, can be found, and can be revoked.";
     key = this:_test_key();
     test_area = #-1;
@@ -138,7 +138,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_grant_allows_non_owner_validation owner: ARCH_WIZARD
+  method test_headless_capability_grant_allows_non_owner_validation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a non-owner can find and validate a stored grant.";
     key = this:_test_key();
     test_area = #-1;
@@ -154,7 +154,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_grant_requires_target_owner_or_wizard owner: ARCH_WIZARD
+  method test_headless_capability_grant_requires_target_owner_or_wizard owner: cowbell::ARCH_WIZARD
     "Security challenge: non-owners cannot grant capabilities for objects they do not control.";
     key = this:_test_key();
     test_area = #-1;
@@ -174,7 +174,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_owner_can_grant_for_owned_target owner: ARCH_WIZARD
+  method test_headless_capability_owner_can_grant_for_owned_target owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a non-wizard owner can grant capabilities for an owned target.";
     key = this:_test_key();
     test_area = #-1;
@@ -192,7 +192,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_grant_allows_non_owner_room_creation owner: ARCH_WIZARD
+  method test_headless_capability_grant_allows_non_owner_room_creation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a non-owner with an area add_room grant can create a room in that area.";
     test_area = #-1;
     created = #-1;
@@ -210,7 +210,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_missing_add_room_denies_room_creation owner: ARCH_WIZARD
+  method test_headless_capability_missing_add_room_denies_room_creation owner: cowbell::ARCH_WIZARD
     "Security challenge: an area grant without add_room must not create rooms.";
     test_area = #-1;
     created = #-1;
@@ -232,7 +232,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_wrong_category_denies_room_creation owner: ARCH_WIZARD
+  method test_headless_capability_wrong_category_denies_room_creation owner: cowbell::ARCH_WIZARD
     "Security challenge: an add_room grant stored under the wrong category must not authorize area room creation.";
     test_area = #-1;
     created = #-1;
@@ -254,7 +254,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_direct_bearer_allows_non_owner_room_creation owner: ARCH_WIZARD
+  method test_headless_capability_direct_bearer_allows_non_owner_room_creation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a bearer area add_room capability can create a room when used by a non-owner.";
     test_area = #-1;
     created = #-1;
@@ -271,7 +271,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_passage_creation_requires_area_and_room_grants owner: ARCH_WIZARD
+  method test_headless_capability_passage_creation_requires_area_and_room_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: passage creation by non-owner requires area and room capabilities together.";
     test_area = #-1;
     room_a = #-1;
@@ -297,7 +297,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_passage_creation_missing_room_grant_denies owner: ARCH_WIZARD
+  method test_headless_capability_passage_creation_missing_room_grant_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: area create_passage and source dig_from are not enough without destination dig_into.";
     test_area = #-1;
     room_a = #-1;
@@ -325,7 +325,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_passage_removal_requires_area_and_room_grants owner: ARCH_WIZARD
+  method test_headless_capability_passage_removal_requires_area_and_room_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: passage removal by non-owner requires area remove_passage and source room dig_from.";
     test_area = #-1;
     room_a = #-1;
@@ -350,7 +350,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_update_passage_requires_source_room_grant owner: ARCH_WIZARD
+  method test_headless_capability_update_passage_requires_source_room_grant owner: cowbell::ARCH_WIZARD
     "Runtime scenario: updating an existing passage requires only source-room dig_from capability.";
     test_area = #-1;
     room_a = #-1;
@@ -374,7 +374,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_update_passage_missing_source_grant_denies owner: ARCH_WIZARD
+  method test_headless_capability_update_passage_missing_source_grant_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: update_passage must deny a non-owner without source-room dig_from capability.";
     test_area = #-1;
     room_a = #-1;
@@ -402,7 +402,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_agent_building_tools_use_stored_grants owner: ARCH_WIZARD
+  method test_headless_capability_agent_building_tools_use_stored_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: agent building tools find stored area and room capabilities for delegated building.";
     test_area = #-1;
     room_a = #-1;
@@ -439,7 +439,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_agent_build_room_missing_grant_denies owner: ARCH_WIZARD
+  method test_headless_capability_agent_build_room_missing_grant_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: agent build_room denies non-owner room creation without add_room.";
     test_area = #-1;
     try
@@ -454,7 +454,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_agent_dig_passage_missing_grants_deny owner: ARCH_WIZARD
+  method test_headless_capability_agent_dig_passage_missing_grants_deny owner: cowbell::ARCH_WIZARD
     "Security challenge: agent dig_passage denies missing area, source-room, or destination-room grants.";
     area_missing = #-1;
     from_missing = #-1;
@@ -497,7 +497,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_agent_remove_passage_missing_grants_deny owner: ARCH_WIZARD
+  method test_headless_capability_agent_remove_passage_missing_grants_deny owner: cowbell::ARCH_WIZARD
     "Security challenge: agent remove_passage denies missing area or source-room grants.";
     area_missing = #-1;
     from_missing = #-1;
@@ -538,7 +538,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_create_child_allows_non_owner_nonfertile_create owner: ARCH_WIZARD
+  method test_headless_capability_create_child_allows_non_owner_nonfertile_create owner: cowbell::ARCH_WIZARD
     "Runtime scenario: create_child capability lets a non-owner create from a non-fertile parent.";
     parent_obj = #-1;
     child = #-1;
@@ -557,7 +557,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_description_allows_non_owner_object_mutation owner: ARCH_WIZARD
+  method test_headless_capability_set_description_allows_non_owner_object_mutation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: set_description capability lets a non-owner update only the delegated object.";
     target = #-1;
     try
@@ -575,7 +575,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_move_and_recycle_install_runtime_grants owner: ARCH_WIZARD
+  method test_headless_capability_move_and_recycle_install_runtime_grants owner: cowbell::ARCH_WIZARD
     "Runtime scenario: root mutation capabilities install narrow runtime grants for delegated movement and recycle operations.";
     target = #-1;
     new_home = #-1;
@@ -603,7 +603,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_owner_allows_non_owner_object_mutation owner: ARCH_WIZARD
+  method test_headless_capability_set_owner_allows_non_owner_object_mutation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a verified set_owner capability lets a non-owner transfer ownership.";
     target = #-1;
     try
@@ -626,7 +626,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_owner_rejects_invalid_authority owner: ARCH_WIZARD
+  method test_headless_capability_set_owner_rejects_invalid_authority owner: cowbell::ARCH_WIZARD
     "Changing ownership requires the target owner, wizard, or a valid target-bound capability.";
     target = #-1;
     other = #-1;
@@ -660,7 +660,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_owner_ignores_overridden_checker owner: ARCH_WIZARD
+  method test_headless_capability_set_owner_ignores_overridden_checker owner: cowbell::ARCH_WIZARD
     "An inherited wizard setter must not trust a child object's authorization override.";
     target = #-1;
     try
@@ -684,7 +684,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_owner_preserves_owner_and_wizard_access owner: ARCH_WIZARD
+  method test_headless_capability_set_owner_preserves_owner_and_wizard_access owner: cowbell::ARCH_WIZARD
     "Owner and wizard calls still transfer object and clobber-property ownership.";
     target = #-1;
     try
@@ -702,7 +702,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_name_aliases_allows_non_owner_object_mutation owner: ARCH_WIZARD
+  method test_headless_capability_set_name_aliases_allows_non_owner_object_mutation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: set_name_aliases capability lets a non-owner rename and update aliases without run_as.";
     target = #-1;
     try
@@ -722,7 +722,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_name_aliases_run_as_allows_non_owner_mutation owner: ARCH_WIZARD
+  method test_headless_capability_set_name_aliases_run_as_allows_non_owner_mutation owner: cowbell::ARCH_WIZARD
     "Compatibility scenario: set_name_aliases still works for a non-owner actor when the capability carries run_as authority.";
     target = #-1;
     try
@@ -742,7 +742,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_thumbnail_allows_non_owner_mutation owner: ARCH_WIZARD
+  method test_headless_capability_set_thumbnail_allows_non_owner_mutation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: set_thumbnail capability lets a non-owner update an object's thumbnail through scoped grants.";
     target = #-1;
     try
@@ -761,7 +761,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_set_thumbnail_rejects_invalid_content owner: ARCH_WIZARD
+  method test_headless_capability_set_thumbnail_rejects_invalid_content owner: cowbell::ARCH_WIZARD
     "A valid scoped grant reaches thumbnail validation and preserves the prior value on rejection.";
     target = #-1;
     try
@@ -790,7 +790,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_root_mutation_wrong_cap_denies owner: ARCH_WIZARD
+  method test_headless_capability_root_mutation_wrong_cap_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: an unrelated root mutation capability should not authorize another mutation.";
     target = #-1;
     try
@@ -811,7 +811,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_root_mutation_revoked_bearer_denies owner: ARCH_WIZARD
+  method test_headless_capability_root_mutation_revoked_bearer_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: revoking a copied root mutation bearer token should deny later runtime-grant installation.";
     target = #-1;
     try
@@ -833,7 +833,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_runtime_grant_literals_accept_string_and_symbol_specs owner: ARCH_WIZARD
+  method test_headless_runtime_grant_literals_accept_string_and_symbol_specs owner: cowbell::ARCH_WIZARD
     "Runtime scenario: task capability grant specs accept string and symbol grant/property names.";
     target = #-1;
     symbol_target = #-1;
@@ -851,7 +851,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_player_mutation_caps_allow_expected_operations owner: ARCH_WIZARD
+  method test_headless_capability_player_mutation_caps_allow_expected_operations owner: cowbell::ARCH_WIZARD
     "Runtime scenario: player mutation capabilities allow delegated account metadata changes.";
     target = #-1;
     try
@@ -882,7 +882,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_player_mutation_without_caps_denies_expected_operations owner: ARCH_WIZARD
+  method test_headless_capability_player_mutation_without_caps_denies_expected_operations owner: cowbell::ARCH_WIZARD
     "Security challenge: player mutation helpers deny non-owner calls without matching capabilities.";
     target = #-1;
     try
@@ -950,7 +950,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_llm_api_key_cap_allows_non_owner_update owner: ARCH_WIZARD
+  method test_headless_capability_llm_api_key_cap_allows_non_owner_update owner: cowbell::ARCH_WIZARD
     "Runtime scenario: set_api_key capability lets a non-owner update the LLM client key.";
     original_key = $llm_client.api_key;
     try
@@ -963,7 +963,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_llm_api_key_without_cap_denies owner: ARCH_WIZARD
+  method test_headless_capability_llm_api_key_without_cap_denies owner: cowbell::ARCH_WIZARD
     "Security challenge: set_api_key denies non-owner calls without a capability.";
     original_key = $llm_client.api_key;
     try
@@ -982,7 +982,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_revoke_denies_stored_grant_operation owner: ARCH_WIZARD
+  method test_headless_capability_revoke_denies_stored_grant_operation owner: cowbell::ARCH_WIZARD
     "Runtime scenario: revoking a stored grant prevents later lookup-mediated use by the grantee.";
     key = this:_test_key();
     test_area = #-1;
@@ -1006,7 +1006,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_revoke_denies_copied_bearer_token owner: ARCH_WIZARD
+  method test_headless_capability_revoke_denies_copied_bearer_token owner: cowbell::ARCH_WIZARD
     "Security challenge: a revoked grant should not leave a copied bearer token usable.";
     key = this:_test_key();
     test_area = #-1;
@@ -1027,7 +1027,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_revoke_denies_passage_area_grant owner: ARCH_WIZARD
+  method test_headless_capability_revoke_denies_passage_area_grant owner: cowbell::ARCH_WIZARD
     "Security challenge: revoked create_passage grants should deny copied tokens and passage creation.";
     test_area = #-1;
     room_a = #-1;
@@ -1071,7 +1071,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_make_player_requires_capability owner: ARCH_WIZARD
+  method test_headless_capability_make_player_requires_capability owner: cowbell::ARCH_WIZARD
     "Security challenge: a non-owner helper must not create players through the wizard-owned make_player wrapper.";
     created = #-1;
     denied = false;
@@ -1103,7 +1103,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_setup_cap_denies_extra_mutations owner: ARCH_WIZARD
+  method test_headless_capability_setup_cap_denies_extra_mutations owner: cowbell::ARCH_WIZARD
     "Security challenge: setup capabilities should not authorize player mutations outside the setup grant list.";
     key = this:_test_key();
     created = #-1;
@@ -1134,7 +1134,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_make_player_setup_can_mark_player owner: ARCH_WIZARD
+  method test_headless_capability_make_player_setup_can_mark_player owner: cowbell::ARCH_WIZARD
     "Runtime scenario: a player setup capability can complete login's initial player setup operations.";
     key = this:_test_key();
     created = #-1;
@@ -1176,7 +1176,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_merge_rejects_wrong_target owner: ARCH_WIZARD
+  method test_headless_capability_merge_rejects_wrong_target owner: cowbell::ARCH_WIZARD
     "Runtime scenario: merging capabilities for different targets is denied.";
     key = this:_test_key();
     target_a = #-1;
@@ -1200,7 +1200,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_capability_merge_rejects_expired_inputs owner: ARCH_WIZARD
+  method test_headless_capability_merge_rejects_expired_inputs owner: cowbell::ARCH_WIZARD
     "Security challenge: expired capabilities cannot be laundered through merge.";
     key = this:_test_key();
     target = #-1;
@@ -1228,7 +1228,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method _make_room_with_area_grant_as_player owner: PLAYER
+  method _make_room_with_area_grant_as_player owner: cowbell::PLAYER
     "Use PLAYER's stored area grant to create a room in target_area.";
     {target_area} = args;
     cap = $player:find_capability_for(target_area, 'area);
@@ -1236,32 +1236,32 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return cap:make_room_in($room);
   endmethod
 
-  method _make_room_with_cap_as_player owner: PLAYER
+  method _make_room_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied area capability to create a room as PLAYER.";
     {cap} = args;
     typeof(cap) == TYPE_FLYWEIGHT || raise(E_INVARG);
     return cap:make_room_in($room);
   endmethod
 
-  method _create_passage_with_caps_as_player owner: PLAYER
+  method _create_passage_with_caps_as_player owner: cowbell::PLAYER
     "Use supplied area and room capabilities to create a passage as PLAYER.";
     {area_cap, from_room, to_room, passage} = args;
     return area_cap:create_passage(from_room, to_room, passage);
   endmethod
 
-  method _remove_passage_with_caps_as_player owner: PLAYER
+  method _remove_passage_with_caps_as_player owner: cowbell::PLAYER
     "Use supplied area and room capabilities to remove a passage as PLAYER.";
     {area_cap, from_room, to_room} = args;
     return area_cap:remove_passage(from_room, to_room);
   endmethod
 
-  method _update_passage_as_player owner: PLAYER
+  method _update_passage_as_player owner: cowbell::PLAYER
     "Update a passage as PLAYER.";
     {area, from_room, to_room, passage} = args;
     return area:update_passage(from_room, to_room, passage);
   endmethod
 
-  method _find_room_named_in_area owner: ARCH_WIZARD
+  method _find_room_named_in_area owner: cowbell::ARCH_WIZARD
     "Return the first room in area with the given name.";
     {area, room_name} = args;
     for candidate in (area:contents())
@@ -1272,19 +1272,19 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return #-1;
   endmethod
 
-  method _create_child_with_cap_as_player owner: PLAYER
+  method _create_child_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied create_child capability as PLAYER.";
     {cap} = args;
     return cap:create();
   endmethod
 
-  method _set_description_with_cap_as_player owner: PLAYER
+  method _set_description_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_description capability as PLAYER.";
     {cap, description} = args;
     return cap:set_description(description);
   endmethod
 
-  method _set_description_with_string_runtime_grant owner: ARCH_WIZARD
+  method _set_description_with_string_runtime_grant owner: cowbell::ARCH_WIZARD
     "Install a string-shaped runtime property_write grant for description.";
     {target, description} = args;
     set_task_perms($player, {{"property_write", target, "description"}});
@@ -1292,7 +1292,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method _set_description_with_symbol_runtime_grant owner: ARCH_WIZARD
+  method _set_description_with_symbol_runtime_grant owner: cowbell::ARCH_WIZARD
     "Install a symbol-shaped runtime property_write grant for description.";
     {target, description} = args;
     set_task_perms($player, {{'property_write, target, 'description}});
@@ -1300,121 +1300,121 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return true;
   endmethod
 
-  method _set_thumbnail_with_cap_as_player owner: PLAYER
+  method _set_thumbnail_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_thumbnail capability as PLAYER.";
     {cap, content_type, picbin} = args;
     return cap:set_thumbnail(content_type, picbin);
   endmethod
 
-  method _set_name_aliases_with_cap_as_player owner: PLAYER
+  method _set_name_aliases_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_name_aliases capability as PLAYER.";
     {cap, new_name, new_aliases} = args;
     return cap:set_name_aliases(new_name, new_aliases);
   endmethod
 
-  method _set_owner_with_cap_as_player owner: PLAYER
+  method _set_owner_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_owner capability as PLAYER.";
     {cap, new_owner} = args;
     return cap:set_owner(new_owner);
   endmethod
 
-  method _move_with_cap_as_player owner: PLAYER
+  method _move_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied move capability as PLAYER.";
     {cap, destination} = args;
     return cap:moveto(destination);
   endmethod
 
-  method _destroy_with_cap_as_player owner: PLAYER
+  method _destroy_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied recycle capability as PLAYER.";
     {cap} = args;
     return cap:destroy();
   endmethod
 
-  method _set_password_with_cap_as_player owner: PLAYER
+  method _set_password_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_password capability as PLAYER.";
     {cap, new_password} = args;
     return cap:set_password(new_password);
   endmethod
 
-  method _set_programmer_with_cap_as_player owner: PLAYER
+  method _set_programmer_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_programmer capability as PLAYER.";
     {cap, flag_value} = args;
     return cap:set_programmer(flag_value);
   endmethod
 
-  method _set_email_address_with_cap_as_player owner: PLAYER
+  method _set_email_address_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_email_address capability as PLAYER.";
     {cap, email} = args;
     return cap:set_email_address(email);
   endmethod
 
-  method _set_oauth2_identities_with_cap_as_player owner: PLAYER
+  method _set_oauth2_identities_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_oauth2_identities capability as PLAYER.";
     {cap, identities} = args;
     return cap:set_oauth2_identities(identities);
   endmethod
 
-  method _set_pronouns_with_cap_as_player owner: PLAYER
+  method _set_pronouns_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_pronouns capability as PLAYER.";
     {cap, pronouns_str} = args;
     return cap:set_pronouns(pronouns_str);
   endmethod
 
-  method _set_profile_picture_with_cap_as_player owner: PLAYER
+  method _set_profile_picture_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_profile_picture capability as PLAYER.";
     {cap, content_type, picbin} = args;
     return cap:set_profile_picture(content_type, picbin);
   endmethod
 
-  method _set_password_as_player owner: PLAYER
+  method _set_password_as_player owner: cowbell::PLAYER
     "Attempt to set another player's password as PLAYER without a capability.";
     {target, new_password} = args;
     return target:set_password(new_password);
   endmethod
 
-  method _set_programmer_as_player owner: PLAYER
+  method _set_programmer_as_player owner: cowbell::PLAYER
     "Attempt to set another player's programmer flag as PLAYER without a capability.";
     {target, flag_value} = args;
     return target:set_programmer(flag_value);
   endmethod
 
-  method _set_email_address_as_player owner: PLAYER
+  method _set_email_address_as_player owner: cowbell::PLAYER
     "Attempt to set another player's email address as PLAYER without a capability.";
     {target, email} = args;
     return target:set_email_address(email);
   endmethod
 
-  method _set_oauth2_identities_as_player owner: PLAYER
+  method _set_oauth2_identities_as_player owner: cowbell::PLAYER
     "Attempt to set another player's OAuth2 identities as PLAYER without a capability.";
     {target, identities} = args;
     return target:set_oauth2_identities(identities);
   endmethod
 
-  method _set_pronouns_as_player owner: PLAYER
+  method _set_pronouns_as_player owner: cowbell::PLAYER
     "Attempt to set another player's pronouns as PLAYER without a capability.";
     {target, pronouns_str} = args;
     return target:set_pronouns(pronouns_str);
   endmethod
 
-  method _set_profile_picture_as_player owner: PLAYER
+  method _set_profile_picture_as_player owner: cowbell::PLAYER
     "Attempt to set another player's profile picture as PLAYER without a capability.";
     {target, content_type, picbin} = args;
     return target:set_profile_picture(content_type, picbin);
   endmethod
 
-  method _set_api_key_with_cap_as_player owner: PLAYER
+  method _set_api_key_with_cap_as_player owner: cowbell::PLAYER
     "Use a supplied set_api_key capability as PLAYER.";
     {cap, new_key} = args;
     return cap:set_api_key(new_key);
   endmethod
 
-  method _set_api_key_as_player owner: PLAYER
+  method _set_api_key_as_player owner: cowbell::PLAYER
     "Attempt to set the LLM API key as PLAYER without a capability.";
     {new_key} = args;
     return $llm_client:set_api_key(new_key);
   endmethod
 
-  method _validate_area_grant_as_player owner: PLAYER
+  method _validate_area_grant_as_player owner: cowbell::PLAYER
     "Validate PLAYER's stored area grant with a test key.";
     {target_area, key} = args;
     cap = $player:find_capability_for(target_area, 'area);
@@ -1422,19 +1422,19 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     return cap:challenge_for_with_key({'add_room}, key);
   endmethod
 
-  method _grant_area_capability_as_player owner: PLAYER
+  method _grant_area_capability_as_player owner: cowbell::PLAYER
     "Attempt to grant capabilities as PLAYER.";
     {target, cap_list, grantee, category, key} = args;
     return $root:grant_capability(target, cap_list, grantee, category, key);
   endmethod
 
-  method _call_make_player_as_player owner: PLAYER
+  method _call_make_player_as_player owner: cowbell::PLAYER
     "Attempt player creation through a non-owner player-owned helper.";
     cap = $player:make_player();
     return cap.delegate;
   endmethod
 
-  method _set_player_flag_with_key owner: ARCH_WIZARD
+  method _set_player_flag_with_key owner: cowbell::ARCH_WIZARD
     "Set a player flag through a test-key setup capability.";
     {cap, flag_value, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_player_flag}, key);
@@ -1442,7 +1442,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     set_player_flag(target, flag_value);
   endmethod
 
-  method _set_name_aliases_with_key owner: ARCH_WIZARD
+  method _set_name_aliases_with_key owner: cowbell::ARCH_WIZARD
     "Set name and aliases through a test-key setup capability.";
     {cap, new_name, new_aliases, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_name_aliases}, key);
@@ -1450,7 +1450,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target:set_name_aliases(new_name, new_aliases);
   endmethod
 
-  method _set_password_with_key owner: ARCH_WIZARD
+  method _set_password_with_key owner: cowbell::ARCH_WIZARD
     "Set password through a test-key setup capability.";
     {cap, new_password, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_password}, key);
@@ -1458,7 +1458,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target:set_password(new_password);
   endmethod
 
-  method _set_email_address_with_key owner: ARCH_WIZARD
+  method _set_email_address_with_key owner: cowbell::ARCH_WIZARD
     "Set email address through a test-key setup capability.";
     {cap, email, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_email_address}, key);
@@ -1466,7 +1466,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target:set_email_address(email);
   endmethod
 
-  method _set_oauth2_identities_with_key owner: ARCH_WIZARD
+  method _set_oauth2_identities_with_key owner: cowbell::ARCH_WIZARD
     "Set OAuth2 identities through a test-key setup capability.";
     {cap, identities, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_oauth2_identities}, key);
@@ -1474,7 +1474,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target:set_oauth2_identities(identities);
   endmethod
 
-  method _set_home_with_key owner: ARCH_WIZARD
+  method _set_home_with_key owner: cowbell::ARCH_WIZARD
     "Set a player home through a test-key setup capability.";
     {cap, home, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_home}, key);
@@ -1482,7 +1482,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target.home = home;
   endmethod
 
-  method _move_with_key owner: ARCH_WIZARD
+  method _move_with_key owner: cowbell::ARCH_WIZARD
     "Move a player through a test-key setup capability.";
     {cap, destination, key} = args;
     {target, perms} = cap:challenge_for_with_key({'move}, key);
@@ -1490,7 +1490,7 @@ object HEADLESS_CAPABILITY_SCENARIOS [
     target:moveto(destination);
   endmethod
 
-  method _set_owner_with_key owner: ARCH_WIZARD
+  method _set_owner_with_key owner: cowbell::ARCH_WIZARD
     "Set owner through a test-key setup capability.";
     {cap, new_owner, key} = args;
     {target, perms} = cap:challenge_for_with_key({'set_owner}, key);

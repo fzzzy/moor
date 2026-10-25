@@ -4,7 +4,7 @@ object HEADLESS_MESSAGING_LETTER [
   import_export_id -> "headless_messaging_letter"
 ]
   name: "Runtime Messaging Letter"
-  parent: LETTER
+  parent: cowbell::LETTER
   location: fixtures::RUNTIME_PROGRAMMER
   owner: fixtures::RUNTIME_PROGRAMMER
 endobject
