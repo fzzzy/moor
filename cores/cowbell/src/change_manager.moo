@@ -636,7 +636,8 @@ object CHANGE_MANAGER [
         continue;
       endif
       const parts = explode(entry.path, "/", true);
-      if (strcmp(parts[$], "constants.moo") == 0)
+      "A package's package.moo holds its constants, like a plain directory's constants.moo.";
+      if (strcmp(parts[$], "constants.moo") == 0 || strcmp(parts[$], "package.moo") == 0)
         continue;
       endif
       let text = "";

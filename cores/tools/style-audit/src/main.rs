@@ -96,10 +96,11 @@ fn run() -> Result<bool, Box<dyn Error>> {
             return Err(format!("selection has no sources: {}", selection.display()).into());
         }
     }
-    if let Some(index) = files
-        .iter()
-        .position(|path| path.file_name().is_some_and(|name| name == "constants.moo"))
-    {
+    // Constants come first: a package's package.moo, or a plain directory's constants.moo.
+    if let Some(index) = files.iter().position(|path| {
+        path.file_name()
+            .is_some_and(|name| name == "package.moo" || name == "constants.moo")
+    }) {
         let constants = files.remove(index);
         files.insert(0, constants);
     }
