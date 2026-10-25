@@ -29,9 +29,7 @@ object LLM_INSPECTION_TOOLS [
     tools = {@tools, $llm_agent_tool:mk("list_builtin_functions", "Get a list of all available MOO builtin functions. Returns a formatted list with function signatures. Use function_info(name) for detailed info about a specific function.", ["type" -> "object", "properties" -> [], "required" -> {}], target_obj, "list_builtin_functions", 'inspection)};
     tools = {@tools, $llm_agent_tool:mk("get_verb_code_range", "Get specific lines from a verb's code. Use this to show focused code snippets to the user with line numbers.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "The object (e.g. '#1', '$login', or 'here')"], "verb" -> ["type" -> "string", "description" -> "The verb name"], "start_line" -> ["type" -> "integer", "description" -> "First line to retrieve (1-indexed, optional)", "minimum" -> 1], "end_line" -> ["type" -> "integer", "description" -> "Last line to retrieve (inclusive, optional)", "minimum" -> 1]], "required" -> {"object", "verb"}], target_obj, "get_verb_code_range", 'inspection)};
     tools = {@tools, $llm_agent_tool:mk("get_verb_metadata", "Get metadata about a verb including owner, flags, and argument specification.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string", "description" -> "The object (e.g. '#1', '$login', or 'here')"], "verb" -> ["type" -> "string", "description" -> "The verb name"]], "required" -> {"object", "verb"}], target_obj, "get_verb_metadata", 'inspection)};
-    tools = {@tools, $llm_agent_tool:mk("list_commands", "List readable command verbs on an object.",
-      ["type" -> "object", "properties" -> ["object" -> ["type" -> "string"]],
-        "required" -> {"object"}], target_obj, "list_commands", 'inspection)};
+    tools = {@tools, $llm_agent_tool:mk("list_commands", "List readable command verbs on an object.", ["type" -> "object", "properties" -> ["object" -> ["type" -> "string"]], "required" -> {"object"}], target_obj, "list_commands", 'inspection)};
     return {@tools, @$llm_code_search:get_tools()};
   endmethod
 
@@ -46,8 +44,7 @@ object LLM_INSPECTION_TOOLS [
     let result = {"Commands available for " + tostr(target) + ":"};
     for entry in (commands)
       const {name, definer, direct, prep, indirect} = entry;
-      result = {@result, name + " (" + direct + " " + prep + " " + indirect
-        + ") [from " + tostr(definer) + "]"};
+      result = {@result, name + " (" + direct + " " + prep + " " + indirect + ") [from " + tostr(definer) + "]"};
       value_bytes(result) <= 65536 || raise(E_QUOTA, "Command list is too large.");
     endfor
     return result:join("\n");
@@ -104,10 +101,9 @@ object LLM_INSPECTION_TOOLS [
         let scope = $area:rooms_from(origin, false);
         const area = origin.location;
         if (valid(area) && isa(area, $area))
-          scope = {@scope, @{candidate for candidate in (area.contents) if (isa(candidate, $room))}};
+          scope = {@scope, @{ candidate for candidate in (area.contents) if isa(candidate, $room) }};
         endif
-        room = $match:require_unique(reference,
-          $match:candidates_in_scope(reference, scope, ['context -> actor]), "room");
+        room = $match:require_unique(reference, $match:candidates_in_scope(reference, scope, ['context -> actor]), "room");
       endif
     endif
     valid(room) && isa(room, $room) || raise(E_INVARG, "Reference is not a room.");
@@ -120,27 +116,22 @@ object LLM_INSPECTION_TOOLS [
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     set_task_perms(actor);
     const from_spec = `request["from_room"] ! E_RANGE => ""';
-    const from_room = this:_resolve_room(from_spec == "" ? actor.location | from_spec,
-      actor, actor.location);
+    const from_room = this:_resolve_room(from_spec == "" ? actor.location | from_spec, actor, actor.location);
     const to_room = this:_resolve_room(request["to_room"], actor, from_room);
     const from_name = from_room:name();
     const to_name = to_room:name();
     to_room == from_room && return "You are already at " + to_name + "!";
     const path = $area:find_path(from_room, to_room, true, true, actor);
     !path && return "No route found from " + from_name + " to " + to_name + ".";
-    let result = {"Route from " + from_name + " (" + tostr(from_room) + ") to " + to_name
-      + " (" + tostr(to_room) + "):"};
+    let result = {"Route from " + from_name + " (" + tostr(from_room) + ") to " + to_name + " (" + tostr(to_room) + "):"};
     for i in [1..length(path) - 1]
       const {room, connector} = path[i];
       const next_room = path[i + 1][1];
       if (typeof(connector) == TYPE_LIST && connector[1] == 'transport)
-        result = {@result, "  " + tostr(i) + ". At " + room:name() + ", use "
-          + connector[4] + " (" + connector[2] + ")"};
+        result = {@result, "  " + tostr(i) + ". At " + room:name() + ", use " + connector[4] + " (" + connector[2] + ")"};
       else
-        const direction = room == connector.side_a_room
-          ? connector.side_a_label | connector.side_b_label;
-        result = {@result, "  " + tostr(i) + ". Go " + direction + " to " + next_room:name()
-          + " (" + tostr(next_room) + ")"};
+        const direction = room == connector.side_a_room ? connector.side_a_label | connector.side_b_label;
+        result = {@result, "  " + tostr(i) + ". Go " + direction + " to " + next_room:name() + " (" + tostr(next_room) + ")"};
       endif
     endfor
     return result:join("\n");
@@ -402,8 +393,7 @@ object LLM_INSPECTION_TOOLS [
     const {request, actor} = args;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     set_task_perms(actor);
-    return $llm_verb_source:read(actor, request["object"], request["verb"],
-      `request["start_line"] ! E_RANGE => 1', `request["end_line"] ! E_RANGE => 0'):numbered_text();
+    return $llm_verb_source:read(actor, request["object"], request["verb"], `request["start_line"] ! E_RANGE => 1', `request["end_line"] ! E_RANGE => 0'):numbered_text();
   endmethod
 
   method get_verb_metadata owner: ARCH_WIZARD
@@ -428,10 +418,8 @@ object LLM_INSPECTION_TOOLS [
       add_property(target, "local_probe", 42, {$hacker, "r"});
       const listing = this:mcp_list_properties(["object" -> tostr(target)], $test_player);
       $test_utils:assert_true(index(listing, "local_probe = 42") > 0, "Local symbol names render");
-      $test_utils:assert_true(index(listing, "inherited_probe = \"child value\"") > 0,
-        "Inherited properties use the target's value");
-      $test_utils:assert_true(index(listing, "private_probe = (unreadable)") > 0,
-        "Private inherited values stay unreadable");
+      $test_utils:assert_true(index(listing, "inherited_probe = \"child value\"") > 0, "Inherited properties use the target's value");
+      $test_utils:assert_true(index(listing, "private_probe = (unreadable)") > 0, "Private inherited values stay unreadable");
       $test_utils:assert_eq(index(listing, "private value"), 0, "Private values are not disclosed");
     finally
       $test_utils:destroy_if_valid(target);
@@ -439,5 +427,4 @@ object LLM_INSPECTION_TOOLS [
     endtry
     return true;
   endmethod
-
 endobject

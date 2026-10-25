@@ -12,7 +12,6 @@ object LOGIN [
   property bogus_command (owner: ARCH_WIZARD, flags: "r") = "?";
   property connection_quiet_period (owner: ARCH_WIZARD, flags: "rc") = 7200;
   property default_home (owner: ARCH_WIZARD, flags: "rc") = FIRST_ROOM;
-  property start_room (owner: ARCH_WIZARD, flags: "rc") = FIRST_ROOM;
   property default_player_class (owner: ARCH_WIZARD, flags: "r") = PLAYER;
   property intercepted_actions (owner: ARCH_WIZARD, flags: "rc") = {};
   property intercepted_players (owner: ARCH_WIZARD, flags: "rc") = {};
@@ -72,6 +71,7 @@ object LOGIN [
   };
   property privacy_policy_content_type (owner: ARCH_WIZARD, flags: "rc") = "text/djot";
   property registration_string (owner: ARCH_WIZARD, flags: "rc") = "Character creation is disabled.";
+  property start_room (owner: ARCH_WIZARD, flags: "rc") = FIRST_ROOM;
   property welcome_message (owner: ARCH_WIZARD, flags: "rc") = {
     "## Welcome to the _mooR_ *Cowbell* core.",
     "",
@@ -95,8 +95,7 @@ object LOGIN [
   method welcome_content owner: ARCH_WIZARD
     "Parse explicit banner syntax before inserting literal server facts into text nodes.";
     set_task_perms(caller_perms());
-    const bindings = ["TITLE" -> this.moo_title, "VERSION" -> server_version(),
-      "CORE_VERSION" -> $sysobj.core_version];
+    const bindings = ["TITLE" -> this.moo_title, "VERSION" -> server_version(), "CORE_VERSION" -> $sysobj.core_version];
     return this:_authored_welcome(this.welcome_message, this.welcome_message_kind, bindings);
   endmethod
 
@@ -106,8 +105,7 @@ object LOGIN [
     const {lines, kind, bindings} = args;
     const source = typeof(lines) == TYPE_LIST ? lines:join("\n") | tostr(lines);
     const authored = $format:authored(kind, source);
-    return $document_template:mk('blocks,
-      {this:_welcome_node(block, 'block, bindings) for block in (flycontents(authored))});
+    return $document_template:mk('blocks, { this:_welcome_node(block, 'block, bindings) for block in (flycontents(authored)) });
   endmethod
 
   method _welcome_node owner: HACKER
@@ -154,7 +152,7 @@ object LOGIN [
       let children = {};
       for entry in (fields[key])
         if (cardinality == 'matrix_optional)
-          children = {@children, {this:_welcome_node(cell, child_kind, bindings) for cell in (entry)}};
+          children = {@children, { this:_welcome_node(cell, child_kind, bindings) for cell in (entry) }};
         else
           children = {@children, this:_welcome_node(entry, child_kind, bindings)};
         endif
@@ -184,8 +182,7 @@ object LOGIN [
       server_log("Login content: " + diagnostic);
     endfor
     const rendered = batch['results][1];
-    const metadata = ['cowbell_document -> batch['document],
-      'annotations -> rendered['annotations], 'delivery_id -> uuid(), 'audience -> 'utility];
+    const metadata = ['cowbell_document -> batch['document], 'annotations -> rendered['annotations], 'delivery_id -> uuid(), 'audience -> 'utility];
     notify(target, rendered['body], false, false, tosym(strsub(tostr(format), "_", "/", 1)), metadata);
   endmethod
 
@@ -487,15 +484,13 @@ object LOGIN [
       $test_utils:assert_true(rejected, "invalid player name rejected before allocation");
     endfor
     const after = players();
-    $test_utils:assert_true(length(after) == length(before)
-      && !length({who for who in (after) if (!(who in before))}), "no player was allocated");
+    $test_utils:assert_true(length(after) == length(before) && !length({ who for who in (after) if !(who in before) }), "no player was allocated");
     return true;
   endmethod
 
   method test_new_player_welcome_uses_configuration owner: ARCH_WIZARD
     "The greeting renders the configured welcome as Djot with the world's title.";
-    const welcome = this:_authored_welcome({"## Welcome to {TITLE}!", "", "Check in at the `desk`."},
-      'djot_blocks, ["TITLE" -> "Test Hotel"]);
+    const welcome = this:_authored_welcome({"## Welcome to {TITLE}!", "", "Check in at the `desk`."}, 'djot_blocks, ["TITLE" -> "Test Hotel"]);
     const body = $document:render($event:mk_info(#90102, welcome):resolve(#90102), 'text_plain)['body];
     $test_utils:assert_true(index(body, "Welcome to Test Hotel!"), "title substituted");
     $test_utils:assert_true(index(body, "Check in at the desk."), "configured text shown");
@@ -642,8 +637,7 @@ object LOGIN [
     const {new_player} = args;
     !valid(new_player) && return;
     "The configured welcome is authored Djot; {TITLE} becomes the world's title.";
-    const welcome = this:_authored_welcome(this.new_player_welcome_message, 'djot_blocks,
-      ["TITLE" -> this.moo_title]);
+    const welcome = this:_authored_welcome(this.new_player_welcome_message, 'djot_blocks, ["TITLE" -> this.moo_title]);
     const tips_list = $format.list:mk({"Set your description: @describe me as <text>", "Set your pronouns: @pronouns they/them (or she/her, he/him, etc.)"});
     const content = $format.block:mk(welcome, $format.title:mk("Next steps", 4), tips_list);
     let event = $event:mk_info(new_player, content):with_audience('utility):with_presentation_hint('inset);

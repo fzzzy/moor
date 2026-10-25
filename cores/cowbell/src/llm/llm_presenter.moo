@@ -6,17 +6,17 @@ object LLM_PRESENTER [
   parent: LLM_TOOL_PROVIDER
   owner: ARCH_WIZARD
 
-  property recipient (owner: ARCH_WIZARD, flags: "") = #-1;
+  property active (owner: ARCH_WIZARD, flags: "") = false;
   property destination (owner: ARCH_WIZARD, flags: "") = 0;
   property group (owner: ARCH_WIZARD, flags: "") = #-1;
-  property active (owner: ARCH_WIZARD, flags: "") = false;
+  property recipient (owner: ARCH_WIZARD, flags: "") = #-1;
 
   method new owner: ARCH_WIZARD
     "Create an anonymous output destination for one authenticated request.";
     const principal = caller_perms();
     const {actor, destination, group} = args;
     typeof(actor) == TYPE_OBJ && valid(actor) && (actor == principal || principal.wizard) || raise(E_PERM);
-    (typeof(destination) == TYPE_OBJ || destination == 0) && typeof(group) == TYPE_OBJ || raise(E_TYPE);
+    typeof(destination) == TYPE_OBJ || destination == 0 && typeof(group) == TYPE_OBJ || raise(E_TYPE);
     const presenter = create($llm_presenter, $arch_wizard, 1);
     presenter.recipient = actor;
     presenter.destination = destination;
@@ -79,24 +79,7 @@ object LLM_PRESENTER [
     set_task_perms(caller_perms());
     const title = ["type" -> "string", "maxLength" -> 256];
     const text = ["type" -> "string", "maxLength" -> 16384];
-    return {
-      $llm_agent_tool:mk("present_code", "Present source code to the requester without interpreting its contents.",
-        ["type" -> "object", "properties" -> ["title" -> title, "code" -> text,
-          "language" -> ["type" -> "string", "maxLength" -> 32]],
-          "required" -> {"code"}, "additionalProperties" -> false], this, "present_code", 'presentation),
-      $llm_agent_tool:mk("show_verb", "Read verb source and show a preview to the requester. Include the reason for reading it.",
-        ["type" -> "object", "properties" -> ["object" -> title, "verb" -> title, "reason" -> text],
-          "required" -> {"object", "verb", "reason"}, "additionalProperties" -> false], this, "show_verb", 'presentation),
-      $llm_agent_tool:mk("present_report", "Present a prose report to the requester.",
-        ["type" -> "object", "properties" -> ["title" -> title, "content" -> text],
-          "required" -> {"content"}, "additionalProperties" -> false], this, "present_report", 'presentation),
-      $llm_agent_tool:mk("present_table", "Present a table to the requester.",
-        ["type" -> "object", "properties" -> ["title" -> title,
-          "headers" -> ["type" -> "array", "items" -> title, "maxItems" -> 16],
-          "rows" -> ["type" -> "array", "maxItems" -> 64,
-            "items" -> ["type" -> "array", "maxItems" -> 16]]],
-          "required" -> {"headers", "rows"}, "additionalProperties" -> false], this, "present_table", 'presentation)
-    };
+    return {$llm_agent_tool:mk("present_code", "Present source code to the requester without interpreting its contents.", ["type" -> "object", "properties" -> ["title" -> title, "code" -> text, "language" -> ["type" -> "string", "maxLength" -> 32]], "required" -> {"code"}, "additionalProperties" -> false], this, "present_code", 'presentation), $llm_agent_tool:mk("show_verb", "Read verb source and show a preview to the requester. Include the reason for reading it.", ["type" -> "object", "properties" -> ["object" -> title, "verb" -> title, "reason" -> text], "required" -> {"object", "verb", "reason"}, "additionalProperties" -> false], this, "show_verb", 'presentation), $llm_agent_tool:mk("present_report", "Present a prose report to the requester.", ["type" -> "object", "properties" -> ["title" -> title, "content" -> text], "required" -> {"content"}, "additionalProperties" -> false], this, "present_report", 'presentation), $llm_agent_tool:mk("present_table", "Present a table to the requester.", ["type" -> "object", "properties" -> ["title" -> title, "headers" -> ["type" -> "array", "items" -> title, "maxItems" -> 16], "rows" -> ["type" -> "array", "maxItems" -> 64, "items" -> ["type" -> "array", "maxItems" -> 16]]], "required" -> {"headers", "rows"}, "additionalProperties" -> false], this, "present_table", 'presentation)};
   endmethod
 
   method present_code owner: ARCH_WIZARD
@@ -137,7 +120,7 @@ object LLM_PRESENTER [
     for candidate in (parameters["rows"])
       typeof(candidate) == TYPE_LIST || raise(E_TYPE, "Each row must be a list.");
     endfor
-    const rows = {{typeof(cell) == TYPE_STR ? cell | tostr(cell) for cell in (row)} for row in (parameters["rows"])};
+    const rows = { { typeof(cell) == TYPE_STR ? cell | tostr(cell) for cell in (row) } for row in (parameters["rows"]) };
     const blocks = title ? {$format.title:mk(title)} | {};
     $llm_presenter:send(this, actor, $format.block:mk(@blocks, $format.table:mk(headers, rows)));
     return "Table presented: " + tostr(length(rows)) + " rows.";
@@ -153,10 +136,8 @@ object LLM_PRESENTER [
     const preview = source.lines[1..min(12, source.total)];
     const title = source:signature() + " [" + source.flags + "] " + source.argspec:join(" ");
     const omitted = source.total > 12 ? tostr(source.total - 12) + " more lines." | "";
-    const document = $format.block:mk($format.title:mk(title), parameters["reason"],
-      $format.code:mk(preview, 'moo, 1), omitted);
+    const document = $format.block:mk($format.title:mk(title), parameters["reason"], $format.code:mk(preview, 'moo, 1), omitted);
     $llm_presenter:send(this, actor, document);
-    return ["code" -> source.lines:join("\n"), "flags" -> source.flags,
-      "argspec" -> source.argspec:join(" "), "total_lines" -> source.total];
+    return ["code" -> source.lines:join("\n"), "flags" -> source.flags, "argspec" -> source.argspec:join(" "), "total_lines" -> source.total];
   endmethod
 endobject

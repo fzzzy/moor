@@ -23,9 +23,7 @@ object LLM_ROOM_VIEW [
           queue = {@queue, ['query -> job.query, 'requester -> job.requester]};
           continue;
         endif
-        jobs = {@jobs, ['query -> job.query, 'requester -> job.requester, 'state -> job.state,
-          'iteration -> (valid(job.agent) ? job.agent.current_iteration | 0),
-          'context -> (valid(job.agent) ? job.agent:get_context() | job.context)]};
+        jobs = {@jobs, ['query -> job.query, 'requester -> job.requester, 'state -> job.state, 'iteration -> valid(job.agent) ? job.agent.current_iteration | 0, 'context -> valid(job.agent) ? job.agent:get_context() | job.context]};
       endif
     endfor
     for offset in [1..length(room.history)]
@@ -53,10 +51,10 @@ object LLM_ROOM_VIEW [
       !lines && (lines = {"No active tasks visible to you."});
       return {@lines, "Queued: " + tostr(length(snapshot['queue]))}:join("\n");
     elseif (kind == 'queue)
-      const lines = {entry['query] for entry in (snapshot['queue])};
+      const lines = { entry['query] for entry in (snapshot['queue]) };
       return lines ? lines:join("\n") | "No pending tasks visible to you.";
     elseif (kind == 'history)
-      const lines = {"[" + tostr(entry['status]) + "] " + entry['query] for entry in (snapshot['history])};
+      const lines = { "[" + tostr(entry['status]) + "] " + entry['query] for entry in (snapshot['history]) };
       return lines ? lines:join("\n") | "No task history visible to you.";
     elseif (kind == 'context)
       let context = {};

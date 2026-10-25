@@ -20,8 +20,7 @@ object ARCHITECTS_COMPASS [
 
   method _system_prompt owner: ARCH_WIZARD
     "Compose the device persona with shared LLM guidance; descendants may specialize this hook.";
-    return $llm_prompts:compose({this.role_prompt, $llm_prompts.interaction,
-      $llm_prompts.project, $llm_prompts.building});
+    return $llm_prompts:compose({this.role_prompt, $llm_prompts.interaction, $llm_prompts.project, $llm_prompts.building});
   endmethod
 
   method _setup_agent owner: ARCH_WIZARD

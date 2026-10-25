@@ -17,41 +17,29 @@ object EXAMPLE_GALLERY [
     set_task_perms(caller_perms());
     const {source, viewer} = args;
     source == this && this == $travel_examples.gallery || return {};
-    let lift = ['id -> "lift", 'label -> "lift", 'command -> this.lift_ready ? "ride lift" | "call lift",
-      'description -> this.lift_ready ? "The lift stands ready. Use ride lift." | "A button calls the hillside lift.",
-      'ambient -> true];
+    let lift = ['id -> "lift", 'label -> "lift", 'command -> this.lift_ready ? "ride lift" | "call lift", 'description -> this.lift_ready ? "The lift stands ready. Use ride lift." | "A button calls the hillside lift.", 'ambient -> true];
     if (this.lift_ready)
       lift['destination] = $travel_examples.overlook;
     endif
-    return {lift,
-      ['id -> "blue", 'label -> "blue portal", 'command -> "enter blue portal",
-        'destination -> $travel_examples.overlook, 'description -> "A blue arch opens onto a distant hillside.",
-        'ambient -> true],
-      ['id -> "mist", 'label -> "misty arch", 'command -> "enter misty arch",
-        'description -> "Mist hides the destination of a second arch.", 'ambient -> true],
-      ['id -> "ferry", 'label -> "ferry", 'command -> "board ferry", 'available -> false,
-        'reason -> "The ferry is out of service."]
-    };
+    return {lift, ['id -> "blue", 'label -> "blue portal", 'command -> "enter blue portal", 'destination -> $travel_examples.overlook, 'description -> "A blue arch opens onto a distant hillside.", 'ambient -> true], ['id -> "mist", 'label -> "misty arch", 'command -> "enter misty arch", 'description -> "Mist hides the destination of a second arch.", 'ambient -> true], ['id -> "ferry", 'label -> "ferry", 'command -> "board ferry", 'available -> false, 'reason -> "The ferry is out of service."]};
   endmethod
 
   method use_exit owner: ARCH_WIZARD
     "Choose a portal destination for the checked room action. The room performs the move.";
     caller == $room || raise(E_PERM);
     const {who, source, option} = args;
-    (this == $travel_examples.gallery && source == this && who.location == source) || return false;
+    this == $travel_examples.gallery && source == this && who.location == source || return false;
     if (option == "lift")
       const ready = this.lift_ready;
       this.lift_ready = !ready;
       $room:exit_options_changed(this, this);
       if (!ready)
-        who:inform_current($event:mk_info(who, "The lift arrives. Use ",
-          $format.annotation:exit(this, "lift", "ride lift"), " to reach the hillside."));
+        who:inform_current($event:mk_info(who, "The lift arrives. Use ", $format.annotation:exit(this, "lift", "ride lift"), " to reach the hillside."));
         return false;
       endif
       return $travel_examples.overlook;
     endif
     option in {"blue", "mist"} || return false;
-    return option == "blue" ? $travel_examples.overlook
-      | { $travel_examples.courtyard, $travel_examples.landing }[random(2)];
+    return option == "blue" ? $travel_examples.overlook | {$travel_examples.courtyard, $travel_examples.landing}[random(2)];
   endmethod
 endobject

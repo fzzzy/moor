@@ -364,7 +364,7 @@ object WIZ_FEATURES [
     player:inform_current($event:mk_info(player, content):with_audience('utility));
   endverb
 
-  verb "@llm-set-budget" (any to any) owner: ARCH_WIZARD flags: "d"
+  verb "@llm-set-budget" (any at any) owner: ARCH_WIZARD flags: "d"
     "Set an actor's LLM token budget";
     this:_challenge_command_perms();
     if (!player:has_admin_elevation())
@@ -623,19 +623,15 @@ object WIZ_FEATURES [
       "Show current configuration";
       const key_status = $llm_client:is_configured() ? "configured" | "NOT SET";
       const title = $format.title:mk("LLM Client Configuration");
-      const rows = {{"Endpoint", tostr($llm_client.api_endpoint)}, {"Model", tostr($llm_client.model)}, {"API Key", key_status},
-        {"Shared world access", $llm_client.shared ? "enabled" | "disabled"},
-        {"Assistance", $player.suggestions_llm_client == $llm_client ? "enabled" | "disabled"}};
+      const rows = {{"Endpoint", tostr($llm_client.api_endpoint)}, {"Model", tostr($llm_client.model)}, {"API Key", key_status}, {"Shared world access", $llm_client.shared ? "enabled" | "disabled"}, {"Assistance", $player.suggestions_llm_client == $llm_client ? "enabled" | "disabled"}};
       const table = $format.table:mk({"Setting", "Value"}, rows);
       const content = $format.block:mk(title, table);
       player:inform_current($event:mk_info(player, content):with_audience('utility));
       return;
     elseif (cmd == "setup")
       player.wizard || raise(E_PERM, "World LLM setup requires a wizard.");
-      const endpoint_default = typeof($llm_client.api_endpoint) == TYPE_STR && $llm_client.api_endpoint != ""
-        ? $llm_client.api_endpoint | "https://openrouter.ai/api/v1/chat/completions";
-      const model_default = typeof($llm_client.model) == TYPE_STR && $llm_client.model != ""
-        ? $llm_client.model | "deepseek/deepseek-v4.1-flash";
+      const endpoint_default = typeof($llm_client.api_endpoint) == TYPE_STR && $llm_client.api_endpoint != "" ? $llm_client.api_endpoint | "https://openrouter.ai/api/v1/chat/completions";
+      const model_default = typeof($llm_client.model) == TYPE_STR && $llm_client.model != "" ? $llm_client.model | "deepseek/deepseek-v4.1-flash";
       let endpoint = player:read_with_prompt({{"prompt", "Completion URL [" + endpoint_default + "]:"}});
       typeof(endpoint) == TYPE_STR || return;
       endpoint == "" && (endpoint = endpoint_default);
@@ -649,7 +645,6 @@ object WIZ_FEATURES [
         player:inform_current($event:mk_info(player, "LLM setup cancelled."));
         return;
       endif
-      // Input suspends; check current authority before reading or changing credentials.
       player.wizard || raise(E_PERM, "World LLM setup requires a wizard.");
       key == "" && (key = $llm_client.api_key);
       if ($llm_client:configure_world(endpoint, model, key))
@@ -922,11 +917,8 @@ object WIZ_FEATURES [
       const issues = label == "aliases" ? {"not a list"} | $str_proto:name_issues(value);
       if (length(issues))
         "Malformed aliases can contain closures or large values that have no useful name literal.";
-        const escaped = typeof(value) == TYPE_STR ? toliteral(value)
-          | "<value of type " + toliteral(typeof(value)) + ">";
-        findings = {@findings, ['object -> target, 'owner -> target.owner,
-          'location -> target.location, 'field -> label, 'value -> escaped,
-          'issues -> issues]};
+        const escaped = typeof(value) == TYPE_STR ? toliteral(value) | "<value of type " + toliteral(typeof(value)) + ">";
+        findings = {@findings, ['object -> target, 'owner -> target.owner, 'location -> target.location, 'field -> label, 'value -> escaped, 'issues -> issues]};
       endif
     endfor
     return findings;
@@ -946,20 +938,17 @@ object WIZ_FEATURES [
     elseif (input == "--players")
       targets = players();
     elseif (input:starts_with("--"))
-      player:inform_current($event:mk_error(player, "Usage: @audit-names [--players | OBJECT]")
-        :with_audience('utility));
+      player:inform_current($event:mk_error(player, "Usage: @audit-names [--players | OBJECT]"):with_audience('utility));
       return;
     else
       try
         targets = {$match:match_object(input, player)};
       except e (ANY)
-        player:inform_current($event:mk_error(player, "Could not resolve object: " + tostr(e[2]))
-          :with_audience('utility));
+        player:inform_current($event:mk_error(player, "Could not resolve object: " + tostr(e[2])):with_audience('utility));
         return;
       endtry
       if (!valid(targets[1]))
-        player:inform_current($event:mk_error(player, "Could not resolve object: " + input)
-          :with_audience('utility));
+        player:inform_current($event:mk_error(player, "Could not resolve object: " + input):with_audience('utility));
         return;
       endif
     endif
@@ -975,25 +964,18 @@ object WIZ_FEATURES [
       endif
       scanned = scanned + 1;
       for finding in ($wiz_features:audit_names(target))
-        rows = {@rows, {tostr(finding['object]), tostr(finding['owner]),
-          tostr(finding['location]), finding['field], finding['value],
-          finding['issues]:join(", ")}};
+        rows = {@rows, {tostr(finding['object]), tostr(finding['owner]), tostr(finding['location]), finding['field], finding['value], finding['issues]:join(", ")}};
         count = count + 1;
       endfor
       if (length(rows) >= 25)
-        player:inform_current($event:mk_info(player, $format.table:mk(
-          {"Object", "Owner", "Location", "Field", "Escaped value", "Reasons"}, rows))
-          :with_audience('utility));
+        player:inform_current($event:mk_info(player, $format.table:mk({"Object", "Owner", "Location", "Field", "Escaped value", "Reasons"}, rows)):with_audience('utility));
         rows = {};
       endif
     endfor
     if (length(rows))
-      player:inform_current($event:mk_info(player, $format.table:mk(
-        {"Object", "Owner", "Location", "Field", "Escaped value", "Reasons"}, rows))
-        :with_audience('utility));
+      player:inform_current($event:mk_info(player, $format.table:mk({"Object", "Owner", "Location", "Field", "Escaped value", "Reasons"}, rows)):with_audience('utility));
     endif
-    player:inform_current($event:mk_info(player, tostr("Name audit: ", count,
-      " finding(s) across ", scanned, " object(s). No names changed.")):with_audience('utility));
+    player:inform_current($event:mk_info(player, tostr("Name audit: ", count, " finding(s) across ", scanned, " object(s). No names changed.")):with_audience('utility));
   endverb
 
   method test_name_audit_stored_values owner: ARCH_WIZARD
@@ -1011,12 +993,10 @@ object WIZ_FEATURES [
     $test_utils:assert_eq(target.name, "\u200F", "name unchanged");
     $test_utils:assert_eq(target.aliases, {"ordinary", "\u200B", 42}, "aliases unchanged");
     target.aliases = "bad list";
-    $test_utils:assert_eq($wiz_features:audit_names(target)[2]['issues], {"not a list"},
-      "malformed aliases property");
+    $test_utils:assert_eq($wiz_features:audit_names(target)[2]['issues], {"not a list"}, "malformed aliases property");
     const captured = 42;
     target.aliases = {{x} => x + captured};
-    $test_utils:assert_eq($wiz_features:audit_names(target)[2]['issues], {"not a string"},
-      "closure-valued alias does not abort the audit");
+    $test_utils:assert_eq($wiz_features:audit_names(target)[2]['issues], {"not a string"}, "closure-valued alias does not abort the audit");
     return true;
   endmethod
 

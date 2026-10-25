@@ -8,8 +8,6 @@ object PROG_HELP_TOPICS [
   owner: ARCH_WIZARD
   readable: true
 
-  override content_kind = 'djot_blocks;
-
   property topic_programming_chmod (owner: ARCH_WIZARD, flags: "rc") = {
     "@chmod",
     "@chmod - Show/change permissions",
@@ -85,6 +83,7 @@ object PROG_HELP_TOPICS [
     {}
   };
 
+  override content_kind (owner: ARCH_WIZARD, flags: "rc") = 'djot_blocks;
   override topic_order (owner: ARCH_WIZARD, flags: "rc") = {
     'topic_programming_overview,
     'topic_programming_show,

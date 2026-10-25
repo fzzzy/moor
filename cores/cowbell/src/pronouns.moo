@@ -20,9 +20,7 @@ object PRONOUNS [
     const {input} = args;
     if (typeof(input) == TYPE_STR)
       const preset = this:lookup(input);
-      typeof(preset) == TYPE_FLYWEIGHT || raise(E_INVARG,
-        "Unknown pronoun preset. Choose " + this:list_presets():join(", ")
-        + ", or enter custom pronouns.");
+      typeof(preset) == TYPE_FLYWEIGHT || raise(E_INVARG, "Unknown pronoun preset. Choose " + this:list_presets():join(", ") + ", or enter custom pronouns.");
       return this:validate(preset);
     endif
     typeof(input) == TYPE_MAP || raise(E_TYPE, "Use a preset name or custom pronoun fields.");
@@ -32,8 +30,7 @@ object PRONOUNS [
       maphaskey(input, field) || raise(E_INVARG, "Missing pronoun field: " + field);
       typeof(input[field]) == TYPE_STR || raise(E_TYPE, "Pronoun fields must be text.");
       const word = input[field]:trim();
-      (length(word) > 0 && length(word) <= 64 && !index(word, "\n") && !index(word, "\r"))
-        || raise(E_INVARG, "Enter one line of 1 to 64 characters for " + field + ".");
+      length(word) > 0 && length(word) <= 64 && !index(word, "\n") && !index(word, "\r") || raise(E_INVARG, "Enter one line of 1 to 64 characters for " + field + ".");
       words = {@words, word};
     endfor
     length(input) == length(fields) || raise(E_INVARG, "Unknown custom pronoun field.");
@@ -45,9 +42,7 @@ object PRONOUNS [
     "Return the fields used to edit an existing pronoun set.";
     const {value} = args;
     const checked = this:validate(value);
-    return ["subject" -> checked.ps, "object" -> checked.po,
-      "possessive_adjective" -> checked.pp, "possessive_pronoun" -> checked.pq,
-      "reflexive" -> checked.pr, "agreement" -> checked.verb_be];
+    return ["subject" -> checked.ps, "object" -> checked.po, "possessive_adjective" -> checked.pp, "possessive_pronoun" -> checked.pq, "reflexive" -> checked.pr, "agreement" -> checked.verb_be];
   endmethod
 
   method examples owner: HACKER
@@ -55,9 +50,7 @@ object PRONOUNS [
     const {input} = args;
     const pronouns = this:from_input(input);
     const subject = pronouns.ps:capitalize();
-    return {subject + " " + pronouns.verb_be + " ready.", "I met " + pronouns.po + ".",
-      "This is " + pronouns.pp + " coat.", "The coat is " + pronouns.pq + ".",
-      subject + " did it " + pronouns.pr + ".", subject + " " + pronouns.verb_have + " a map."};
+    return {subject + " " + pronouns.verb_be + " ready.", "I met " + pronouns.po + ".", "This is " + pronouns.pp + " coat.", "The coat is " + pronouns.pq + ".", subject + " did it " + pronouns.pr + ".", subject + " " + pronouns.verb_have + " a map."};
   endmethod
 
   method prompt_custom owner: ARCH_WIZARD
@@ -67,35 +60,28 @@ object PRONOUNS [
     const {editor, ?confirmation = "Use these pronouns?"} = args;
     editor == caller_perms() || raise(E_PERM);
     let input = [];
-    for field in ({{"subject", "___ is ready.", "ze"}, {"object", "I met ___.", "zir"},
-      {"possessive_adjective", "This is ___ coat.", "zir"},
-      {"possessive_pronoun", "The coat is ___.", "zirs"}, {"reflexive", "Ze did it ___.", "zirself"}})
+    for field in ({{"subject", "___ is ready.", "ze"}, {"object", "I met ___.", "zir"}, {"possessive_adjective", "This is ___ coat.", "zir"}, {"possessive_pronoun", "The coat is ___.", "zirs"}, {"reflexive", "Ze did it ___.", "zirself"}})
       const answer = editor:prompt("Fill the blank: " + field[2] + " Enter @abort to cancel.", field[3]);
       typeof(answer) == TYPE_STR || return false;
       input[field[1]] = answer;
     endfor
     let agreement = "";
     while (!(agreement in {"is", "are"}))
-      const answer = editor:prompt("Choose: " + input["subject"] + " is ready, or "
-        + input["subject"] + " are ready. Enter is or are, or @abort to cancel.", "is or are");
+      const answer = editor:prompt("Choose: " + input["subject"] + " is ready, or " + input["subject"] + " are ready. Enter is or are, or @abort to cancel.", "is or are");
       typeof(answer) == TYPE_STR || return false;
       agreement = answer:trim();
     endwhile
     input["agreement"] = agreement;
     const examples = this:examples(input);
-    editor:inform_current($event:mk_info(editor,
-      @{$format.paragraph:mk(line) for line in (examples)}):with_audience('utility));
+    editor:inform_current($event:mk_info(editor, @{ $format.paragraph:mk(line) for line in (examples) }):with_audience('utility));
     return equal(editor:confirm(confirmation), true) ? input | false;
   endmethod
 
   method test_custom_input owner: HACKER
     "Custom editor fields and presets share validation, previews, and lossless editing.";
-    let input = ["subject" -> " ze ", "object" -> "zir", "possessive_adjective" -> "zir",
-      "possessive_pronoun" -> "zirs", "reflexive" -> "zirself", "agreement" -> "is"];
+    let input = ["subject" -> " ze ", "object" -> "zir", "possessive_adjective" -> "zir", "possessive_pronoun" -> "zirs", "reflexive" -> "zirself", "agreement" -> "is"];
     const set = this:from_input(input);
-    $test_utils:assert_true(equal(this:examples(input), {"Ze is ready.", "I met zir.",
-      "This is zir coat.", "The coat is zirs.", "Ze did it zirself.", "Ze has a map."}),
-      "preview covers all forms and agreement");
+    $test_utils:assert_true(equal(this:examples(input), {"Ze is ready.", "I met zir.", "This is zir coat.", "The coat is zirs.", "Ze did it zirself.", "Ze has a map."}), "preview covers all forms and agreement");
     $test_utils:assert_true(equal(this:from_input(this:to_input(set)), set), "custom edit roundtrip");
     for preset in (this:list_presets())
       $test_utils:assert_true(equal(this:from_input(preset), this:lookup(preset)), "preset uses same input path");
@@ -120,8 +106,7 @@ object PRONOUNS [
     for word in ({ps, po, pp, pq, pr})
       typeof(word) == TYPE_STR || raise(E_TYPE, "Pronoun forms must be strings.");
     endfor
-    const pronouns = <this, .display = ps + "/" + po, .ps = ps, .po = po, .pp = pp,
-      .pq = pq, .pr = pr, .is_plural = is_plural, .verb_be = verb_be, .verb_have = verb_have>;
+    const pronouns = <this, .display = ps + "/" + po, .ps = ps, .po = po, .pp = pp, .pq = pq, .pr = pr, .is_plural = is_plural, .verb_be = verb_be, .verb_have = verb_have>;
     return this:validate(pronouns);
   endmethod
 
@@ -136,12 +121,10 @@ object PRONOUNS [
         typeof(word) == TYPE_STR || raise(E_TYPE, "Pronoun " + tostr(field) + " must be a string.");
         length(word:trim()) || raise(E_INVARG, "Pronoun " + tostr(field) + " must not be empty.");
       endfor
-      typeof(pronouns.is_plural) == TYPE_BOOL
-        || raise(E_TYPE, "Pronoun agreement must be a boolean.");
+      typeof(pronouns.is_plural) == TYPE_BOOL || raise(E_TYPE, "Pronoun agreement must be a boolean.");
       const be = pronouns.is_plural ? "are" | "is";
       const have = pronouns.is_plural ? "have" | "has";
-      (strcmp(pronouns.verb_be, be) == 0 && strcmp(pronouns.verb_have, have) == 0)
-        || raise(E_INVARG, "Pronoun verb forms disagree with is_plural.");
+      strcmp(pronouns.verb_be, be) == 0 && strcmp(pronouns.verb_have, have) == 0 || raise(E_INVARG, "Pronoun verb forms disagree with is_plural.");
     except (E_PROPNF)
       raise(E_INVARG, "Pronoun set is missing a required field.");
     endtry
@@ -187,7 +170,7 @@ object PRONOUNS [
 
   method list_presets owner: HACKER
     "Return the labels available to pronoun selectors.";
-    return {this:display(preset) for preset in (this:presets())};
+    return { this:display(preset) for preset in (this:presets()) };
   endmethod
 
   method test_custom_sets owner: HACKER
@@ -221,8 +204,7 @@ object PRONOUNS [
     endfor
     $test_utils:assert_raises(E_INVARG, this, "display", {<$pronouns, .ps = "ze">}, "incomplete set");
     $test_utils:assert_raises(E_INVARG, this, "display", {<$sub, .display = "ze/zir">}, "wrong delegate");
-    const inconsistent = <this, .ps = "ze", .po = "zir", .pp = "zir", .pq = "zirs",
-      .pr = "zirself", .display = "ze/zir", .is_plural = true, .verb_be = "is", .verb_have = "has">;
+    const inconsistent = <this, .ps = "ze", .po = "zir", .pp = "zir", .pq = "zirs", .pr = "zirself", .display = "ze/zir", .is_plural = true, .verb_be = "is", .verb_have = "has">;
     $test_utils:assert_raises(E_INVARG, this, "validate", {inconsistent}, "inconsistent verbs");
     return true;
   endmethod

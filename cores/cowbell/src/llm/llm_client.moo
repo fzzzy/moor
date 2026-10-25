@@ -7,11 +7,11 @@ object LLM_CLIENT [
   owner: HACKER
   readable: true
 
+  property allowed_users (owner: ARCH_WIZARD, flags: "") = {};
   property api_endpoint (owner: HACKER, flags: "rc") = 0;
   property api_key (owner: ARCH_WIZARD, flags: "") = 0;
-  property shared (owner: ARCH_WIZARD, flags: "") = false;
-  property allowed_users (owner: ARCH_WIZARD, flags: "") = {};
   property model (owner: HACKER, flags: "rc") = 0;
+  property shared (owner: ARCH_WIZARD, flags: "") = false;
 
   override description (owner: HACKER, flags: "rc") = "OpenAI-compatible LLM API client for chat completions using worker_request.";
 
@@ -20,13 +20,9 @@ object LLM_CLIENT [
     "Returns true when Mr. Welcome uses this client. A running Mr. Welcome keeps his client, so startup is not blocked.";
     caller_perms().wizard && this == $llm_client || raise(E_PERM);
     const {endpoint, model, key} = args;
-    typeof(endpoint) == TYPE_STR && length(endpoint) <= 4096
-      && (endpoint:starts_with("https://") || endpoint:starts_with("http://"))
-      || raise(E_INVARG, "Use an HTTP or HTTPS completion endpoint.");
-    typeof(model) == TYPE_STR && length(model) > 0 && length(model) <= 256
-      || raise(E_INVARG, "Enter a model name.");
-    typeof(key) == TYPE_STR && length(key) > 0 && length(key) <= 8192
-      || raise(E_INVARG, "Enter an API key.");
+    typeof(endpoint) == TYPE_STR && length(endpoint) <= 4096 && (endpoint:starts_with("https://") || endpoint:starts_with("http://")) || raise(E_INVARG, "Use an HTTP or HTTPS completion endpoint.");
+    typeof(model) == TYPE_STR && length(model) > 0 && length(model) <= 256 || raise(E_INVARG, "Enter a model name.");
+    typeof(key) == TYPE_STR && length(key) > 0 && length(key) <= 8192 || raise(E_INVARG, "Enter an API key.");
     const agent = $mr_welcome.agent;
     if (valid(agent) && agent.client != this)
       "A running flag can outlive an interrupted turn; leave the client rather than block startup.";

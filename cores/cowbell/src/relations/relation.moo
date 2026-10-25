@@ -8,27 +8,23 @@ object RELATION [
   fertile: true
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "N-ary persistent data relation.";
-
+  property fact_schema (owner: HACKER, flags: "rc") = ['columns -> {}, 'types -> []];
   property set_version (owner: HACKER, flags: "rc") = 0;
 
-  property fact_schema (owner: HACKER, flags: "rc") = ['columns -> {}, 'types -> []];
+  override description (owner: HACKER, flags: "rc") = "N-ary persistent data relation.";
 
   method define_fields owner: ARCH_WIZARD
     "Define ordered, named fields on an owned relation. Existing tuples must fit before any change.";
     const {relation, columns, types} = args;
     const principal = caller_perms();
-    (typeof(relation) == TYPE_OBJ && valid(relation) && isa(relation, $relation))
-      || raise(E_INVARG, "The relation no longer exists, or is not a relation.");
-    (principal == relation.owner || principal.wizard) || raise(E_PERM, "You do not own this relation.");
+    typeof(relation) == TYPE_OBJ && valid(relation) && isa(relation, $relation) || raise(E_INVARG, "The relation no longer exists, or is not a relation.");
+    principal == relation.owner || principal.wizard || raise(E_PERM, "You do not own this relation.");
     set_task_perms(principal);
     $behavior_schema:_types(types, "relation fields");
-    (typeof(columns) == TYPE_LIST && length(columns) > 0 && length(columns) == length(types))
-      || raise(E_INVARG, "Declare each relation field once, in tuple order.");
+    typeof(columns) == TYPE_LIST && length(columns) > 0 && length(columns) == length(types) || raise(E_INVARG, "Declare each relation field once, in tuple order.");
     let seen = {};
     for field in (columns)
-      (maphaskey(types, field) && !(field in seen))
-        || raise(E_INVARG, "Declare each relation field once, in tuple order.");
+      maphaskey(types, field) && !(field in seen) || raise(E_INVARG, "Declare each relation field once, in tuple order.");
       seen = {@seen, field};
     endfor
     const schema = ['columns -> columns, 'types -> types];
@@ -43,17 +39,13 @@ object RELATION [
     "Read a relation's field definitions and check an optional required shape and write authority.";
     const {relation, ?expected = 0, ?write = false} = args;
     const principal = caller_perms();
-    (typeof(relation) == TYPE_OBJ && valid(relation) && isa(relation, $relation))
-      || raise(E_INVARG, "The relation no longer exists, or is not a relation.");
-    (principal == relation.owner || principal.wizard || (relation.r && !write))
-      || raise(E_PERM, write ? "You cannot write to this relation." | "You cannot read this relation.");
+    typeof(relation) == TYPE_OBJ && valid(relation) && isa(relation, $relation) || raise(E_INVARG, "The relation no longer exists, or is not a relation.");
+    principal == relation.owner || principal.wizard || (relation.r && !write) || raise(E_PERM, write ? "You cannot write to this relation." | "You cannot read this relation.");
     set_task_perms(principal);
     const schema = relation.fact_schema;
-    length(schema['columns]) > 0
-      || raise(E_INVARG, "Define this relation's fields with @facts OBJECT define FIELD:TYPE.");
+    length(schema['columns]) > 0 || raise(E_INVARG, "Define this relation's fields with @facts OBJECT define FIELD:TYPE.");
     if (typeof(expected) == TYPE_MAP)
-      equal(schema['types], expected)
-        || raise(E_INVARG, "This relation has different field names or types from those required by the condition or step.");
+      equal(schema['types], expected) || raise(E_INVARG, "This relation has different field names or types from those required by the condition or step.");
     endif
     return schema;
   endmethod
@@ -76,7 +68,7 @@ object RELATION [
     operation in {'record, 'forget} || raise(E_INVARG, "Expected record or forget.");
     const schema = $relation:schema(relation, fields, true);
     $behavior_schema:bindings(values, schema['types], "fact fields");
-    const tuple = {values[field] for field in (schema['columns])};
+    const tuple = { values[field] for field in (schema['columns]) };
     return operation == 'record ? $relation:assert(tuple, relation) | $relation:retract(tuple, relation);
   endmethod
 
@@ -85,7 +77,7 @@ object RELATION [
     const {tuple, ?relation = this} = args;
     isa(relation, $relation) || raise(E_INVARG, "Expected a relation.");
     const principal = caller_perms();
-    (principal == relation.owner || principal.wizard) || raise(E_PERM);
+    principal == relation.owner || principal.wizard || raise(E_PERM);
     set_task_perms(principal);
     typeof(tuple) == TYPE_LIST || raise(E_TYPE);
     length(tuple) > 0 || raise(E_INVARG);
@@ -112,7 +104,7 @@ object RELATION [
     "Add one stored identity to each scalar index under the caller's write permissions.";
     const {relation, identity, tuple} = args;
     const principal = caller_perms();
-    (principal == relation.owner || principal.wizard) || raise(E_PERM);
+    principal == relation.owner || principal.wizard || raise(E_PERM);
     set_task_perms(principal);
     for element in (tuple)
       if (typeof(element) in {TYPE_FLYWEIGHT, TYPE_LIST, TYPE_MAP})
@@ -133,7 +125,7 @@ object RELATION [
     "Requires relation ownership or wizard authority. No suspension or partial batch commits.";
     const {?relation = this} = args;
     const principal = caller_perms();
-    (principal == relation.owner || principal.wizard) || raise(E_PERM);
+    principal == relation.owner || principal.wizard || raise(E_PERM);
     set_task_perms(principal);
     const names = properties(relation);
     let kept = [];
@@ -144,8 +136,7 @@ object RELATION [
         continue;
       endif
       const tuple = relation.(property);
-      (typeof(tuple) == TYPE_LIST && length(tuple) > 0)
-        || raise(E_INVARG, "Invalid stored relation tuple: " + name);
+      typeof(tuple) == TYPE_LIST && length(tuple) > 0 || raise(E_INVARG, "Invalid stored relation tuple: " + name);
       let duplicate = false;
       for original in (mapvalues(kept))
         if (equal(original, tuple))
@@ -176,7 +167,7 @@ object RELATION [
     const {tuple, ?relation = this} = args;
     isa(relation, $relation) || raise(E_INVARG, "Expected a relation.");
     const principal = caller_perms();
-    (principal == relation.owner || principal.wizard) || raise(E_PERM);
+    principal == relation.owner || principal.wizard || raise(E_PERM);
     set_task_perms(principal);
     typeof(tuple) == TYPE_LIST || raise(E_TYPE);
     relation.set_version != 1 && $relation:repair(relation);
@@ -216,8 +207,7 @@ object RELATION [
     const {position, value} = args;
     typeof(position) == TYPE_INT || raise(E_TYPE);
     position > 0 || raise(E_INVARG);
-    return {tuple for tuple in ($relation:select_containing(value, this))
-      if (length(tuple) >= position && equal(tuple[position], value))};
+    return { tuple for tuple in ($relation:select_containing(value, this)) if length(tuple) >= position && equal(tuple[position], value) };
   endmethod
 
   method select_containing owner: ARCH_WIZARD
@@ -254,11 +244,9 @@ object RELATION [
     "Return distinct stored facts, including before legacy storage has been repaired.";
     const {?relation = this} = args;
     set_task_perms(caller_perms());
-    const tuples = {relation.(name) for name in (properties(relation)) if (tostr(name):starts_with("tuple_"))};
-    const matched = term_match({'var, 'Tuple}, tuples, [],
-      ['case_sensitive -> true, 'dedupe -> true,
-        'max_solutions -> max(1, length(tuples)), 'max_steps -> max(1, length(tuples))]);
-    return {row['Tuple] for row in (matched)};
+    const tuples = { relation.(name) for name in (properties(relation)) if tostr(name):starts_with("tuple_") };
+    const matched = term_match({'var, 'Tuple}, tuples, [], ['case_sensitive -> true, 'dedupe -> true, 'max_solutions -> max(1, length(tuples)), 'max_steps -> max(1, length(tuples))]);
+    return { row['Tuple] for row in (matched) };
   endmethod
 
   method replace_snapshot owner: ARCH_WIZARD
@@ -292,7 +280,7 @@ object RELATION [
   method clear owner: ARCH_WIZARD
     "Remove all tuples and indexes under the caller's write permissions.";
     const principal = caller_perms();
-    (principal == this.owner || principal.wizard) || raise(E_PERM);
+    principal == this.owner || principal.wizard || raise(E_PERM);
     set_task_perms(principal);
     for property in (properties(this))
       const name = tostr(property);
@@ -320,7 +308,7 @@ object RELATION [
     endif
     if (typeof(identities) != TYPE_LIST)
       const names = properties(relation);
-      identities = {tostr(name)[7..length(tostr(name))] for name in (names) if (tostr(name):starts_with("tuple_"))};
+      identities = { tostr(name)[7..length(tostr(name))] for name in (names) if tostr(name):starts_with("tuple_") };
     endif
     for identity in (identities)
       equal(relation.("tuple_" + identity), tuple) && return identity;
@@ -425,8 +413,7 @@ object RELATION [
     const again = relation:assert({#1, #2, "edge"});
     $test_utils:assert_eq(first, again, "Assertion is idempotent");
     $test_utils:assert_eq(relation:count(), 1, "One stored fact");
-    $test_utils:assert_eq(relation:query({#1, {'var, 'To}, {'var, 'Label}}),
-      {['To -> #2, 'Label -> "edge"]}, "One binding map");
+    $test_utils:assert_eq(relation:query({#1, {'var, 'To}, {'var, 'Label}}), {['To -> #2, 'Label -> "edge"]}, "One binding map");
     $test_utils:assert_true(relation:retract({#1, #2, "edge"}), "One retraction removes the fact");
     $test_utils:assert_false(relation:member({#1, #2, "edge"}), "No duplicate remains");
     return true;
@@ -488,8 +475,8 @@ object RELATION [
       $behavior_schema:_type(values[field], fields[field], "relation input " + tostr(field));
     endfor
     const columns = schema['columns];
-    const pattern = {{'var, column} for column in (columns)};
-    const types = {fields[field_name] for field_name in (columns)};
+    const pattern = { {'var, column} for column in (columns) };
+    const types = { fields[field_name] for field_name in (columns) };
     return $relation:_query_result(relation, pattern, values, ['max_solutions -> limit], types);
   endmethod
 
@@ -502,8 +489,7 @@ object RELATION [
     typeof(bindings) == TYPE_MAP || raise(E_TYPE);
     typeof(options) == TYPE_MAP || raise(E_TYPE);
     const limit = `options['max_solutions] ! E_RANGE => 256';
-    (typeof(limit) == TYPE_INT && limit > 0 && limit <= 4096)
-      || raise(E_INVARG, "Relation result limit must be between 1 and 4096");
+    typeof(limit) == TYPE_INT && limit > 0 && limit <= 4096 || raise(E_INVARG, "Relation result limit must be between 1 and 4096");
     options['case_sensitive] = true;
     options['dedupe] = true;
     options['max_solutions] = limit + 1;
@@ -523,13 +509,12 @@ object RELATION [
     endif
     if (typeof(identities) != TYPE_LIST)
       const names = properties(relation);
-      identities = {tostr(name)[7..length(tostr(name))] for name in (names) if (tostr(name):starts_with("tuple_"))};
+      identities = { tostr(name)[7..length(tostr(name))] for name in (names) if tostr(name):starts_with("tuple_") };
     endif
     length(identities) <= 4096 || raise(E_QUOTA, "Relation query needs a narrower input scope");
-    const candidates = {relation.("tuple_" + identity) for identity in (identities)};
+    const candidates = { relation.("tuple_" + identity) for identity in (identities) };
     for tuple in (candidates)
-      (typeof(tuple) == TYPE_LIST && length(tuple) > 0)
-        || raise(E_INVARG, "Invalid stored relation fact");
+      typeof(tuple) == TYPE_LIST && length(tuple) > 0 || raise(E_INVARG, "Invalid stored relation fact");
       if (length(types) > 0)
         length(tuple) == length(types) || raise(E_INVARG, "Stored fact has the wrong number of fields");
         for i in [1..length(types)]

@@ -232,9 +232,7 @@ object ACTOR [
       "Default: construct from direction and passage description";
       if (direction)
         "The direction is this room's exit back the way the actor came, so up means from above.";
-        const places = ["up" -> "above", "down" -> "below", "upstairs" -> "upstairs",
-          "downstairs" -> "downstairs", "in" -> "inside", "inside" -> "inside",
-          "out" -> "outside", "outside" -> "outside"];
+        const places = ["up" -> "above", "down" -> "below", "upstairs" -> "upstairs", "downstairs" -> "downstairs", "in" -> "inside", "inside" -> "inside", "out" -> "outside", "outside" -> "outside"];
         const place = maphaskey(places, direction:lowercase()) ? places[direction:lowercase()] | 0;
         parts = {@parts, " from ", place ? place | "the " + direction};
       endif
@@ -252,12 +250,10 @@ object ACTOR [
 
   method test_arrival_direction_names_the_origin owner: ARCH_WIZARD
     "The direction is the exit back toward the origin: arriving by up stairs means coming from below.";
-    for case in ({{"down", "below"}, {"up", "above"}, {"out", "outside"}, {"in", "inside"},
-        {"upstairs", "upstairs"}, {"lobby", "the lobby"}, {"north", "the north"}})
+    for case in ({{"down", "below"}, {"up", "above"}, {"out", "outside"}, {"in", "inside"}, {"upstairs", "upstairs"}, {"lobby", "the lobby"}, {"north", "the north"}})
       const {direction, place} = case;
       const text = toliteral($actor:mk_arrival_event(#-1, direction));
-      $test_utils:assert_true(index(text, ".text = \" from \"") && index(text, ".text = \"" + place + "\""),
-        "arrival via " + direction + " reads from " + place);
+      $test_utils:assert_true(index(text, ".text = \" from \"") && index(text, ".text = \"" + place + "\""), "arrival via " + direction + " reads from " + place);
     endfor
     return true;
   endmethod
@@ -447,7 +443,7 @@ object ACTOR [
     set_task_perms(caller_perms());
     let details = {};
     if (typeof(this.wearing) == TYPE_LIST && length(this.wearing))
-      const items = {item for item in (this.wearing) if valid(item)};
+      const items = { item for item in (this.wearing) if valid(item) };
       let clothing = {};
       let integrated = {};
       for i in [1..length(items)]
@@ -462,8 +458,7 @@ object ACTOR [
         endif
       endfor
       if (length(clothing))
-        details = {@details, " ", $sub:sc_dobj(), " ", $sub:verb_be_dobj(),
-          " wearing ", @clothing, "."};
+        details = {@details, " ", $sub:sc_dobj(), " ", $sub:verb_be_dobj(), " wearing ", @clothing, "."};
       endif
       for description in (integrated)
         details = {@details, " ", description};
@@ -471,8 +466,7 @@ object ACTOR [
     endif
     const activities = this:action_activity_descriptions(this);
     if (length(activities))
-      details = {@details, "\n\n", $sub:sc_dobj(), " ", $sub:verb_be_dobj(),
-        " currently ", activities:english_list(), "."};
+      details = {@details, "\n\n", $sub:sc_dobj(), " ", $sub:verb_be_dobj(), " currently ", activities:english_list(), "."};
     endif
     return details;
   endmethod

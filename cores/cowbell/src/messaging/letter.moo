@@ -9,12 +9,12 @@ object LETTER [
   fertile: true
   readable: true
 
-  property subject (owner: ARCH_WIZARD, flags: "rc") = "";
   property addressee (owner: ARCH_WIZARD, flags: "rc") = #-1;
   property author (owner: ARCH_WIZARD, flags: "rc") = #-1;
   property read_at (owner: ARCH_WIZARD, flags: "rc") = 0;
   property sealed (owner: ARCH_WIZARD, flags: "rc") = 0;
   property sent_at (owner: ARCH_WIZARD, flags: "rc") = 0;
+  property subject (owner: ARCH_WIZARD, flags: "rc") = "";
 
   override aliases (owner: ARCH_WIZARD, flags: "rc") = {"letter"};
   override object_documentation (owner: ARCH_WIZARD, flags: "rc") = "A letter is a note with a subject, author, addressee, timestamps, and sealing. The subject is message content; the object name remains letter. A sealed letter can be read by its author or addressee.";

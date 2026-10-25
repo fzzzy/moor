@@ -6,24 +6,24 @@ object LLM_JOB [
   parent: ROOT
   owner: ARCH_WIZARD
 
-  property host (owner: ARCH_WIZARD, flags: "") = #-1;
-  property requester (owner: ARCH_WIZARD, flags: "") = #-1;
-  property reply_connection (owner: ARCH_WIZARD, flags: "") = 0;
-  property query (owner: ARCH_WIZARD, flags: "") = "";
-  property context (owner: ARCH_WIZARD, flags: "") = {};
-  property presenter (owner: ARCH_WIZARD, flags: "") = #-1;
   property agent (owner: ARCH_WIZARD, flags: "") = #-1;
-  property state (owner: ARCH_WIZARD, flags: "") = 'queued;
-  property result (owner: ARCH_WIZARD, flags: "") = "";
-  property worker_task (owner: ARCH_WIZARD, flags: "") = 0;
-  property parent_task (owner: ARCH_WIZARD, flags: "") = 0;
-  property waiter (owner: ARCH_WIZARD, flags: "") = 0;
-  property timeout_seconds (owner: ARCH_WIZARD, flags: "") = 180;
+  property context (owner: ARCH_WIZARD, flags: "") = {};
   property deadline (owner: ARCH_WIZARD, flags: "") = 0;
   property finished_at (owner: ARCH_WIZARD, flags: "") = 0;
-  property recovery_required (owner: ARCH_WIZARD, flags: "") = false;
   property history_taken (owner: ARCH_WIZARD, flags: "") = false;
+  property host (owner: ARCH_WIZARD, flags: "") = #-1;
+  property parent_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property presenter (owner: ARCH_WIZARD, flags: "") = #-1;
+  property query (owner: ARCH_WIZARD, flags: "") = "";
+  property recovery_required (owner: ARCH_WIZARD, flags: "") = false;
+  property reply_connection (owner: ARCH_WIZARD, flags: "") = 0;
+  property requester (owner: ARCH_WIZARD, flags: "") = #-1;
+  property result (owner: ARCH_WIZARD, flags: "") = "";
+  property state (owner: ARCH_WIZARD, flags: "") = 'queued;
+  property timeout_seconds (owner: ARCH_WIZARD, flags: "") = 180;
   property tool_state (owner: ARCH_WIZARD, flags: "") = [];
+  property waiter (owner: ARCH_WIZARD, flags: "") = 0;
+  property worker_task (owner: ARCH_WIZARD, flags: "") = 0;
 
   method new owner: ARCH_WIZARD
     "Consume one signed request and allocate its private anonymous execution state.";
@@ -52,11 +52,10 @@ object LLM_JOB [
 
   method bind_agent owner: ARCH_WIZARD
     "Attach one anonymous agent before execution; the host retains the job until completion.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     this.state == 'queued && !valid(this.agent) || raise(E_INVARG, "Job already configured");
     const {agent} = args;
-    valid(agent) && isa(agent, $llm_agent) && is_anonymous(agent)
-      && (agent.owner == this.requester || this.requester.wizard) || raise(E_INVARG);
+    valid(agent) && isa(agent, $llm_agent) && is_anonymous(agent) && (agent.owner == this.requester || this.requester.wizard) || raise(E_INVARG);
     !agent.running || raise(E_INVARG, "Agent already running.");
     this.agent = agent;
     agent.tool_callback = this;
@@ -65,7 +64,7 @@ object LLM_JOB [
 
   method run owner: ARCH_WIZARD
     "Run the bound agent with a tracked child and a bounded deadline.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     const {prompt, timeout} = args;
     this.state == 'queued && valid(this.agent) || raise(E_INVARG, "Job is not ready");
     typeof(timeout) == TYPE_INT && timeout >= 1 && timeout <= 3600 || raise(E_INVARG);
@@ -128,8 +127,7 @@ object LLM_JOB [
   method cancel owner: ARCH_WIZARD
     "Stop only this job's child. The requester, host owner, or wizard may cancel.";
     const principal = caller_perms();
-    valid(principal) && (principal.wizard || principal == this.requester
-      || (valid(this.host) && principal == this.host.owner)) || raise(E_PERM);
+    valid(principal) && (principal.wizard || principal == this.requester || (valid(this.host) && principal == this.host.owner)) || raise(E_PERM);
     const {?state = 'cancelled} = args;
     state in {'cancelled, 'timed_out} || raise(E_INVARG);
     this.state in {'queued, 'running} || return false;
@@ -147,32 +145,30 @@ object LLM_JOB [
 
   method fail owner: ARCH_WIZARD
     "Record host setup failure through the same terminal-state transition as model failures.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     const {message} = args;
     return this:_finish('failed, message);
   endmethod
 
   method report owner: ARCH_WIZARD
     "Send the final result to the connection captured for this request.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     this.state in {'complete, 'failed, 'cancelled, 'timed_out, 'unknown, 'waiting} || raise(E_INVARG);
     this:_notify(typeof(this.result) == TYPE_STR ? this.result | toliteral(this.result));
   endmethod
 
   method take_history owner: ARCH_WIZARD
     "Return a terminal history value once, without retaining the job or its agent in that value.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     this.state in {'complete, 'failed, 'cancelled, 'timed_out, 'unknown, 'waiting} || raise(E_INVARG, "Job is active");
     this.history_taken && return [];
     this.history_taken = true;
-    return ['query -> this.query, 'requester -> this.requester, 'result -> this.result,
-      'context -> this.context, 'status -> this.state, 'finished_at -> this.finished_at,
-      'recovery_required -> this.recovery_required];
+    return ['query -> this.query, 'requester -> this.requester, 'result -> this.result, 'context -> this.context, 'status -> this.state, 'finished_at -> this.finished_at, 'recovery_required -> this.recovery_required];
   endmethod
 
   method release owner: ARCH_WIZARD
     "Break agent callback cycles and release captured state after its history value is taken.";
-    (caller == this || caller == this.host || caller == $llm_room_runtime) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host || caller == $llm_room_runtime && caller_perms().wizard || raise(E_PERM);
     this.state in {'queued, 'running} && this:cancel();
     if (valid(this.agent))
       this.agent.tool_callback = #-1;
@@ -207,8 +203,7 @@ object LLM_JOB [
     caller in {$llm_agent} || raise(E_PERM);
     const {job, source, name, values} = args;
     source == job.agent && principal == job.requester || raise(E_PERM);
-    name in {"on_tool_call", "on_tool_complete", "on_tool_error", "on_compaction_start", "on_compaction_end"}
-      || raise(E_PERM);
+    name in {"on_tool_call", "on_tool_complete", "on_tool_error", "on_compaction_start", "on_compaction_end"} || raise(E_PERM);
     return job:(name)(@values);
   endmethod
 

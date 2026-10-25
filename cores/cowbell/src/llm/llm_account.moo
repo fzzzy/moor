@@ -42,11 +42,9 @@ object LLM_ACCOUNT [
     for record in (mapvalues(held))
       reserved = reserved + record['amount];
     endfor
-    actor.llm_tokens_used + reserved + amount <= actor.llm_token_budget
-      || raise(E_QUOTA, "LLM token budget cannot cover this request.");
+    actor.llm_tokens_used + reserved + amount <= actor.llm_token_budget || raise(E_QUOTA, "LLM token budget cannot cover this request.");
     const id = uuid();
-    actor.llm_reservations[id] = ['amount -> amount, 'deadline -> deadline,
-      'purpose -> purpose, 'model -> model, 'started -> ftime()];
+    actor.llm_reservations[id] = ['amount -> amount, 'deadline -> deadline, 'purpose -> purpose, 'model -> model, 'started -> ftime()];
     return id;
   endmethod
 
@@ -71,10 +69,7 @@ object LLM_ACCOUNT [
     if (length(log) >= 100)
       log = log[length(log) - 98..$];
     endif
-    actor.llm_usage_log = {@log, ["id" -> id, "timestamp" -> time(), "tokens" -> tokens,
-      "usage" -> reported ? usage | [], "reported" -> reported, "status" -> tostr(status),
-      "purpose" -> tostr(record['purpose]), "model" -> record['model],
-      "seconds" -> ftime() - record['started]]};
+    actor.llm_usage_log = {@log, ["id" -> id, "timestamp" -> time(), "tokens" -> tokens, "usage" -> reported ? usage | [], "reported" -> reported, "status" -> tostr(status), "purpose" -> tostr(record['purpose]), "model" -> record['model], "seconds" -> ftime() - record['started]]};
     return true;
   endmethod
 

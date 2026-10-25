@@ -18,8 +18,7 @@ object DATA_VISOR [
 
   method _system_prompt owner: ARCH_WIZARD
     "Compose the device persona with shared LLM guidance; descendants may specialize this hook.";
-    return $llm_prompts:compose({this.role_prompt, $llm_prompts.interaction,
-      $llm_prompts.project, $llm_prompts.programming});
+    return $llm_prompts:compose({this.role_prompt, $llm_prompts.interaction, $llm_prompts.project, $llm_prompts.programming});
   endmethod
 
   method _setup_agent owner: ARCH_WIZARD
@@ -92,8 +91,7 @@ object DATA_VISOR [
     set_task_perms(actor);
     const compass = this:_find_architects_compass(actor);
     valid(compass) && compass.owner == actor || return;
-    const names = {"build_room", "dig_passage", "remove_passage", "set_passage_description",
-      "rename_object", "describe_object", "move_object", "grant_capability"};
+    const names = {"build_room", "dig_passage", "remove_passage", "set_passage_description", "rename_object", "describe_object", "move_object", "grant_capability"};
     const catalog = $llm_tool_catalog:compose($llm_building_tools:get_tools(), $llm_programming_tools:get_tools());
     for tool in (catalog)
       if (tool.name in names)
@@ -118,11 +116,9 @@ object DATA_VISOR [
     const {request, actor} = args;
     $llm_wearable:_require_tool_dispatch(actor, caller_perms());
     set_task_perms(actor);
-    const source = $llm_verb_source:read(actor, request["object"], request["verb"],
-      request["start_line"], request["end_line"], `request["context_lines"] ! E_RANGE => 0');
+    const source = $llm_verb_source:read(actor, request["object"], request["verb"], request["start_line"], request["end_line"], `request["context_lines"] ! E_RANGE => 0');
     $llm_wearable_session:emit_for_device(this, actor, $event:mk_eval_result(actor, "", source:document()));
-    return "Code range presented to user: " + source:signature() + " lines "
-      + tostr(source.first) + "-" + tostr(source.last);
+    return "Code range presented to user: " + source:signature() + " lines " + tostr(source.first) + "-" + tostr(source.last);
   endmethod
 
   method _check_user_eligible owner: HACKER
@@ -269,5 +265,4 @@ object DATA_VISOR [
     endfor
     return 0;
   endmethod
-
 endobject

@@ -116,8 +116,7 @@ object SUB [
     if (kind == 'capitalize)
       return {{$document_template:mk('capitalize, $format:inlines({this.content}))}, state};
     endif
-    typeof(viewer) == TYPE_OBJ && valid(viewer)
-      || raise(E_INVARG, "This substitution needs a viewer");
+    typeof(viewer) == TYPE_OBJ && valid(viewer) || raise(E_INVARG, "This substitution needs a viewer");
     if (kind == 'agree)
       const binding = $document_resolver:binding(context, this.binding_name);
       binding['kind] == 'object || raise(E_INVARG, "Agreement requires an object binding.");
@@ -128,8 +127,7 @@ object SUB [
       let plural = target == viewer;
       if (!plural)
         const request = this.subject_form == 'name ? 'grammar | 'pronouns;
-        const {answer, subjects} = $document_resolver:capture_subject(
-          target, viewer, request, state['subjects]);
+        const {answer, subjects} = $document_resolver:capture_subject(target, viewer, request, state['subjects]);
         state['subjects] = subjects;
         plural = this.subject_form == 'name ? answer['number] == 'plural | answer.is_plural;
       endif
@@ -158,10 +156,9 @@ object SUB [
         return {$format:literal_inline("<no-" + tostr(binding_name) + ">"), state};
       endif
       const forms = ['article_a -> 'indefinite, 'article_the -> 'definite, 'listing -> 'listing];
-      const form = kind == 'reference ? this.form | (maphaskey(forms, kind) ? forms[kind] | 'bare);
-      const perspective = kind == 'reference && (`this.third_person ! E_PROPNF => false') ? $nothing | viewer;
-      const {phrase, subjects} = $document_resolver:capture_subject(
-        target, perspective, form, state['subjects]);
+      const form = kind == 'reference ? this.form | maphaskey(forms, kind) ? forms[kind] | 'bare;
+      const perspective = kind == 'reference && `this.third_person ! E_PROPNF => false' ? $nothing | viewer;
+      const {phrase, subjects} = $document_resolver:capture_subject(target, perspective, form, state['subjects]);
       state['subjects] = subjects;
       let label = phrase;
       if (`this.capitalize_binding ! E_PROPNF => false')
@@ -194,19 +191,15 @@ object SUB [
     if (typeof(target) != TYPE_OBJ || !valid(target))
       return {$format:literal_inline("<no-" + tostr(subject) + ">"), state};
     endif
-    const self_forms = ['subject -> "you", 'object -> "you", 'pos_adj -> "your",
-      'pos_noun -> "yours", 'reflexive -> "yourself", 'verb_be -> "are",
-      'verb_have -> "have", 'verb_look -> "look"];
+    const self_forms = ['subject -> "you", 'object -> "you", 'pos_adj -> "your", 'pos_noun -> "yours", 'reflexive -> "yourself", 'verb_be -> "are", 'verb_have -> "have", 'verb_look -> "look"];
     maphaskey(self_forms, form) || raise(E_INVARG, "Unknown substitution: " + name);
     let text = "";
     if (target == viewer)
       text = self_forms[form];
     else
-      const {pronouns, subjects} = $document_resolver:capture_subject(
-        target, viewer, 'pronouns, state['subjects]);
+      const {pronouns, subjects} = $document_resolver:capture_subject(target, viewer, 'pronouns, state['subjects]);
       state['subjects] = subjects;
-      const fields = ['subject -> 'ps, 'object -> 'po, 'pos_adj -> 'pp,
-        'pos_noun -> 'pq, 'reflexive -> 'pr, 'verb_be -> 'verb_be, 'verb_have -> 'verb_have];
+      const fields = ['subject -> 'ps, 'object -> 'po, 'pos_adj -> 'pp, 'pos_noun -> 'pq, 'reflexive -> 'pr, 'verb_be -> 'verb_be, 'verb_have -> 'verb_have];
       if (form == 'verb_look)
         text = pronouns.is_plural ? "look" | "looks";
       else
@@ -220,8 +213,7 @@ object SUB [
     "Refer to an explicit object using its phrase verb when the document resolves.";
     const {object, ?form = 'definite} = args;
     typeof(object) == TYPE_OBJ || raise(E_TYPE, "A reference requires an object.");
-    form in {'label, 'bare, 'definite, 'indefinite, 'listing}
-      || raise(E_INVARG, "Unknown noun phrase form.");
+    form in {'label, 'bare, 'definite, 'indefinite, 'listing} || raise(E_INVARG, "Unknown noun phrase form.");
     return <$sub, .type = 'reference, .object = object, .form = form>;
   endmethod
 
@@ -229,16 +221,14 @@ object SUB [
     "Name an emote's subject in third person so its authored continuation keeps its meaning.";
     const {object} = args;
     typeof(object) == TYPE_OBJ || raise(E_TYPE);
-    return <$sub, .type = 'reference, .object = object, .form = 'definite,
-      .third_person = true, .capitalize = true>;
+    return <$sub, .type = 'reference, .object = object, .form = 'definite, .third_person = true, .capitalize = true>;
   endmethod
 
   method pronoun owner: HACKER
     "Select one pronoun form for any object role or named object binding.";
     const {binding_name, form} = args;
-    (typeof(binding_name) == TYPE_SYM && typeof(form) == TYPE_SYM) || raise(E_TYPE);
-    form in {'subject, 'object, 'pos_adj, 'pos_noun, 'reflexive}
-      || raise(E_INVARG, "Pronoun form must be subject, object, pos_adj, pos_noun, or reflexive.");
+    typeof(binding_name) == TYPE_SYM && typeof(form) == TYPE_SYM || raise(E_TYPE);
+    form in {'subject, 'object, 'pos_adj, 'pos_noun, 'reflexive} || raise(E_INVARG, "Pronoun form must be subject, object, pos_adj, pos_noun, or reflexive.");
     return <$sub, .type = 'pronoun, .binding_name = binding_name, .form = form>;
   endmethod
 
@@ -246,12 +236,10 @@ object SUB [
     "Choose plural or singular wording for a binding's name or subject pronoun.";
     "The viewer always takes the plural form, as in you are or you wave.";
     const {binding_name, subject_form, plural_form, singular_form} = args;
-    (typeof(binding_name) == TYPE_SYM && typeof(subject_form) == TYPE_SYM
-      && typeof(plural_form) == TYPE_STR && typeof(singular_form) == TYPE_STR) || raise(E_TYPE);
+    typeof(binding_name) == TYPE_SYM && typeof(subject_form) == TYPE_SYM && typeof(plural_form) == TYPE_STR && typeof(singular_form) == TYPE_STR || raise(E_TYPE);
     subject_form in {'name, 'pronoun} || raise(E_INVARG, "Agreement needs 'name or 'pronoun.");
-    (length(plural_form) && length(singular_form)) || raise(E_INVARG, "Both verb forms are required.");
-    return <$sub, .type = 'agree, .binding_name = binding_name, .subject_form = subject_form,
-      .plural_form = plural_form, .singular_form = singular_form>;
+    length(plural_form) && length(singular_form) || raise(E_INVARG, "Both verb forms are required.");
+    return <$sub, .type = 'agree, .binding_name = binding_name, .subject_form = subject_form, .plural_form = plural_form, .singular_form = singular_form>;
   endmethod
 
   method capitalize owner: HACKER
@@ -371,8 +359,7 @@ object SUB [
     const capitalize_binding = name in {'nc, 'dc, 'ic, 'tc, 'lc};
     const binding_name = capitalize_binding ? tosym(tostr(name)[1]) | name;
     const type = verb in {"a", "ac"} ? 'article_a | 'article_the;
-    return <this, .type = type, .binding_name = binding_name,
-      .capitalize = capitalize_article, .capitalize_binding = capitalize_binding>;
+    return <this, .type = type, .binding_name = binding_name, .capitalize = capitalize_article, .capitalize_binding = capitalize_binding>;
   endmethod
 
   method "listing listingc" owner: HACKER
@@ -385,9 +372,7 @@ object SUB [
     "Article tokens retain exact capitalization and complete custom binding names.";
     const item = $thing:create(true);
     item.name = "apple";
-    for example in ({{"{a d}", "an apple"}, {"{A d}", "An apple"},
-      {"{an d}", "an apple"}, {"{An d}", "An apple"}, {"{The d}", "The apple"},
-      {"{the dc}", "the Apple"}, {"{the relic}", "the apple"}, {"{The relic}", "The apple"}})
+    for example in ({{"{a d}", "an apple"}, {"{A d}", "An apple"}, {"{an d}", "an apple"}, {"{An d}", "An apple"}, {"{The d}", "The apple"}, {"{the dc}", "the Apple"}, {"{the relic}", "the apple"}, {"{The relic}", "The apple"}})
       const content = $sub_utils:compile(example[1]);
       const event = $event:mk_test(player, @content):with_dobj(item):with_object_binding('relic, item);
       const actual = $document:render(event:resolve(player), 'text_plain)['body];
@@ -400,22 +385,16 @@ object SUB [
     "Mass nouns, plurals, proper names, and pronunciation overrides affect articles.";
     const item = $thing:create(true);
     const event = $event:mk_test(player, this:a('d), " / ", this:the('d)):with_dobj(item);
-    for example in ({{"water", false, false, false, "", "some water / the water"},
-      {"boots", true, true, false, "", "some boots / the boots"},
-      {"Henri", true, false, true, "", "Henri / Henri"},
-      {"MRI scanner", true, false, false, "an", "an MRI scanner / the MRI scanner"},
-      {"herb", true, false, false, "a", "a herb / the herb"}})
+    for example in ({{"water", false, false, false, "", "some water / the water"}, {"boots", true, true, false, "", "some boots / the boots"}, {"Henri", true, false, true, "", "Henri / Henri"}, {"MRI scanner", true, false, false, "an", "an MRI scanner / the MRI scanner"}, {"herb", true, false, false, "a", "a herb / the herb"}})
       item.name = example[1];
-      item.noun_kind = example[4] ? 'name | (example[2] ? 'count | 'mass);
+      item.noun_kind = example[4] ? 'name | example[2] ? 'count | 'mass;
       item.noun_number = example[3] ? 'plural | 'singular;
       item.indefinite_article = example[5];
       const actual = $document:render(event:resolve(player), 'text_plain)['body];
       $test_utils:assert_eq(strcmp(actual, example[6]), 0, item.name);
-      $test_utils:assert_eq($document:render(event:resolve(item), 'text_plain)['body],
-        "you / you", "viewer has no articles");
+      $test_utils:assert_eq($document:render(event:resolve(item), 'text_plain)['body], "you / you", "viewer has no articles");
     endfor
-    for example in ({{"hour", "an"}, {"honest answer", "an"}, {"user", "a"},
-      {"unidentified object", "an"}, {"unusual object", "an"}, {"unicycle", "a"}})
+    for example in ({{"hour", "an"}, {"honest answer", "an"}, {"user", "a"}, {"unidentified object", "an"}, {"unusual object", "an"}, {"unicycle", "a"}})
       $test_utils:assert_eq(example[1]:indefinite_article(), example[2], example[1]);
     endfor
     item.indefinite_article = "some";
@@ -531,11 +510,10 @@ object SUB [
   method test_unicode_capitalized_substitutions owner: HACKER
     "Name, text binding, and selected-branch capitalization share Unicode case conversion.";
     const actor = $thing:create(true);
-    actor.name = "éloïse";
-    const event = $event:mk_test(actor, this:nc(), " / ", this:bindingc('word), " / ",
-      this:self_altc("you", {this:n()})):with_text_binding('word, "σάρα");
+    actor.name = "\u00E9lo\u00EFse";
+    const event = $event:mk_test(actor, this:nc(), " / ", this:bindingc('word), " / ", this:self_altc("you", {this:n()})):with_text_binding('word, "\u03C3\u03AC\u03C1\u03B1");
     const rendered = $document:render(event:resolve(player), 'text_plain)['body];
-    $test_utils:assert_eq(strcmp(rendered, "Éloïse / Σάρα / Éloïse"), 0, "Unicode substitutions");
+    $test_utils:assert_eq(strcmp(rendered, "\u00C9lo\u00EFse / \u03A3\u03AC\u03C1\u03B1 / \u00C9lo\u00EFse"), 0, "Unicode substitutions");
     return true;
   endmethod
 
@@ -652,34 +630,25 @@ object SUB [
     const actor = $thing:create(true);
     actor.name = "alex";
     actor.pronouns = $pronouns.they_them;
-    for example in ({{"{nc} {agree actor name:are|is} ready.", "Alex is ready.", "You are ready."},
-      {"{sc} {agree actor pronoun:wave|waves}.", "They wave.", "You wave."},
-      {"{sc} {be} ready.", "They are ready.", "You are ready."}})
+    for example in ({{"{nc} {agree actor name:are|is} ready.", "Alex is ready.", "You are ready."}, {"{sc} {agree actor pronoun:wave|waves}.", "They wave.", "You wave."}, {"{sc} {be} ready.", "They are ready.", "You are ready."}})
       const content = $sub_utils:compile(example[1]);
       for version in ({content, $sub_utils:compile($sub_utils:decompile(content))})
         const event = $event:mk_test(actor, @version);
-        $test_utils:assert_eq(strcmp($document:render(event:resolve(player), 'text_plain)['body],
-          example[2]), 0, "observer: " + example[1]);
-        $test_utils:assert_eq(strcmp($document:render(event:resolve(actor), 'text_plain)['body],
-          example[3]), 0, "actor: " + example[1]);
+        $test_utils:assert_eq(strcmp($document:render(event:resolve(player), 'text_plain)['body], example[2]), 0, "observer: " + example[1]);
+        $test_utils:assert_eq(strcmp($document:render(event:resolve(actor), 'text_plain)['body], example[3]), 0, "actor: " + example[1]);
       endfor
     endfor
     actor.pronouns = $pronouns.he_him;
     const singular = $event:mk_test(actor, this:sc(), " ", this:agree('actor, 'pronoun, "wave", "waves"));
-    $test_utils:assert_eq($document:render(singular:resolve(player), 'text_plain)['body],
-      "He waves", "singular pronoun agreement");
+    $test_utils:assert_eq($document:render(singular:resolve(player), 'text_plain)['body], "He waves", "singular pronoun agreement");
     const boots = $thing:create(true);
     boots.name = "boots";
     boots.noun_number = 'plural;
     for role in ({'dobj, 'iobj, 'this, 'location, 'companion})
-      const content = {this:bindingc(role), " ", this:agree(role, 'name, "are", "is"), " / ",
-        this:agree(role, 'pronoun, "are", "is")};
-      const event = $event:mk_test(actor, @content):with_dobj(boots):with_iobj(boots)
-        :with_this(boots):with_location(boots):with_object_binding('companion, boots);
-      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body],
-        "Boots are / is", "name number differs from it/its for " + tostr(role));
-      $test_utils:assert_eq($document:render(event:resolve(boots), 'text_plain)['body],
-        "You are / are", "agreement follows subject viewer for " + tostr(role));
+      const content = {this:bindingc(role), " ", this:agree(role, 'name, "are", "is"), " / ", this:agree(role, 'pronoun, "are", "is")};
+      const event = $event:mk_test(actor, @content):with_dobj(boots):with_iobj(boots):with_this(boots):with_location(boots):with_object_binding('companion, boots);
+      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body], "Boots are / is", "name number differs from it/its for " + tostr(role));
+      $test_utils:assert_eq($document:render(event:resolve(boots), 'text_plain)['body], "You are / are", "agreement follows subject viewer for " + tostr(role));
     endfor
     return true;
   endmethod
@@ -697,16 +666,12 @@ object SUB [
       endfor
       content = {this:capitalize(content[1..$ - 1])};
       for version in ({content, $sub_utils:compile($sub_utils:decompile(content))})
-        const event = $event:mk_test(actor, @version):with_object_binding('recipient, recipient)
-          :with_this(recipient):with_location(recipient):with_dobj(recipient):with_iobj(recipient);
+        const event = $event:mk_test(actor, @version):with_object_binding('recipient, recipient):with_this(recipient):with_location(recipient):with_dobj(recipient):with_iobj(recipient);
         for viewer in ({actor, recipient, player})
-          const expected = viewer == recipient ? "You / you / your / yours / yourself"
-            | "Ze / zir / zir / zirs / zirself";
+          const expected = viewer == recipient ? "You / you / your / yours / yourself" | "Ze / zir / zir / zirs / zirself";
           const document = event:resolve(viewer);
-          $test_utils:assert_true(equal($document:render(document, 'text_plain)['body], expected),
-            "named pronouns: " + tostr(role));
-          $test_utils:assert_true(equal($document:render(document, 'text_html)['body],
-            "<p>" + expected + "</p>"), "HTML uses the same resolved pronouns");
+          $test_utils:assert_true(equal($document:render(document, 'text_plain)['body], expected), "named pronouns: " + tostr(role));
+          $test_utils:assert_true(equal($document:render(document, 'text_html)['body], "<p>" + expected + "</p>"), "HTML uses the same resolved pronouns");
         endfor
       endfor
     endfor
@@ -714,8 +679,7 @@ object SUB [
     $test_utils:assert_raises(E_INVARG, missing, "resolve", {actor}, "missing named participant");
     const text = missing:with_text_binding('missing, "Alex");
     $test_utils:assert_raises(E_INVARG, text, "resolve", {actor}, "text has no pronouns");
-    for template in ({"{pronoun recipient}", "{pronoun recipient invalid}",
-      "{pronoun recipient subject extra}"})
+    for template in ({"{pronoun recipient}", "{pronoun recipient invalid}", "{pronoun recipient subject extra}"})
       $test_utils:assert_raises(E_INVARG, $sub_utils, "compile", {template}, template);
     endfor
     return true;
@@ -725,8 +689,7 @@ object SUB [
     "Invalid subject forms and non-object bindings produce authoring errors.";
     $test_utils:assert_raises(E_INVARG, this, "agree", {'actor, 'bad, "are", "is"}, "unknown subject form");
     $test_utils:assert_raises(E_INVARG, this, "agree", {'actor, 'name, "", "is"}, "empty verb form");
-    const text = $event:mk_test(player, this:agree('word, 'name, "are", "is"))
-      :with_text_binding('word, "boots");
+    const text = $event:mk_test(player, this:agree('word, 'name, "are", "is")):with_text_binding('word, "boots");
     $test_utils:assert_raises(E_INVARG, text, "resolve", {player}, "agreement needs object grammar");
     const missing = $event:mk_test(player, this:agree('missing, 'name, "are", "is"));
     $test_utils:assert_raises(E_INVARG, missing, "resolve", {player}, "unknown binding");
@@ -745,10 +708,8 @@ object SUB [
     chair.name = "chair";
     for example in ({{chair.dumped_msg, "dumped"}, {chair.squeezed_msg, "squeezed"}})
       const event = $event:mk_test(actor, @example[1]):with_dobj(occupant):with_this(chair);
-      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body],
-        "Sam is " + example[2] + " off the chair.", "observer sees name agreement");
-      $test_utils:assert_eq($document:render(event:resolve(occupant), 'text_plain)['body],
-        "You are " + example[2] + " off the chair.", "occupant sees own agreement");
+      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body], "Sam is " + example[2] + " off the chair.", "observer sees name agreement");
+      $test_utils:assert_eq($document:render(event:resolve(occupant), 'text_plain)['body], "You are " + example[2] + " off the chair.", "occupant sees own agreement");
     endfor
     return true;
   endmethod
@@ -788,8 +749,7 @@ object SUB [
 
   method test_render_actor_perspective owner: HACKER
     "Resolve actor and observer wording before either document is serialized.";
-    const event = $event:mk_social(player, this:nc(), " ", this:self_alt("wave", "waves"),
-      " to ", this:the('d), "."):with_dobj(this);
+    const event = $event:mk_social(player, this:nc(), " ", this:self_alt("wave", "waves"), " to ", this:the('d), "."):with_dobj(this);
     const own = $document:render(event:resolve(player), 'text_plain)['body];
     const observer = $document:render(event:resolve(#0), 'text_plain)['body];
     $test_utils:assert_eq(own, "You wave to " + this.name + ".", "Actor perspective");
@@ -799,11 +759,9 @@ object SUB [
 
   method test_eval_missing_object_bindings owner: HACKER
     "Missing optional participants produce readable placeholders without interaction descriptors.";
-    for example in ({{this:s_dobj(), "<no-dobj>"}, {this:o_iobj(), "<no-iobj>"},
-      {this:verb_have_dobj(), "<no-dobj>"}, {this:verb_look_iobj(), "<no-iobj>"}})
+    for example in ({{this:s_dobj(), "<no-dobj>"}, {this:o_iobj(), "<no-iobj>"}, {this:verb_have_dobj(), "<no-dobj>"}, {this:verb_look_iobj(), "<no-iobj>"}})
       const event = $event:mk_test(player, example[1]);
-      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body],
-        example[2], "Absent participant");
+      $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body], example[2], "Absent participant");
     endfor
     return true;
   endmethod
@@ -811,8 +769,7 @@ object SUB [
   method test_binding_eval_and_missing_binding owner: HACKER
     "Object bindings preserve perspective, while an unknown binding is an explicit authoring error.";
     const event = $event:mk_test(player, this:binding('actor), " / ", this:binding('d)):with_dobj(this);
-    $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body],
-      "you / " + this:name(), "Object binding labels");
+    $test_utils:assert_eq($document:render(event:resolve(player), 'text_plain)['body], "you / " + this:name(), "Object binding labels");
     const invalid = $event:mk_test(player, this:binding('missing));
     $test_utils:assert_raises(E_INVARG, invalid, "resolve", {player}, "Unknown binding");
     return true;
@@ -823,8 +780,7 @@ object SUB [
     const target = $test_utils:anonymous($thing);
     target.name = "test relic";
     const self_event = $event:mk_test(player, this:a('d)):with_dobj(target);
-    $test_utils:assert_eq($document:render(self_event:resolve(target), 'text_plain)['body],
-      "you", "Self has no article");
+    $test_utils:assert_eq($document:render(self_event:resolve(target), 'text_plain)['body], "you", "Self has no article");
     target.noun_kind = 'name;
     for substitution in ({this:the('d), this:a('d)})
       const event = $event:mk_test(player, substitution):with_dobj(target);

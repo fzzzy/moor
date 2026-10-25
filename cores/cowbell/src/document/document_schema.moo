@@ -10,85 +10,11 @@ object DOCUMENT_SCHEMA [
   method _shape owner: HACKER
     "Return the fixed field schema. Child fields are ordered by reading order.";
     const {kind, path} = args;
-    const shapes = [
-      'document -> ['group -> 'root, 'required -> ['version -> 'version],
-        'optional -> [], 'children -> {{'blocks, 'block, 'many}},
-        'contents -> 'blocks],
-      'text -> ['group -> 'inline, 'required -> ['text -> 'text],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'inline_code -> ['group -> 'inline, 'required -> ['text -> 'string],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'soft_break -> ['group -> 'inline, 'required -> [],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'hard_break -> ['group -> 'inline, 'required -> [],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'emphasis -> ['group -> 'inline, 'required -> [],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'strong -> ['group -> 'inline, 'required -> [],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'strike -> ['group -> 'inline, 'required -> [],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'link -> ['group -> 'inline, 'required -> ['url -> 'url],
-        'optional -> ['title -> 'string], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'reference -> ['group -> 'inline, 'required -> ['descriptor -> 'descriptor],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'image -> ['group -> 'inline, 'required -> ['src -> 'image_url, 'alt -> 'text],
-        'optional -> ['title -> 'string], 'children -> {},
-        'contents -> false],
-      'paragraph -> ['group -> 'block, 'required -> [],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'heading -> ['group -> 'block, 'required -> ['level -> 'level],
-        'optional -> [], 'children -> {{'children, 'inline, 'many}},
-        'contents -> 'children],
-      'block_quote -> ['group -> 'block, 'required -> [],
-        'optional -> [], 'children -> {{'children, 'block, 'many}},
-        'contents -> 'children],
-      'code_block -> ['group -> 'block, 'required -> ['text -> 'string],
-        'optional -> ['language -> 'language, 'first_line -> 'positive], 'children -> {},
-        'contents -> false],
-      'thematic_break -> ['group -> 'block, 'required -> [],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'list -> ['group -> 'block, 'required -> ['style -> 'list_style],
-        'optional -> ['start -> 'integer], 'children -> {{'items, 'list_item, 'many}},
-        'contents -> 'items],
-      'list_item -> ['group -> 'record, 'required -> [],
-        'optional -> ['checked -> 'boolean], 'children -> {{'blocks, 'block, 'many}},
-        'contents -> false],
-      'definition_list -> ['group -> 'block, 'required -> [],
-        'optional -> [], 'children -> {{'items, 'definition_item, 'many}},
-        'contents -> 'items],
-      'definition_item -> ['group -> 'record, 'required -> [],
-        'optional -> [], 'children -> {{'term, 'inline, 'many}, {'definition, 'block, 'many}},
-        'contents -> false],
-      'table -> ['group -> 'block, 'required -> [],
-        'optional -> [], 'children -> {{'caption, 'inline, 'many},
-          {'columns, 'column, 'many}, {'header, 'inline, 'matrix_optional},
-          {'rows, 'row, 'many}},
-        'contents -> 'rows],
-      'column -> ['group -> 'record, 'required -> ['align -> 'align],
-        'optional -> [], 'children -> {},
-        'contents -> false],
-      'row -> ['group -> 'record, 'required -> [],
-        'optional -> [], 'children -> {{'cells, 'cell, 'many}},
-        'contents -> false],
-      'cell -> ['group -> 'record, 'required -> [],
-        'optional -> [], 'children -> {{'blocks, 'block, 'many}},
-        'contents -> false]
-    ];
+    const shapes = ['document -> ['group -> 'root, 'required -> ['version -> 'version], 'optional -> [], 'children -> {{'blocks, 'block, 'many}}, 'contents -> 'blocks], 'text -> ['group -> 'inline, 'required -> ['text -> 'text], 'optional -> [], 'children -> {}, 'contents -> false], 'inline_code -> ['group -> 'inline, 'required -> ['text -> 'string], 'optional -> [], 'children -> {}, 'contents -> false], 'soft_break -> ['group -> 'inline, 'required -> [], 'optional -> [], 'children -> {}, 'contents -> false], 'hard_break -> ['group -> 'inline, 'required -> [], 'optional -> [], 'children -> {}, 'contents -> false], 'emphasis -> ['group -> 'inline, 'required -> [], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'strong -> ['group -> 'inline, 'required -> [], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'strike -> ['group -> 'inline, 'required -> [], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'link -> ['group -> 'inline, 'required -> ['url -> 'url], 'optional -> ['title -> 'string], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'reference -> ['group -> 'inline, 'required -> ['descriptor -> 'descriptor], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'image -> ['group -> 'inline, 'required -> ['src -> 'image_url, 'alt -> 'text], 'optional -> ['title -> 'string], 'children -> {}, 'contents -> false], 'paragraph -> ['group -> 'block, 'required -> [], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'heading -> ['group -> 'block, 'required -> ['level -> 'level], 'optional -> [], 'children -> {{'children, 'inline, 'many}}, 'contents -> 'children], 'block_quote -> ['group -> 'block, 'required -> [], 'optional -> [], 'children -> {{'children, 'block, 'many}}, 'contents -> 'children], 'code_block -> ['group -> 'block, 'required -> ['text -> 'string], 'optional -> ['language -> 'language, 'first_line -> 'positive], 'children -> {}, 'contents -> false], 'thematic_break -> ['group -> 'block, 'required -> [], 'optional -> [], 'children -> {}, 'contents -> false], 'list -> ['group -> 'block, 'required -> ['style -> 'list_style], 'optional -> ['start -> 'integer], 'children -> {{'items, 'list_item, 'many}}, 'contents -> 'items], 'list_item -> ['group -> 'record, 'required -> [], 'optional -> ['checked -> 'boolean], 'children -> {{'blocks, 'block, 'many}}, 'contents -> false], 'definition_list -> ['group -> 'block, 'required -> [], 'optional -> [], 'children -> {{'items, 'definition_item, 'many}}, 'contents -> 'items], 'definition_item -> ['group -> 'record, 'required -> [], 'optional -> [], 'children -> {{'term, 'inline, 'many}, {'definition, 'block, 'many}}, 'contents -> false], 'table -> ['group -> 'block, 'required -> [], 'optional -> [], 'children -> {{'caption, 'inline, 'many}, {'columns, 'column, 'many}, {'header, 'inline, 'matrix_optional}, {'rows, 'row, 'many}}, 'contents -> 'rows], 'column -> ['group -> 'record, 'required -> ['align -> 'align], 'optional -> [], 'children -> {}, 'contents -> false], 'row -> ['group -> 'record, 'required -> [], 'optional -> [], 'children -> {{'cells, 'cell, 'many}}, 'contents -> false], 'cell -> ['group -> 'record, 'required -> [], 'optional -> [], 'children -> {{'blocks, 'block, 'many}}, 'contents -> false]];
     maphaskey(shapes, kind) || raise(E_INVARG, path + ": unknown node kind");
     return shapes[kind];
   endmethod
+
   method encode owner: HACKER
     "Validate canonical flyweights and return inert version 1 metadata. No callbacks or suspension.";
     const {document} = args;
@@ -106,18 +32,15 @@ object DOCUMENT_SCHEMA [
     "Remove invalid or excess interactions once, returning explicit path diagnostics.";
     const {document} = args;
     const checked = $document_schema:_checked(document, false, true);
-    return ['document -> $document_schema:_decode(checked['encoded], 'document),
-      'encoded -> checked['encoded], 'diagnostics -> checked['diagnostics]];
+    return ['document -> $document_schema:_decode(checked['encoded], 'document), 'encoded -> checked['encoded], 'diagnostics -> checked['diagnostics]];
   endmethod
 
   method _checked owner: HACKER
     "Bound and validate the full tree, then enforce the compact UTF-8 metadata limit.";
     const {value, wire, finalize} = args;
     const state = ['nodes -> 0, 'references -> 0, 'bytes -> 0, 'diagnostics -> {}];
-    const {encoded, finished, splice} =
-      $document_schema:_walk(value, 'document, "document", 0, false, state, wire, finalize);
-    length(binary_from_str(generate_json(encoded))) <= 262144
-      || raise(E_QUOTA, "document: encoded document exceeds 256 KiB");
+    const {encoded, finished, splice} = $document_schema:_walk(value, 'document, "document", 0, false, state, wire, finalize);
+    length(binary_from_str(generate_json(encoded))) <= 262144 || raise(E_QUOTA, "document: encoded document exceeds 256 KiB");
     return ['encoded -> encoded, 'diagnostics -> finished['diagnostics]];
   endmethod
 
@@ -164,8 +87,7 @@ object DOCUMENT_SCHEMA [
     const is_node = shape['group] in {'inline, 'block};
     if (!wire && expected in {'document, 'inline, 'block})
       if (typeof(shape['contents]) == TYPE_SYM)
-        !maphaskey(fields, shape['contents])
-          || raise(E_INVARG, path + ": children must occupy flyweight contents");
+        !maphaskey(fields, shape['contents]) || raise(E_INVARG, path + ": children must occupy flyweight contents");
         fields[shape['contents]] = contents;
       else
         length(contents) == 0 || raise(E_INVARG, path + ": node cannot contain children");
@@ -177,8 +99,7 @@ object DOCUMENT_SCHEMA [
     endfor
     is_node && (allowed = {@allowed, 'kind});
     for key in (mapkeys(fields))
-      (typeof(key) == TYPE_SYM && key in allowed && match(tostr(key), "^[a-z_]+$", 1))
-        || raise(E_INVARG, path + ": unknown field " + toliteral(key));
+      typeof(key) == TYPE_SYM && key in allowed && match(tostr(key), "^[a-z_]+$", 1) || raise(E_INVARG, path + ": unknown field " + toliteral(key));
     endfor
     if (kind in {'link, 'reference})
       !interactive || raise(E_INVARG, path + ": interactive labels cannot nest");
@@ -247,21 +168,17 @@ object DOCUMENT_SCHEMA [
         let encoded_sequence = {};
         for j in [1..length(sequence)]
           const entry = sequence[j];
-          const node_path = cardinality == 'matrix_optional
-            ? entry_path + "[" + tostr(j - 1) + "]" | entry_path;
-          const {result, next_state, splice} = $document_schema:_walk(
-            entry, child_kind, node_path, depth + 1, interactive, state, wire, finalize);
+          const node_path = cardinality == 'matrix_optional ? entry_path + "[" + tostr(j - 1) + "]" | entry_path;
+          const {result, next_state, splice} = $document_schema:_walk(entry, child_kind, node_path, depth + 1, interactive, state, wire, finalize);
           state = next_state;
           encoded_sequence = splice ? {@encoded_sequence, @result} | {@encoded_sequence, result};
         endfor
-        children = cardinality == 'matrix_optional
-          ? {@children, encoded_sequence} | {@children, @encoded_sequence};
+        children = cardinality == 'matrix_optional ? {@children, encoded_sequence} | {@children, @encoded_sequence};
       endfor
       encoded[tostr(key)] = children;
     endfor
     if (kind == 'text)
-      (!index(encoded["text"], "\n") && !index(encoded["text"], "\r"))
-        || raise(E_INVARG, path + ".text: use break nodes for newlines");
+      !index(encoded["text"], "\n") && !index(encoded["text"], "\r") || raise(E_INVARG, path + ".text: use break nodes for newlines");
     elseif (kind == 'list)
       if (encoded["style"] == "bullet")
         !maphaskey(encoded, "start") || raise(E_INVARG, path + ".start: bullet lists have no start");
@@ -273,8 +190,7 @@ object DOCUMENT_SCHEMA [
         length(encoded["header"]) == width || raise(E_INVARG, path + ".header: wrong column count");
       endif
       for i in [1..length(encoded["rows"])]
-        length(encoded["rows"][i]["cells"]) == width
-          || raise(E_INVARG, path + ".rows[" + tostr(i - 1) + "].cells: wrong column count");
+        length(encoded["rows"][i]["cells"]) == width || raise(E_INVARG, path + ".rows[" + tostr(i - 1) + "].cells: wrong column count");
       endfor
     endif
     return {drop_reference ? encoded["children"] | encoded, state, drop_reference};
@@ -302,10 +218,9 @@ object DOCUMENT_SCHEMA [
       if (rule == 'version)
         value == 1 || raise(E_INVARG, path + ": unsupported document version");
       elseif (rule == 'level)
-        (value >= 1 && value <= 6) || raise(E_INVARG, path + ": heading level must be 1 through 6");
+        value >= 1 && value <= 6 || raise(E_INVARG, path + ": heading level must be 1 through 6");
       else
-        (value >= -9007199254740991 && value <= 9007199254740991)
-          || raise(E_INVARG, path + ": integer is outside the exact JSON range");
+        value >= -9007199254740991 && value <= 9007199254740991 || raise(E_INVARG, path + ": integer is outside the exact JSON range");
         if (rule == 'positive)
           value > 0 || raise(E_INVARG, path + ": expected positive integer");
         endif
@@ -316,8 +231,7 @@ object DOCUMENT_SCHEMA [
       return value;
     elseif (rule in {'align, 'list_style})
       const values = rule == 'align ? {'start, 'center, 'end} | {'bullet, 'numbered};
-      typeof(value) == (wire ? TYPE_STR | TYPE_SYM)
-        || raise(E_INVARG, path + ": invalid enum type");
+      typeof(value) == (wire ? TYPE_STR | TYPE_SYM) || raise(E_INVARG, path + ": invalid enum type");
       for allowed in (values)
         if (strcmp(tostr(value), tostr(allowed)) == 0)
           return tostr(allowed);
@@ -328,16 +242,13 @@ object DOCUMENT_SCHEMA [
     typeof(value) == TYPE_STR || raise(E_INVARG, path + ": expected string");
     length(binary_from_str(value)) <= 262144 || raise(E_QUOTA, path + ": string exceeds 256 KiB");
     if (rule == 'language)
-      (!length(value) || match(value, "^[A-Za-z0-9_.+-]+$", 1))
-        || raise(E_INVARG, path + ": invalid code language");
+      !length(value) || match(value, "^[A-Za-z0-9_.+-]+$", 1) || raise(E_INVARG, path + ": invalid code language");
     elseif (rule in {'url, 'image_url})
       const safe_scheme = index(value, "https://") == 1 || index(value, "http://") == 1;
-      (safe_scheme || (rule == 'url && index(value, "mailto:") == 1))
-        || raise(E_INVARG, path + ": unsupported URL scheme");
+      safe_scheme || (rule == 'url && index(value, "mailto:") == 1) || raise(E_INVARG, path + ": unsupported URL scheme");
       const bytes = binary_from_str(value);
       for i in [1..length(bytes)]
-        (bytes[i] > 32 && bytes[i] != 127)
-          || raise(E_INVARG, path + ": URL contains whitespace or controls");
+        bytes[i] > 32 && bytes[i] != 127 || raise(E_INVARG, path + ": URL contains whitespace or controls");
       endfor
     endif
     return value;
@@ -369,7 +280,7 @@ object DOCUMENT_SCHEMA [
       let children = {};
       for value in (encoded[tostr(key)])
         if (cardinality == 'matrix_optional)
-          children = {@children, {$document_schema:_decode(entry, child_kind) for entry in (value)}};
+          children = {@children, { $document_schema:_decode(entry, child_kind) for entry in (value) }};
         else
           children = {@children, $document_schema:_decode(value, child_kind)};
         endif
@@ -388,6 +299,7 @@ object DOCUMENT_SCHEMA [
     fields['kind] = kind;
     return toflyweight($document_node, fields, contents);
   endmethod
+
   method _descriptor owner: HACKER
     "Validate the interaction protocol and return an inert string-keyed descriptor.";
     const {value, path, wire} = args;
@@ -395,31 +307,14 @@ object DOCUMENT_SCHEMA [
     maphaskey(fields, 'kind) || raise(E_INVARG, path + ": missing interaction kind");
     const kind = $document_schema:_interaction_scalar(fields['kind], 'kind, path + ".kind", wire);
     const result = $document_schema:_interaction_record(value, tosym(kind), path, wire);
-    $document_schema:_utf16_length(generate_json(result)) <= 2048
-      || raise(E_INVARG, path + ": descriptor exceeds 2048 UTF-16 units");
+    $document_schema:_utf16_length(generate_json(result)) <= 2048 || raise(E_INVARG, path + ": descriptor exceeds 2048 UTF-16 units");
     return result;
   endmethod
 
   method _interaction_shape owner: HACKER
     "Define descriptor records using the web interaction protocol's fields and bounds.";
     const {kind} = args;
-    const shapes = [
-      'object -> {['kind -> 'kind, 'ref -> 'ref], ['object_kind -> 'object_kind]},
-      'help -> {['kind -> 'kind, 'provider -> 'ref, 'topic -> 256], []},
-      'verb -> {['kind -> 'kind, 'receiver -> 'ref, 'name -> 256], ['definer -> 'ref]},
-      'property -> {['kind -> 'kind, 'object -> 'ref, 'name -> 256], []},
-      'change -> {['kind -> 'kind, 'provider -> 'ref, 'review -> 'positive,
-        'generation -> 'positive], ['row -> 256]},
-      'command -> {['kind -> 'kind], ['command -> 1024, 'template -> 1024,
-        'arguments -> 'arguments, 'action -> 'action, 'exit -> 'exit]},
-      'action -> {['label -> 80], ['icon -> 32, 'title -> 256]},
-      'exit -> {['source -> 'ref], ['destination -> 'ref, 'passage -> 128,
-        'provider -> 'ref, 'registration -> 128, 'option -> 128]},
-      'field -> {['label -> 256, 'expected_kind -> 'expected_kind],
-        ['required -> 'boolean, 'suggestions -> 'suggestions, 'bound -> 'bound]},
-      'suggestions -> {['provider -> 'ref, 'source -> 256], []},
-      'bound -> {['value -> 256, 'label -> 256], []}
-    ];
+    const shapes = ['object -> {['kind -> 'kind, 'ref -> 'ref], ['object_kind -> 'object_kind]}, 'help -> {['kind -> 'kind, 'provider -> 'ref, 'topic -> 256], []}, 'verb -> {['kind -> 'kind, 'receiver -> 'ref, 'name -> 256], ['definer -> 'ref]}, 'property -> {['kind -> 'kind, 'object -> 'ref, 'name -> 256], []}, 'change -> {['kind -> 'kind, 'provider -> 'ref, 'review -> 'positive, 'generation -> 'positive], ['row -> 256]}, 'command -> {['kind -> 'kind], ['command -> 1024, 'template -> 1024, 'arguments -> 'arguments, 'action -> 'action, 'exit -> 'exit]}, 'action -> {['label -> 80], ['icon -> 32, 'title -> 256]}, 'exit -> {['source -> 'ref], ['destination -> 'ref, 'passage -> 128, 'provider -> 'ref, 'registration -> 128, 'option -> 128]}, 'field -> {['label -> 256, 'expected_kind -> 'expected_kind], ['required -> 'boolean, 'suggestions -> 'suggestions, 'bound -> 'bound]}, 'suggestions -> {['provider -> 'ref, 'source -> 256], []}, 'bound -> {['value -> 256, 'label -> 256], []}];
     return shapes[kind];
   endmethod
 
@@ -430,8 +325,7 @@ object DOCUMENT_SCHEMA [
     length(value) <= 16 || raise(E_INVARG, path + ": too many descriptor fields");
     let fields = [];
     for key in (mapkeys(value))
-      typeof(key) == (wire ? TYPE_STR | TYPE_SYM)
-        || raise(E_INVARG, path + ": invalid descriptor field type");
+      typeof(key) == (wire ? TYPE_STR | TYPE_SYM) || raise(E_INVARG, path + ": invalid descriptor field type");
       let name = wire ? tosym(key) | key;
       if (wire)
         if (strcmp(key, "objectKind") == 0)
@@ -440,12 +334,10 @@ object DOCUMENT_SCHEMA [
           name = 'expected_kind;
         else
           match(key, "^[a-z_]+$", 1) || raise(E_INVARG, path + ": invalid descriptor field spelling");
-          !(name in {'object_kind, 'expected_kind})
-            || raise(E_INVARG, path + ": descriptor metadata uses camelCase for this field");
+          !(name in {'object_kind, 'expected_kind}) || raise(E_INVARG, path + ": descriptor metadata uses camelCase for this field");
         endif
       else
-        match(tostr(name), "^[a-z_]+$", 1)
-          || raise(E_INVARG, path + ": invalid descriptor field spelling");
+        match(tostr(name), "^[a-z_]+$", 1) || raise(E_INVARG, path + ": invalid descriptor field spelling");
       endif
       !maphaskey(fields, name) || raise(E_INVARG, path + ": duplicate descriptor field");
       fields[name] = value[key];
@@ -462,15 +354,13 @@ object DOCUMENT_SCHEMA [
       let arguments = [];
       for key in (mapkeys(fields))
         key in {'dobj, 'iobj} || raise(E_INVARG, path + ": unknown argument slot");
-        arguments[tostr(key)] = $document_schema:_interaction_record(
-          fields[key], 'field, path + "." + tostr(key), wire);
+        arguments[tostr(key)] = $document_schema:_interaction_record(fields[key], 'field, path + "." + tostr(key), wire);
       endfor
       return arguments;
     endif
     const {required, optional} = $document_schema:_interaction_shape(kind);
     for key in (mapkeys(fields))
-      (maphaskey(required, key) || maphaskey(optional, key))
-        || raise(E_INVARG, path + ": unknown descriptor field " + tostr(key));
+      maphaskey(required, key) || maphaskey(optional, key) || raise(E_INVARG, path + ": unknown descriptor field " + tostr(key));
     endfor
     let result = [];
     for key in ({@mapkeys(required), @mapkeys(optional)})
@@ -493,21 +383,16 @@ object DOCUMENT_SCHEMA [
     endfor
     if (kind == 'exit)
       if (maphaskey(result, "passage"))
-        (maphaskey(result, "destination") && !maphaskey(result, "provider")
-          && !maphaskey(result, "registration") && !maphaskey(result, "option"))
-          || raise(E_INVARG, path + ": invalid passage reference");
+        maphaskey(result, "destination") && !maphaskey(result, "provider") && !maphaskey(result, "registration") && !maphaskey(result, "option") || raise(E_INVARG, path + ": invalid passage reference");
       else
-        (maphaskey(result, "provider") && maphaskey(result, "registration")
-          && maphaskey(result, "option")) || raise(E_INVARG, path + ": incomplete custom exit reference");
+        maphaskey(result, "provider") && maphaskey(result, "registration") && maphaskey(result, "option") || raise(E_INVARG, path + ": incomplete custom exit reference");
       endif
     endif
     if (kind == 'command)
       if (maphaskey(result, "command"))
-        (!maphaskey(result, "template") && !maphaskey(result, "arguments"))
-          || raise(E_INVARG, path + ": command and template are mutually exclusive");
+        !maphaskey(result, "template") && !maphaskey(result, "arguments") || raise(E_INVARG, path + ": command and template are mutually exclusive");
       else
-        (maphaskey(result, "template") && maphaskey(result, "arguments")
-          && !maphaskey(result, "exit")) || raise(E_INVARG, path + ": incomplete command template");
+        maphaskey(result, "template") && maphaskey(result, "arguments") && !maphaskey(result, "exit") || raise(E_INVARG, path + ": incomplete command template");
         let rest = result["template"];
         for slot in (mapkeys(result["arguments"]))
           const marker = "{" + slot + "}";
@@ -515,8 +400,7 @@ object DOCUMENT_SCHEMA [
           position > 0 || raise(E_INVARG, path + ": argument missing from template");
           rest = rest[1..position - 1] + rest[position + length(marker)..$];
         endfor
-        (!index(rest, "{") && !index(rest, "}"))
-          || raise(E_INVARG, path + ": unknown or repeated template placeholder");
+        !index(rest, "{") && !index(rest, "}") || raise(E_INVARG, path + ": unknown or repeated template placeholder");
       endif
     elseif (kind == 'field && result["expectedKind"] == "object" && maphaskey(result, "bound"))
       $document_schema:_interaction_scalar(result["bound"]["value"], 'ref, path + ".bound.value", true);
@@ -530,12 +414,8 @@ object DOCUMENT_SCHEMA [
     if (rule in {'positive, 'boolean})
       return $document_schema:_scalar(value, rule, path, wire);
     elseif (rule in {'kind, 'object_kind, 'expected_kind})
-      typeof(value) == (wire ? TYPE_STR | TYPE_SYM)
-        || raise(E_INVARG, path + ": invalid descriptor enum type");
-      const enums = [
-        'kind -> {'object, 'command, 'help, 'verb, 'property, 'change},
-        'object_kind -> {'object, 'person, 'container}, 'expected_kind -> {'object, 'text}
-      ];
+      typeof(value) == (wire ? TYPE_STR | TYPE_SYM) || raise(E_INVARG, path + ": invalid descriptor enum type");
+      const enums = ['kind -> {'object, 'command, 'help, 'verb, 'property, 'change}, 'object_kind -> {'object, 'person, 'container}, 'expected_kind -> {'object, 'text}];
       for allowed in (enums[rule])
         if (strcmp(tostr(value), tostr(allowed)) == 0)
           return tostr(allowed);
@@ -545,12 +425,10 @@ object DOCUMENT_SCHEMA [
     endif
     typeof(value) == TYPE_STR || raise(E_INVARG, path + ": expected descriptor text");
     const limit = rule == 'ref ? 64 | rule;
-    (length(value) > 0 && length(value) <= limit && $document_schema:_utf16_length(value) <= limit)
-      || raise(E_INVARG, path + ": invalid descriptor text length");
+    length(value) > 0 && length(value) <= limit && $document_schema:_utf16_length(value) <= limit || raise(E_INVARG, path + ": invalid descriptor text length");
     const bytes = binary_from_str(value);
     for i in [1..length(bytes)]
-      (bytes[i] >= 32 && bytes[i] != 127)
-        || raise(E_INVARG, path + ": descriptor text contains a control character");
+      bytes[i] >= 32 && bytes[i] != 127 || raise(E_INVARG, path + ": descriptor text contains a control character");
     endfor
     if (rule == 'ref)
       let valid_ref = !!match(value, "^oid:[0-9]+$", 1);

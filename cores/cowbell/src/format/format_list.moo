@@ -13,7 +13,7 @@ object FORMAT_LIST [
     "Construct a list. Each item can contain inline content or an explicit block group.";
     const {items, ?ordered = false, ?start = 1} = args;
     typeof(items) == TYPE_LIST && typeof(ordered) == TYPE_BOOL || raise(E_TYPE);
-    const records = {['blocks -> $format:blocks({item})] for item in (items)};
+    const records = { ['blocks -> $format:blocks({item})] for item in (items) };
     let fields = ['style -> ordered ? 'numbered | 'bullet];
     ordered && (fields['start] = start);
     return $document_template:mk('list, records, fields);

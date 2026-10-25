@@ -8,22 +8,20 @@ object ROOT [
   fertile: true
   readable: true
 
+  property aliases (owner: HACKER, flags: "rc") = {};
+  property description (owner: HACKER, flags: "rc") = "Root prototype object from which all other objects inherit.";
+  property description_kind (owner: HACKER, flags: "rc") = 'literal;
+  property indefinite_article (owner: HACKER, flags: "rc") = "";
+  property llm_reservations (owner: ARCH_WIZARD, flags: "") = [];
   property llm_token_budget (owner: ARCH_WIZARD, flags: "") = 20000000;
   property llm_tokens_used (owner: ARCH_WIZARD, flags: "") = 0;
   property llm_usage_log (owner: ARCH_WIZARD, flags: "") = {};
-  property llm_reservations (owner: ARCH_WIZARD, flags: "") = [];
-
-  property reaction_state_fields (owner: HACKER, flags: "rc") = [];
-  property reaction_reports (owner: ARCH_WIZARD, flags: "") = [];
-  property reaction_timers (owner: ARCH_WIZARD, flags: "") = [];
-
-  property aliases (owner: HACKER, flags: "rc") = {};
   property noun_kind (owner: HACKER, flags: "rc") = 'name;
   property noun_number (owner: HACKER, flags: "rc") = 'singular;
-  property indefinite_article (owner: HACKER, flags: "rc") = "";
-  property description (owner: HACKER, flags: "rc") = "Root prototype object from which all other objects inherit.";
-  property description_kind (owner: HACKER, flags: "rc") = 'literal;
   property object_documentation (owner: HACKER, flags: "rc") = 0;
+  property reaction_reports (owner: ARCH_WIZARD, flags: "") = [];
+  property reaction_state_fields (owner: HACKER, flags: "rc") = [];
+  property reaction_timers (owner: ARCH_WIZARD, flags: "") = [];
   property revoked_capability_jtis (owner: ARCH_WIZARD, flags: "rc") = [];
   property thumbnail (owner: HACKER, flags: "rc") = false;
 
@@ -62,8 +60,7 @@ object ROOT [
       return [];
     endif
     let bindings = $sub_utils:standard_bindings("The person performing the action.");
-    bindings['dobj] = ['kind -> 'object, 'description -> "The object the message belongs to.",
-      'example -> 'host];
+    bindings['dobj] = ['kind -> 'object, 'description -> "The object the message belongs to.", 'example -> 'host];
     return bindings;
   endmethod
 
@@ -261,8 +258,7 @@ object ROOT [
     "Return this object's noun kind, number, and article override for a viewer.";
     set_task_perms(caller_perms());
     const {?viewer = player} = args;
-    return $root:_validate_noun_grammar(['kind -> this.noun_kind,
-      'number -> this.noun_number, 'article -> this.indefinite_article]);
+    return $root:_validate_noun_grammar(['kind -> this.noun_kind, 'number -> this.noun_number, 'article -> this.indefinite_article]);
   endmethod
 
   method _validate_noun_grammar owner: HACKER
@@ -272,12 +268,9 @@ object ROOT [
     for field in ({'kind, 'number, 'article})
       maphaskey(grammar, field) || raise(E_INVARG, "Missing noun grammar field: " + tostr(field));
     endfor
-    grammar['kind] in {'count, 'mass, 'name}
-      || raise(E_INVARG, "Noun kind must be count, mass, or name.");
-    grammar['number] in {'singular, 'plural}
-      || raise(E_INVARG, "Noun number must be singular or plural.");
-    grammar['article] in {"", "a", "an"}
-      || raise(E_INVARG, "Indefinite article must be automatic, a, or an.");
+    grammar['kind] in {'count, 'mass, 'name} || raise(E_INVARG, "Noun kind must be count, mass, or name.");
+    grammar['number] in {'singular, 'plural} || raise(E_INVARG, "Noun number must be singular or plural.");
+    grammar['article] in {"", "a", "an"} || raise(E_INVARG, "Indefinite article must be automatic, a, or an.");
     return grammar;
   endmethod
 
@@ -285,12 +278,10 @@ object ROOT [
     "Return a literal label, bare, definite, indefinite, or listing phrase for a viewer.";
     set_task_perms(caller_perms());
     const {form, ?viewer = player} = args;
-    form in {'label, 'bare, 'definite, 'indefinite, 'listing}
-      || raise(E_INVARG, "Unknown noun phrase form: " + tostr(form));
+    form in {'label, 'bare, 'definite, 'indefinite, 'listing} || raise(E_INVARG, "Unknown noun phrase form: " + tostr(form));
     if (form == 'listing)
       const selected = this:listing_form(viewer);
-      selected in {'definite, 'indefinite}
-        || raise(E_INVARG, "Listing form must be definite or indefinite.");
+      selected in {'definite, 'indefinite} || raise(E_INVARG, "Listing form must be definite or indefinite.");
       return this:noun_phrase(selected, viewer);
     endif
     const label = this:name();
@@ -301,7 +292,7 @@ object ROOT [
     const grammar = $root:_validate_noun_grammar(this:noun_grammar(viewer));
     grammar['kind] == 'name && return label;
     form == 'definite && return "the " + label;
-    (grammar['kind] == 'mass || grammar['number] == 'plural) && return "some " + label;
+    grammar['kind] == 'mass || grammar['number] == 'plural && return "some " + label;
     const article = grammar['article] ? grammar['article] | label:indefinite_article();
     return article + " " + label;
   endmethod
@@ -324,13 +315,11 @@ object ROOT [
   method set_grammar owner: ARCH_WIZARD
     "Set noun settings, or reset fields with 'inherit. Requires owner, wizard, or set_grammar authority.";
     const principal = caller_perms();
-    const {target, perms, grants} = $root:_check_permissions_with_grants_as(
-      this, principal, 'set_grammar);
+    const {target, perms, grants} = $root:_check_permissions_with_grants_as(this, principal, 'set_grammar);
     set_task_perms(perms, grants);
     const {changes} = args;
     typeof(changes) == TYPE_MAP || raise(E_TYPE, "Grammar settings must be a map.");
-    const properties = ['kind -> "noun_kind", 'number -> "noun_number",
-      'article -> "indefinite_article", 'listing -> "listing_form"];
+    const properties = ['kind -> "noun_kind", 'number -> "noun_number", 'article -> "indefinite_article", 'listing -> "listing_form"];
     let resolved = [];
     for field in (mapkeys(changes))
       maphaskey(properties, field) || raise(E_INVARG, "Unknown grammar setting: " + tostr(field));
@@ -346,13 +335,9 @@ object ROOT [
       endif
       resolved[field] = value;
     endfor
-    $root:_validate_noun_grammar([
-      'kind -> maphaskey(resolved, 'kind) ? resolved['kind] | target.noun_kind,
-      'number -> maphaskey(resolved, 'number) ? resolved['number] | target.noun_number,
-      'article -> maphaskey(resolved, 'article) ? resolved['article] | target.indefinite_article]);
+    $root:_validate_noun_grammar(['kind -> maphaskey(resolved, 'kind) ? resolved['kind] | target.noun_kind, 'number -> maphaskey(resolved, 'number) ? resolved['number] | target.noun_number, 'article -> maphaskey(resolved, 'article) ? resolved['article] | target.indefinite_article]);
     if (maphaskey(resolved, 'listing))
-      resolved['listing] in {'definite, 'indefinite}
-        || raise(E_INVARG, "Listing form must be definite or indefinite.");
+      resolved['listing] in {'definite, 'indefinite} || raise(E_INVARG, "Listing form must be definite or indefinite.");
     endif
     for field in (mapkeys(changes))
       if (changes[field] == 'inherit)
@@ -723,15 +708,11 @@ object ROOT [
       elseif (cap == 'recycle)
         grants = {@grants, {"object_recycle", target}};
       elseif (cap == 'set_description)
-        grants = {@grants, {"property_write", target, "description"},
-          {"property_write", target, "description_kind"}};
+        grants = {@grants, {"property_write", target, "description"}, {"property_write", target, "description_kind"}};
       elseif (cap == 'set_name_aliases)
         grants = {@grants, {"object_rename", target}, {"property_write", target, "aliases"}};
       elseif (cap == 'set_grammar)
-        grants = {@grants, {"property_write", target, "noun_kind"},
-          {"property_write", target, "noun_number"},
-          {"property_write", target, "indefinite_article"},
-          {"property_write", target, "listing_form"}};
+        grants = {@grants, {"property_write", target, "noun_kind"}, {"property_write", target, "noun_number"}, {"property_write", target, "indefinite_article"}, {"property_write", target, "listing_form"}};
       elseif (cap == 'set_owner)
         grants = {@grants, {"property_write", target, "owner"}};
       elseif (cap == 'set_thumbnail)
@@ -1134,13 +1115,10 @@ object ROOT [
     "Require the caller to act as itself, as an owned NPC, or with wizard authority.";
     const {who, ?principal = caller_perms()} = args;
     const invoking = caller_perms();
-    (typeof(principal) == TYPE_OBJ && valid(principal))
-      || raise(E_PERM, "The action needs a valid authority.");
-    (principal == invoking || (valid(invoking) && invoking.wizard)) || raise(E_PERM);
-    (typeof(who) == TYPE_OBJ && valid(who) && isa(who, $actor))
-      || raise(E_INVARG, "The action needs a person or an NPC.");
-    (principal == who || principal.wizard
-      || (principal == who.owner && !is_player(who))) || raise(E_PERM, "You cannot act as that person.");
+    typeof(principal) == TYPE_OBJ && valid(principal) || raise(E_PERM, "The action needs a valid authority.");
+    principal == invoking || (valid(invoking) && invoking.wizard) || raise(E_PERM);
+    typeof(who) == TYPE_OBJ && valid(who) && isa(who, $actor) || raise(E_INVARG, "The action needs a person or an NPC.");
+    principal == who || principal.wizard || (principal == who.owner && !is_player(who)) || raise(E_PERM, "You cannot act as that person.");
     return true;
   endmethod
 
@@ -1356,8 +1334,7 @@ object ROOT [
       $test_utils:assert_eq(scratch:display_name(), "Root Test Object", "display_name() should default to name()");
       $test_utils:assert_eq(scratch:aliases(), {"root-test", "rto"}, "aliases() should return .aliases");
       $test_utils:assert_false(scratch:is_actor(), "root descendants should not be actors by default");
-      $test_utils:assert_eq(scratch:noun_grammar(player),
-        ['kind -> 'name, 'number -> 'singular, 'article -> ""], "Complete singular name");
+      $test_utils:assert_eq(scratch:noun_grammar(player), ['kind -> 'name, 'number -> 'singular, 'article -> ""], "Complete singular name");
     finally
       valid(scratch) && recycle(scratch);
     endtry
@@ -1369,18 +1346,15 @@ object ROOT [
     for prototype in ({$thing, $player})
       const target = create(prototype, $hacker, 1);
       target:set_name_aliases("Original", {"original-alias"});
-      $test_utils:assert_raises(E_INVARG, target, "set_name_aliases", {"\u200F", {}},
-        "invisible name rejected");
-      $test_utils:assert_raises(E_INVARG, target, "set_name_aliases", {"Changed", {"good", "\u200B"}},
-        "bad alias rejects the entire rename");
+      $test_utils:assert_raises(E_INVARG, target, "set_name_aliases", {"\u200F", {}}, "invisible name rejected");
+      $test_utils:assert_raises(E_INVARG, target, "set_name_aliases", {"Changed", {"good", "\u200B"}}, "bad alias rejects the entire rename");
       $test_utils:assert_eq(target.name, "Original", "name unchanged after failed rename");
       $test_utils:assert_eq(target.aliases, {"original-alias"}, "aliases unchanged after failed rename");
       target:set_description("Original description");
-      $test_utils:assert_raises(E_INVARG, target, "set_description", {{"line", "\u001B[Hhome"}},
-        "nested description control rejected");
+      $test_utils:assert_raises(E_INVARG, target, "set_description", {{"line", "\x1B[Hhome"}}, "nested description control rejected");
       $test_utils:assert_eq(target.description, "Original description", "description unchanged");
-      target:set_description("Multiline\n\t日本語");
-      $test_utils:assert_eq(target.description, "Multiline\n\t日本語", "multiline Unicode retained");
+      target:set_description("Multiline\n\t\u65E5\u672C\u8A9E");
+      $test_utils:assert_eq(target.description, "Multiline\n\t\u65E5\u672C\u8A9E", "multiline Unicode retained");
     endfor
     return true;
   endmethod

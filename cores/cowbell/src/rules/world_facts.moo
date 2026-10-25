@@ -9,40 +9,7 @@ object WORLD_FACTS [
 
   method schemas owner: HACKER
     "Declare the read-only world predicates and their named inputs and outputs.";
-    return [
-      'is -> ['description -> "Compare two exact values.",
-        'inputs -> ['left -> 'any, 'right -> 'any], 'outputs -> []],
-      'isa -> ['description -> "Check an object's prototype ancestry.",
-        'inputs -> ['object -> 'object, 'prototype -> 'object], 'outputs -> []],
-      'owner_is -> ['description -> "Check an object's owner.",
-        'inputs -> ['object -> 'object, 'owner -> 'object], 'outputs -> []],
-      'location_is -> ['description -> "Check an object's location.",
-        'inputs -> ['object -> 'object, 'location -> 'object], 'outputs -> []],
-      'nearby -> ['description -> "Check whether an object is at a supplied location.",
-        'inputs -> ['object -> 'object, 'location -> 'object], 'outputs -> []],
-      'contains -> ['description -> "Check whether a container directly contains an item.",
-        'inputs -> ['container -> 'object, 'item -> 'object], 'outputs -> []],
-      'is_wizard -> ['description -> "Check an actor's wizard flag.",
-        'inputs -> ['actor -> 'object], 'outputs -> []],
-      'is_programmer -> ['description -> "Check an actor's programmer flag.",
-        'inputs -> ['actor -> 'object], 'outputs -> []],
-      'is_builder -> ['description -> "Check an actor's builder flag.",
-        'inputs -> ['actor -> 'object], 'outputs -> []],
-      'is_open -> ['description -> "Check a container's open state.",
-        'inputs -> ['object -> 'object], 'outputs -> []],
-      'is_locked -> ['description -> "Check a container's locked state.",
-        'inputs -> ['object -> 'object], 'outputs -> []],
-      'is_portable -> ['description -> "Check an item's portable state.",
-        'inputs -> ['object -> 'object], 'outputs -> []],
-      'sitting -> ['description -> "Check whether an actor is on a seat.",
-        'inputs -> ['actor -> 'object, 'seat -> 'object], 'outputs -> []],
-      'property_is -> ['description -> "Compare a readable property with an exact value.",
-        'inputs -> ['object -> 'object, 'field -> 'symbol, 'value -> 'any], 'outputs -> []],
-      'property_at_least -> ['description -> "Compare a readable integer property with a minimum.",
-        'inputs -> ['object -> 'object, 'field -> 'symbol, 'minimum -> 'integer], 'outputs -> []],
-      'occupants -> ['description -> "Select direct contents of one readable location.",
-        'inputs -> ['location -> 'object], 'outputs -> ['object -> 'object]]
-    ];
+    return ['is -> ['description -> "Compare two exact values.", 'inputs -> ['left -> 'any, 'right -> 'any], 'outputs -> []], 'isa -> ['description -> "Check an object's prototype ancestry.", 'inputs -> ['object -> 'object, 'prototype -> 'object], 'outputs -> []], 'owner_is -> ['description -> "Check an object's owner.", 'inputs -> ['object -> 'object, 'owner -> 'object], 'outputs -> []], 'location_is -> ['description -> "Check an object's location.", 'inputs -> ['object -> 'object, 'location -> 'object], 'outputs -> []], 'nearby -> ['description -> "Check whether an object is at a supplied location.", 'inputs -> ['object -> 'object, 'location -> 'object], 'outputs -> []], 'contains -> ['description -> "Check whether a container directly contains an item.", 'inputs -> ['container -> 'object, 'item -> 'object], 'outputs -> []], 'is_wizard -> ['description -> "Check an actor's wizard flag.", 'inputs -> ['actor -> 'object], 'outputs -> []], 'is_programmer -> ['description -> "Check an actor's programmer flag.", 'inputs -> ['actor -> 'object], 'outputs -> []], 'is_builder -> ['description -> "Check an actor's builder flag.", 'inputs -> ['actor -> 'object], 'outputs -> []], 'is_open -> ['description -> "Check a container's open state.", 'inputs -> ['object -> 'object], 'outputs -> []], 'is_locked -> ['description -> "Check a container's locked state.", 'inputs -> ['object -> 'object], 'outputs -> []], 'is_portable -> ['description -> "Check an item's portable state.", 'inputs -> ['object -> 'object], 'outputs -> []], 'sitting -> ['description -> "Check whether an actor is on a seat.", 'inputs -> ['actor -> 'object, 'seat -> 'object], 'outputs -> []], 'property_is -> ['description -> "Compare a readable property with an exact value.", 'inputs -> ['object -> 'object, 'field -> 'symbol, 'value -> 'any], 'outputs -> []], 'property_at_least -> ['description -> "Compare a readable integer property with a minimum.", 'inputs -> ['object -> 'object, 'field -> 'symbol, 'minimum -> 'integer], 'outputs -> []], 'occupants -> ['description -> "Select direct contents of one readable location.", 'inputs -> ['location -> 'object], 'outputs -> ['object -> 'object]]];
   endmethod
 
   method query owner: ARCH_WIZARD
@@ -83,8 +50,7 @@ object WORLD_FACTS [
       matches = value >= values['minimum];
     elseif (name == 'occupants)
       const contents = values['location].contents;
-      return ['rows -> {['object -> item] for item in (contents[1..min(length(contents), limit)])},
-        'complete -> length(contents) <= limit];
+      return ['rows -> { ['object -> item] for item in (contents[1..min(length(contents), limit)]) }, 'complete -> length(contents) <= limit];
     endif
     return ['rows -> matches ? {[]} | {}, 'complete -> true];
   endmethod

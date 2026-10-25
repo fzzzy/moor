@@ -6,21 +6,21 @@ object LLM_OBSERVER_JOB [
   parent: LLM_JOB
   owner: ARCH_WIZARD
 
+  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
   property actor_programmer (owner: ARCH_WIZARD, flags: "") = false;
   property actor_wizard (owner: ARCH_WIZARD, flags: "") = false;
-  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
   property captured_client (owner: ARCH_WIZARD, flags: "") = #-1;
   property captured_model (owner: ARCH_WIZARD, flags: "") = false;
   property captured_options (owner: ARCH_WIZARD, flags: "") = false;
-  property kind (owner: ARCH_WIZARD, flags: "") = 'observation;
-  property room (owner: ARCH_WIZARD, flags: "") = #-1;
-  property questioner (owner: ARCH_WIZARD, flags: "") = #-1;
-  property observations (owner: ARCH_WIZARD, flags: "") = {};
-  property ready_at (owner: ARCH_WIZARD, flags: "") = 0;
-  property interaction_task (owner: ARCH_WIZARD, flags: "") = 0;
-  property thinking_task (owner: ARCH_WIZARD, flags: "") = 0;
   property done (owner: ARCH_WIZARD, flags: "") = false;
+  property interaction_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property kind (owner: ARCH_WIZARD, flags: "") = 'observation;
+  property observations (owner: ARCH_WIZARD, flags: "") = {};
+  property questioner (owner: ARCH_WIZARD, flags: "") = #-1;
+  property ready_at (owner: ARCH_WIZARD, flags: "") = 0;
   property retired (owner: ARCH_WIZARD, flags: "") = false;
+  property room (owner: ARCH_WIZARD, flags: "") = #-1;
+  property thinking_task (owner: ARCH_WIZARD, flags: "") = 0;
 
   method check owner: ARCH_WIZARD
     "Check the captured NPC, room, requester connection, and lifetime before effects.";
@@ -30,18 +30,14 @@ object LLM_OBSERVER_JOB [
     const runtime = job.host;
     $llm_observer_runtime:check(runtime, job.kind == 'configure);
     runtime.current == job && runtime.subject == job.requester || raise(E_PERM);
-    job.requester.programmer == job.actor_programmer && job.requester.wizard == job.actor_wizard
-      && `job.requester.is_builder ! E_PROPNF => false' == job.actor_builder || raise(E_PERM, "NPC permissions changed.");
+    job.requester.programmer == job.actor_programmer && job.requester.wizard == job.actor_wizard && `job.requester.is_builder ! E_PROPNF => false' == job.actor_builder || raise(E_PERM, "NPC permissions changed.");
     job.requester.location == job.room || raise(E_PERM, "Observer moved.");
     time() < job.deadline || raise(E_QUOTA, "Observer request timed out.");
     if (valid(job.agent))
-      runtime.agent == job.agent && job.agent.client == job.captured_client
-        && job.agent.model_override == job.captured_model && job.agent.chat_opts == job.captured_options
-        || raise(E_PERM, "Observer model configuration changed.");
+      runtime.agent == job.agent && job.agent.client == job.captured_client && job.agent.model_override == job.captured_model && job.agent.chat_opts == job.captured_options || raise(E_PERM, "Observer model configuration changed.");
     endif
     if (typeof(job.reply_connection) == TYPE_OBJ)
-      valid(job.questioner) && job.reply_connection in {entry[1] for entry in (connections(job.questioner))}
-        || raise(E_PERM, "Connection is no longer attached.");
+      valid(job.questioner) && job.reply_connection in { entry[1] for entry in (connections(job.questioner)) } || raise(E_PERM, "Connection is no longer attached.");
     endif
     return true;
   endmethod
@@ -66,8 +62,7 @@ object LLM_OBSERVER_JOB [
     $llm_observer_job:check(this);
     const {agent} = args;
     this.state == 'queued && !valid(this.agent) || raise(E_INVARG);
-    agent == this.host.agent && isa(agent, $llm_agent) && is_anonymous(agent)
-      && agent.owner == this.host.controller && !agent.running || raise(E_PERM);
+    agent == this.host.agent && isa(agent, $llm_agent) && is_anonymous(agent) && agent.owner == this.host.controller && !agent.running || raise(E_PERM);
     this.captured_client = agent.client;
     this.captured_model = agent.model_override;
     this.captured_options = agent.chat_opts;
@@ -144,8 +139,7 @@ object LLM_OBSERVER_JOB [
     endif
     let prompt = observer.response_prompt;
     if (this.kind == 'ask)
-      prompt = "Answer this direct question from the room: " + generate_json([
-        "actor" -> tostr(this.questioner), "question" -> this.query]);
+      prompt = "Answer this direct question from the room: " + generate_json(["actor" -> tostr(this.questioner), "question" -> this.query]);
     endif
     value_bytes(prompt) <= 32768 || raise(E_QUOTA);
     this:_start_thinking();
@@ -155,7 +149,7 @@ object LLM_OBSERVER_JOB [
     if (this.state == 'complete)
       const speech = $llm_observer_speech:mk(this.result);
       "Models often say a line with a tool and then return it as the reply; the room heard it once.";
-      const presented = {$llm_observer_speech:mk(text).text for text in (this.agent.presented_text)};
+      const presented = { $llm_observer_speech:mk(text).text for text in (this.agent.presented_text) };
       if (length(speech.text) && speech.text in presented)
         runtime.last_spoke_at = time();
       elseif (speech:announce(observer, this.room))
@@ -197,8 +191,7 @@ object LLM_OBSERVER_JOB [
     let kept = {};
     let recent = {};
     for message in (context)
-      if (message["role"] == "user" && typeof(`message["content"] ! E_RANGE => false') == TYPE_STR
-          && message["content"]:starts_with("OBSERVATION:"))
+      if (message["role"] == "user" && typeof(`message["content"] ! E_RANGE => false') == TYPE_STR && message["content"]:starts_with("OBSERVATION:"))
         if (!clear)
           recent = {@recent, message};
           while (length(recent) > 6 || value_bytes(recent) > 32768)
@@ -333,7 +326,7 @@ object LLM_OBSERVER_JOB [
 
   method fail owner: ARCH_WIZARD
     "Record an output failure even after the model completes; cancellation remains terminal.";
-    (caller == this || caller == this.host) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host && caller_perms().wizard || raise(E_PERM);
     if (this.state == 'complete)
       const {message} = args;
       this.state = 'failed;
@@ -346,7 +339,7 @@ object LLM_OBSERVER_JOB [
 
   method report_error owner: ARCH_WIZARD
     "Report failures to the captured questioner without publishing diagnostics to the room.";
-    (caller == this || caller == this.host) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == this.host && caller_perms().wizard || raise(E_PERM);
     $llm_observer_job:check(this);
     valid(this.questioner) && this:_notify(this.result);
   endmethod

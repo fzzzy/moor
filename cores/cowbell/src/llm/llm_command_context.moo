@@ -153,7 +153,7 @@ object LLM_COMMAND_CONTEXT [
         bindings = {@bindings, {option['provider], option['identity], option['descriptor]}};
       elseif (maphaskey(option, 'passage))
         const aliases = $passage:expand_direction_aliases($passage:command_names(option['passage], room));
-        names = {@aliases, @{"go " + alias for alias in (aliases)}};
+        names = {@aliases, @{ "go " + alias for alias in (aliases) }};
         bindings = {@bindings, {option['identity], option['destination]}};
       endif
       exits = {@exits, ["label" -> option['label], "state" -> tostr(option['state]), "commands" -> names]};
@@ -169,8 +169,7 @@ object LLM_COMMAND_CONTEXT [
     for hint in (hints)
       const command = hint["command"];
       const description = `hint["description"] ! E_RANGE => ""';
-      typeof(command) == TYPE_STR && length(command) > 0 && length(command) <= 512
-        && typeof(description) == TYPE_STR && length(description) <= 512 || raise(E_INVARG, "Invalid room command hint.");
+      typeof(command) == TYPE_STR && length(command) > 0 && length(command) <= 512 && typeof(description) == TYPE_STR && length(description) <= 512 || raise(E_INVARG, "Invalid room command hint.");
       safe_hints = {@safe_hints, ["command" -> command, "description" -> description]};
       commands = setadd(commands, command);
     endfor
@@ -208,14 +207,10 @@ object LLM_COMMAND_CONTEXT [
     const online = connected_players();
     const known = people[1..min(256, length(people))];
     const names = $llm_command_context:names(actor, known);
-    const players = {["name" -> names[index], "connected" -> (known[index] in online) > 0] for index in [1..length(known)]};
-    const data = ["location" -> $llm_command_context:names(actor, {room})[1],
-      "inventory" -> $llm_command_context:objects(actor, actor.contents),
-      "nearby" -> $llm_command_context:objects(actor, visible), "ambient_commands" -> ambient,
-      "players" -> players, "exits" -> travel['exits], "room_hints" -> travel['hints]];
+    const players = { ["name" -> names[index], "connected" -> known[index] in online > 0] for index in [1..length(known)] };
+    const data = ["location" -> $llm_command_context:names(actor, {room})[1], "inventory" -> $llm_command_context:objects(actor, actor.contents), "nearby" -> $llm_command_context:objects(actor, visible), "ambient_commands" -> ambient, "players" -> players, "exits" -> travel['exits], "room_hints" -> travel['hints]];
     actor.location == room || raise(E_PERM, "Actor moved during command context collection.");
-    return ['data -> data, 'room -> room, 'scope -> scope, 'environment -> environment,
-      'known_players -> known, 'commands -> travel['commands], 'exit_bindings -> travel['bindings]];
+    return ['data -> data, 'room -> room, 'scope -> scope, 'environment -> environment, 'known_players -> known, 'commands -> travel['commands], 'exit_bindings -> travel['bindings]];
   endmethod
 
   method accepts owner: ARCH_WIZARD
@@ -224,8 +219,7 @@ object LLM_COMMAND_CONTEXT [
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     set_task_perms(actor);
     actor.location == snapshot['room] || raise(E_PERM, "Actor moved.");
-    typeof(candidate) == TYPE_STR && length(candidate) > 0 && length(candidate) <= 512
-      && !index(candidate, "\n") && !index(candidate, "\r") || return false;
+    typeof(candidate) == TYPE_STR && length(candidate) > 0 && length(candidate) <= 512 && !index(candidate, "\n") && !index(candidate, "\r") || return false;
     candidate in snapshot['commands] && return true;
     const parsed = $match:parse_command(candidate, snapshot['scope], actor);
     const matches = find_command_verb(parsed, snapshot['environment]);

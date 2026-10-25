@@ -6,17 +6,17 @@ object LLM_TASK [
   parent: ROOT
   owner: ARCH_WIZARD
 
-  property project (owner: ARCH_WIZARD, flags: "") = #-1;
-  property task_id (owner: ARCH_WIZARD, flags: "") = 0;
-  property parent_task_id (owner: ARCH_WIZARD, flags: "") = 0;
-  property summary (owner: ARCH_WIZARD, flags: "") = "";
-  property status (owner: ARCH_WIZARD, flags: "") = 'pending;
-  property created_at (owner: ARCH_WIZARD, flags: "") = 0;
-  property started_at (owner: ARCH_WIZARD, flags: "") = 0;
   property completed_at (owner: ARCH_WIZARD, flags: "") = 0;
-  property result (owner: ARCH_WIZARD, flags: "") = "";
+  property created_at (owner: ARCH_WIZARD, flags: "") = 0;
   property error (owner: ARCH_WIZARD, flags: "") = "";
   property findings (owner: ARCH_WIZARD, flags: "") = {};
+  property parent_task_id (owner: ARCH_WIZARD, flags: "") = 0;
+  property project (owner: ARCH_WIZARD, flags: "") = #-1;
+  property result (owner: ARCH_WIZARD, flags: "") = "";
+  property started_at (owner: ARCH_WIZARD, flags: "") = 0;
+  property status (owner: ARCH_WIZARD, flags: "") = 'pending;
+  property summary (owner: ARCH_WIZARD, flags: "") = "";
+  property task_id (owner: ARCH_WIZARD, flags: "") = 0;
 
   method check owner: ARCH_WIZARD
     "Authenticate task access and require current project membership, including after ownership changes.";
@@ -24,19 +24,14 @@ object LLM_TASK [
     typeof(task) == TYPE_OBJ && valid(task) && isa(task, $llm_task) || raise(E_TYPE);
     !is_clear_property(task, "project") && valid(task.project) || raise(E_PERM, "Task is no longer tracked.");
     $llm_project:check(task.project, principal);
-    maphaskey(task.project.tasks, task.task_id) && task.project.tasks[task.task_id] == task
-      || raise(E_PERM, "Task is no longer tracked.");
+    maphaskey(task.project.tasks, task.task_id) && task.project.tasks[task.task_id] == task || raise(E_PERM, "Task is no longer tracked.");
   endmethod
 
   method get_status owner: ARCH_WIZARD
     "Return a CoW task status snapshot to the project owner or wizard.";
     $llm_task:check(this, caller_perms());
     const children = this.project:children(this.task_id);
-    return ["task_id" -> this.task_id, "description" -> this.summary, "status" -> this.status,
-      "parent_task_id" -> this.parent_task_id, "created_at" -> this.created_at,
-      "started_at" -> this.started_at, "completed_at" -> this.completed_at,
-      "result" -> this.result, "error" -> this.error, "subtask_count" -> length(children),
-      "finding_count" -> length(this.findings)];
+    return ["task_id" -> this.task_id, "description" -> this.summary, "status" -> this.status, "parent_task_id" -> this.parent_task_id, "created_at" -> this.created_at, "started_at" -> this.started_at, "completed_at" -> this.completed_at, "result" -> this.result, "error" -> this.error, "subtask_count" -> length(children), "finding_count" -> length(this.findings)];
   endmethod
 
   method _transition owner: ARCH_WIZARD
@@ -120,7 +115,7 @@ object LLM_TASK [
     $llm_task:check(this, caller_perms());
     const {subject} = args;
     $llm_project:text(subject, 256);
-    return {finding for finding in (this.findings) if (strcmp(finding[2], subject) == 0)};
+    return { finding for finding in (this.findings) if strcmp(finding[2], subject) == 0 };
   endmethod
 
   method remove_finding owner: ARCH_WIZARD
@@ -129,7 +124,7 @@ object LLM_TASK [
     const {subject, key, value} = args;
     const expected = toliteral({this.task_id, subject, key, value});
     const previous = length(this.findings);
-    this.findings = {finding for finding in (this.findings) if (strcmp(toliteral(finding), expected) != 0)};
+    this.findings = { finding for finding in (this.findings) if strcmp(toliteral(finding), expected) != 0 };
     return length(this.findings) < previous;
   endmethod
 
@@ -179,5 +174,4 @@ object LLM_TASK [
     $test_utils:assert_eq(task:get_findings("database"), {}, "Removal releases the finding");
     return true;
   endmethod
-
 endobject

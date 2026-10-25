@@ -14,21 +14,19 @@ object EVENT [
     set_task_perms(caller_perms());
     const {actor, @content} = args;
     const present = typeof(actor) == TYPE_OBJ && valid(actor);
-    (present || (typeof(actor) == TYPE_BOOL && !actor)) || raise(E_INVARG, "Invalid event actor");
+    present || (typeof(actor) == TYPE_BOOL && !actor) || raise(E_INVARG, "Invalid event actor");
     const actor_name = present ? actor:name() | "";
     const location = present ? actor.location | false;
     const action = verb[4..$];
     const blocks = $format:blocks(content);
-    return <$event, .actor = actor, .actor_name = actor_name, .verb = action,
-      .dobj = false, .iobj = false, .this_obj = false, .location = location,
-      .timestamp = time(), .bindings = [], blocks>;
+    return <$event, .actor = actor, .actor_name = actor_name, .verb = action, .dobj = false, .iobj = false, .this_obj = false, .location = location, .timestamp = time(), .bindings = [], blocks>;
   endmethod
 
   method "with_dobj with_iobj with_this" owner: ARCH_WIZARD
     "Capture an object target on the immutable event value. No target is represented by false.";
     set_task_perms(caller_perms());
     const {value} = args;
-    (typeof(value) == TYPE_OBJ || (typeof(value) == TYPE_BOOL && !value)) || raise(E_TYPE);
+    typeof(value) == TYPE_OBJ || (typeof(value) == TYPE_BOOL && !value) || raise(E_TYPE);
     let key = tosym(verb[6..$]);
     key == 'this && (key = 'this_obj);
     this.(key) = value;
@@ -47,10 +45,8 @@ object EVENT [
     "Capture a named binding with an explicit kind. Text is never reinterpreted as markup.";
     const {name, value} = args;
     typeof(name) == TYPE_SYM || raise(E_TYPE);
-    !(name in {'actor, 'dobj, 'iobj, 'this_obj, 'location, 'n, 'nc, 'd, 'dc,
-      'i, 'ic, 'this, 't, 'tc, 'l, 'lc}) || raise(E_INVARG, "Reserved event binding");
-    const kinds = ["with_text_binding" -> 'text, "with_object_binding" -> 'object,
-      "with_content_binding" -> 'content];
+    !(name in {'actor, 'dobj, 'iobj, 'this_obj, 'location, 'n, 'nc, 'd, 'dc, 'i, 'ic, 'this, 't, 'tc, 'l, 'lc}) || raise(E_INVARG, "Reserved event binding");
+    const kinds = ["with_text_binding" -> 'text, "with_object_binding" -> 'object, "with_content_binding" -> 'content];
     const kind = kinds[verb];
     if (kind == 'text)
       typeof(value) == TYPE_STR || raise(E_TYPE, "Text bindings require strings");
@@ -174,5 +170,4 @@ object EVENT [
     this.presentation_hint = 'inset;
     return this;
   endverb
-
 endobject

@@ -21,5 +21,4 @@ object FORMAT_LINK [
     const {parts} = args;
     return $document_template:mk('inline, $format:inlines(parts));
   endmethod
-
 endobject

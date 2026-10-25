@@ -22,13 +22,12 @@ object FORMAT_DJOT [
     "Parse one inline sequence. A blank line returns no nodes; blocks and paragraph breaks fail.";
     const {source} = args;
     const lines = $format.djot:_source(source);
-    (length(lines) == 1 && !length(lines[1][1]:trim())) && return {};
+    length(lines) == 1 && !length(lines[1][1]:trim()) && return {};
     for line in (lines)
       if (length(lines) > 1 && !length(line[1]:trim()))
         $format.djot:_error(line, 1, "inline input cannot contain a paragraph boundary");
       endif
-      $format.djot:_marker(line)[1] == 'paragraph
-        || $format.djot:_error(line, 1, "inline input cannot contain a block construct");
+      $format.djot:_marker(line)[1] == 'paragraph || $format.djot:_error(line, 1, "inline input cannot contain a block construct");
     endfor
     const nodes = $format.djot:_inline(lines, [], 1);
     $document:validate($document:mk({$document_node:mk('paragraph, nodes)}));
@@ -51,8 +50,7 @@ object FORMAT_DJOT [
   method _error owner: HACKER
     "Raise a source diagnostic at a character offset in a retained physical line.";
     const {line, offset, message} = args;
-    raise(E_INVARG, "Djot line " + tostr(line[2]) + ", column "
-      + tostr(line[3] + offset - 1) + ": " + message);
+    raise(E_INVARG, "Djot line " + tostr(line[2]) + ", column " + tostr(line[3] + offset - 1) + ": " + message);
   endmethod
 
   method _at owner: HACKER
@@ -77,7 +75,7 @@ object FORMAT_DJOT [
     const found = pcre_match(source, pattern, case_matters, false);
     !length(found) && return {};
     const groups = found[1];
-    const positions = {groups[tostr(i)]["position"] for i in [1..length(groups) - 1]};
+    const positions = { groups[tostr(i)]["position"] for i in [1..length(groups) - 1] };
     return {@groups["0"]["position"], positions};
   endmethod
 
@@ -135,7 +133,7 @@ object FORMAT_DJOT [
   method _nesting owner: HACKER
     "Bound inline containers before a link or image can consume their parsed labels.";
     const {nodes, depth} = args;
-    let pending = {{node, depth} for node in (nodes)};
+    let pending = { {node, depth} for node in (nodes) };
     while (length(pending))
       const {node, level} = pending[1];
       pending = pending[2..$];
@@ -166,8 +164,7 @@ object FORMAT_DJOT [
     !length(text) && return {'blank, indent, false};
     const fence = $format.djot:_match(text, "^(`{3,})[ \t]*(.*)$", 1);
     if (fence)
-      return {'code_block, indent, {$format.djot:_capture(text, fence, 1),
-        $format.djot:_capture(text, fence, 2):trim()}};
+      return {'code_block, indent, {$format.djot:_capture(text, fence, 1), $format.djot:_capture(text, fence, 2):trim()}};
     endif
     const heading = $format.djot:_match(text, "^(#{1,})[ \t]+", 1);
     if (heading)
@@ -244,8 +241,7 @@ object FORMAT_DJOT [
       elseif (kind == 'code_block)
         const {fence, language} = data;
         language:starts_with("=") && $format.djot:_error(line, prefix + 1, "raw output is not supported");
-        (!length(language) || $format.djot:_match(language, "^[A-Za-z0-9_.+-]+$", 1))
-          || $format.djot:_error(line, prefix + 1, "invalid code language or attributes");
+        !length(language) || $format.djot:_match(language, "^[A-Za-z0-9_.+-]+$", 1) || $format.djot:_error(line, prefix + 1, "invalid code language or attributes");
         let code = {};
         cursor = cursor + 1;
         while (cursor <= length(lines))
@@ -258,8 +254,7 @@ object FORMAT_DJOT [
           cursor = cursor + 1;
         endwhile
         if (!scan)
-          blocks = {@blocks, $document_node:mk('code_block, {},
-            ['text -> length(code) ? code:join("\n") + "\n" | "", 'language -> language])};
+          blocks = {@blocks, $document_node:mk('code_block, {}, ['text -> length(code) ? code:join("\n") + "\n" | "", 'language -> language])};
         endif
         continue;
       elseif (kind == 'thematic_break)
@@ -302,8 +297,7 @@ object FORMAT_DJOT [
         $format.djot:_error(line, prefix + 1, "a caption must follow a table");
       endif
       "Paragraphs and headings continue to the next blank line; block markers cannot interrupt them.";
-      kind != 'heading || data <= 6
-        || $format.djot:_error(line, 1, "heading levels must be 1 through 6");
+      kind != 'heading || data <= 6 || $format.djot:_error(line, 1, "heading levels must be 1 through 6");
       let paragraph = {$format.djot:_strip(line, prefix)};
       cursor = cursor + 1;
       while (cursor <= length(lines) && length(lines[cursor][1]:trim()))
@@ -368,8 +362,7 @@ object FORMAT_DJOT [
       references = updated;
       if (!scan)
         if (marker == ":")
-          (length(children) && children[1].kind == 'paragraph)
-            || $format.djot:_error(initial, 1, "a definition item needs a term");
+          length(children) && children[1].kind == 'paragraph || $format.djot:_error(initial, 1, "a definition item needs a term");
           items = {@items, ['term -> flycontents(children[1]), 'definition -> children[2..$]]};
         else
           let item = ['blocks -> children];
@@ -378,10 +371,8 @@ object FORMAT_DJOT [
         endif
       endif
     endwhile
-    const fields = marker in {"-", "+", "*"}
-      ? ['style -> 'bullet] | ['style -> 'numbered, 'start -> first['start]];
-    const list = marker == ":" ? $document_node:mk('definition_list, items)
-      | $document_node:mk('list, items, fields);
+    const fields = marker in {"-", "+", "*"} ? ['style -> 'bullet] | ['style -> 'numbered, 'start -> first['start]];
+    const list = marker == ":" ? $document_node:mk('definition_list, items) | $document_node:mk('list, items, fields);
     return {list, cursor, references};
   endmethod
 
@@ -410,8 +401,7 @@ object FORMAT_DJOT [
       endif
       cursor = cursor + 1;
     endwhile
-    start > length(text:trimr())
-      || $format.djot:_error(line, start, "table row needs a closing pipe outside code");
+    start > length(text:trimr()) || $format.djot:_error(line, start, "table row needs a closing pipe outside code");
     return cells;
   endmethod
 
@@ -435,7 +425,7 @@ object FORMAT_DJOT [
         if (length(rows) > 1 || maphaskey(fields, 'header))
           if (!scan)
             if (!length(fields['columns]))
-              fields['columns] = {['align -> 'start] for i in [1..width]};
+              fields['columns] = { ['align -> 'start] for i in [1..width] };
             endif
             tables = {@tables, $document_node:mk('table, rows[1..$ - 1], fields)};
           endif
@@ -443,11 +433,10 @@ object FORMAT_DJOT [
         endif
         if (length(rows))
           const last_row = rows[length(rows)];
-          fields['header] = {flycontents(cell['blocks][1]) for cell in (last_row['cells])};
+          fields['header] = { flycontents(cell['blocks][1]) for cell in (last_row['cells]) };
         endif
         rows = {};
-        fields['columns] = {['align -> cell[1]:ends_with(":")
-          ? (cell[1]:starts_with(":") ? 'center | 'end) | 'start] for cell in (cells)};
+        fields['columns] = { ['align -> cell[1]:ends_with(":") ? cell[1]:starts_with(":") ? 'center | 'end | 'start] for cell in (cells) };
       elseif (!scan)
         let values = {};
         for cell in (cells)
@@ -459,7 +448,7 @@ object FORMAT_DJOT [
       cursor = cursor + 1;
     endwhile
     if (!length(fields['columns]))
-      fields['columns] = {['align -> 'start] for i in [1..width]};
+      fields['columns] = { ['align -> 'start] for i in [1..width] };
     endif
     let next = cursor;
     while (next <= length(lines) && !length(lines[next][1]:trim()))
@@ -487,7 +476,7 @@ object FORMAT_DJOT [
     "Scan inline delimiters left to right. The first matched closer fixes container precedence.";
     const {lines, references, depth} = args;
     depth <= 32 || raise(E_QUOTA, "Djot nesting exceeds 32 levels");
-    const source = {line[1] for line in (lines)}:join("\n");
+    const source = { line[1] for line in (lines) }:join("\n");
     let tokens = {};
     let cursor = 1;
     while (cursor <= length(source))
@@ -514,7 +503,7 @@ object FORMAT_DJOT [
           cursor = cursor + hard[2];
           continue;
         elseif (next == " ")
-          tokens = {@tokens, $format.djot:_text(" ")};
+          tokens = {@tokens, $format.djot:_text("\u00A0")};
           cursor = cursor + 2;
           continue;
         elseif (length(binary_from_str(next)) == 1 && $format.djot:_match(next, "^[[:punct:]]$", 1))
@@ -554,14 +543,10 @@ object FORMAT_DJOT [
         tokens = {@tokens, $document_node:mk('inline_code, {}, ['text -> text])};
         cursor = found ? closing + width | closing;
         continue;
-      elseif ((char == "$" && (next == "`" || tail:starts_with("$$`")))
-          || tail:starts_with("[^"))
+      elseif (char == "$" && (next == "`" || tail:starts_with("$$`")) || tail:starts_with("[^"))
         $format.djot:_error(line, column, "math and footnotes are not supported");
       elseif (char == "{")
-        if ($format.djot:_match(tail, "(?s)^\\{[=+~^].*?[=+~^]\\}", 1)
-            || $format.djot:_match(tail, "^\\{=[A-Za-z][A-Za-z0-9_-]*\\}", 1)
-            || $format.djot:_match(tail, "^\\{[.#%][^}]*\\}", 1)
-            || $format.djot:_match(tail, "^\\{[A-Za-z_][^}]*=.+\\}", 1))
+        if ($format.djot:_match(tail, "(?s)^\\{[=+~^].*?[=+~^]\\}", 1) || $format.djot:_match(tail, "^\\{=[A-Za-z][A-Za-z0-9_-]*\\}", 1) || $format.djot:_match(tail, "^\\{[.#%][^}]*\\}", 1) || $format.djot:_match(tail, "^\\{[A-Za-z_][^}]*=.+\\}", 1))
           $format.djot:_error(line, column, "this Djot extension or attribute is not supported");
         endif
       elseif (char in {"~", "^"})
@@ -573,12 +558,9 @@ object FORMAT_DJOT [
         const end = index(tail, ">");
         if (end > 1)
           const address = tail[2..end - 1];
-          if (!index(address, "\n") && ($format.djot:_match(address, "^[A-Za-z][A-Za-z0-9+.-]*:", 1)
-              || $format.djot:_match(address, "^[^ <>@]+@[^ <>@]+$", 1)))
-            const url = index(address, "@") && !index(address, ":")
-              ? "mailto:" + address | address;
-            tokens = {@tokens, $document_node:mk('link, {$format.djot:_text(address)},
-              ['url -> $format.djot:_url(url, false, lines, cursor)])};
+          if (!index(address, "\n") && ($format.djot:_match(address, "^[A-Za-z][A-Za-z0-9+.-]*:", 1) || $format.djot:_match(address, "^[^ <>@]+@[^ <>@]+$", 1)))
+            const url = index(address, "@") && !index(address, ":") ? "mailto:" + address | address;
+            tokens = {@tokens, $document_node:mk('link, {$format.djot:_text(address)}, ['url -> $format.djot:_url(url, false, lines, cursor)])};
             cursor = cursor + end;
             continue;
           endif
@@ -607,8 +589,7 @@ object FORMAT_DJOT [
             offset || $format.djot:_error(line, column, "unclosed reference label");
             const name = source[end..end + offset - 2];
             const key = length(name) ? name | $format.djot:_plain(label);
-            maphaskey(references, encode_base32(key))
-              || $format.djot:_error(line, column, "undefined link reference " + key);
+            maphaskey(references, encode_base32(key)) || $format.djot:_error(line, column, "undefined link reference " + key);
             url = references[encode_base32(key)];
             end = end + offset - 1;
           else
@@ -633,14 +614,12 @@ object FORMAT_DJOT [
               end = end + 1;
             endwhile
             !nesting || $format.djot:_error(line, column, "unclosed link destination");
-            url = {part:trim() for part in (url:split("\n"))}:join("");
+            url = { part:trim() for part in (url:split("\n")) }:join("");
           endif
           const image = tokens[opening]['image];
           $format.djot:_nesting(label, depth + 2);
           url = $format.djot:_url(url, image, lines, cursor);
-          const node = image
-            ? $document_node:mk('image, {}, ['src -> url, 'alt -> $format.djot:_plain(label)])
-            | $document_node:mk('link, label, ['url -> url]);
+          const node = image ? $document_node:mk('image, {}, ['src -> url, 'alt -> $format.djot:_plain(label)]) | $document_node:mk('link, label, ['url -> url]);
           tokens = {@tokens[1..opening - 1], node};
           cursor = end + 1;
           continue;
@@ -662,9 +641,7 @@ object FORMAT_DJOT [
         if (can_close)
           while (opening > 0)
             const token = tokens[opening];
-            if (typeof(token) == TYPE_MAP && token['marker] == marker
-                && token['explicit] == marked && opening < length(tokens)
-                && length(strsub(source[token['offset] + 1..cursor - 1], marker, "", 1)))
+            if (typeof(token) == TYPE_MAP && token['marker] == marker && token['explicit] == marked && opening < length(tokens) && length(strsub(source[token['offset] + 1..cursor - 1], marker, "", 1)))
               break;
             endif
             opening = opening - 1;
@@ -680,23 +657,19 @@ object FORMAT_DJOT [
           cursor = cursor + (explicit_close ? 2 | 1);
           continue;
         elseif (explicit_open || (!explicit_close && length(next) && !index(" \t\n", next)))
-          tokens = {@tokens, ['marker -> marker, 'explicit -> marked, 'offset -> cursor,
-            'raw -> explicit_open ? "{" + marker | marker]};
+          tokens = {@tokens, ['marker -> marker, 'explicit -> marked, 'offset -> cursor, 'raw -> explicit_open ? "{" + marker | marker]};
           cursor = cursor + (explicit_open ? 2 | 1);
           continue;
         endif
       elseif (marker in {"\"", "'"})
         const marked = explicit_open || explicit_close;
-        const apostrophe = marker == "'" && $format.djot:_match(previous, "[[:alnum:]]", 1)
-          && $format.djot:_match(next, "[[:alnum:]]", 1);
+        const apostrophe = marker == "'" && $format.djot:_match(previous, "[[:alnum:]]", 1) && $format.djot:_match(next, "[[:alnum:]]", 1);
         let opening = length(tokens);
-        const can_close = explicit_close || (!explicit_open && !apostrophe
-          && !index(" \t\n", previous));
+        const can_close = explicit_close || (!explicit_open && !apostrophe && !index(" \t\n", previous));
         if (can_close)
           while (opening > 0)
             const token = tokens[opening];
-            if (typeof(token) == TYPE_MAP && token['marker] == marker
-                && token['explicit] == marked)
+            if (typeof(token) == TYPE_MAP && token['marker] == marker && token['explicit] == marked)
               break;
             endif
             opening = opening - 1;
@@ -704,29 +677,26 @@ object FORMAT_DJOT [
         else
           opening = 0;
         endif
-        const left = marker == "\"" ? "“" | "‘";
-        const right = marker == "\"" ? "”" | "’";
+        const left = marker == "\"" ? "\u201C" | "\u2018";
+        const right = marker == "\"" ? "\u201D" | "\u2019";
         if (opening)
           const contents = $format.djot:_nodes(tokens[opening + 1..$]);
-          tokens = {@tokens[1..opening - 1], $format.djot:_text(left),
-            @contents, $format.djot:_text(right)};
-        elseif (explicit_open || (!explicit_close && !apostrophe && length(next)
-            && !index(" \t\n", next)))
-          tokens = {@tokens, ['marker -> marker, 'explicit -> marked,
-            'raw -> explicit_open ? left | marker == "'" ? right | left]};
+          tokens = {@tokens[1..opening - 1], $format.djot:_text(left), @contents, $format.djot:_text(right)};
+        elseif (explicit_open || (!explicit_close && !apostrophe && length(next) && !index(" \t\n", next)))
+          tokens = {@tokens, ['marker -> marker, 'explicit -> marked, 'raw -> explicit_open ? left | marker == "'" ? right | left]};
         else
           tokens = {@tokens, $format.djot:_text(explicit_close ? right | marker == "'" ? right | left)};
         endif
         cursor = cursor + (marked ? 2 | 1);
         continue;
       elseif (tail:starts_with("..."))
-        tokens = {@tokens, $format.djot:_text("…")};
+        tokens = {@tokens, $format.djot:_text("\u2026")};
         cursor = cursor + 3;
         continue;
       elseif (tail:starts_with("--"))
         const width = $format.djot:_match(tail, "^-+", 1)[2];
         const size = width % 3 == 0 ? 3 | width % 2 == 0 ? 2 | 3;
-        tokens = {@tokens, $format.djot:_text(size == 3 ? "—" | "–")};
+        tokens = {@tokens, $format.djot:_text(size == 3 ? "\u2014" | "\u2013")};
         cursor = cursor + size;
         continue;
       endif

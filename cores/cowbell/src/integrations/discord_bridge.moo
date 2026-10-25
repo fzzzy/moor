@@ -7,8 +7,6 @@ object DISCORD_BRIDGE [
   owner: ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Relays what Discord speakers hear, and who arrives and leaves, to a Discord channel through its webhook, and speaks the channel's messages through the speakers. Uses the curl worker: posts go to the channel webhook and the bot reads the channel by polling.";
-
   property api_base (owner: ARCH_WIZARD, flags: "") = "https://discord.com/api/v10";
   property batch_seconds (owner: ARCH_WIZARD, flags: "") = 5;
   property bot_token (owner: ARCH_WIZARD, flags: "") = "";
@@ -30,6 +28,8 @@ object DISCORD_BRIDGE [
   property webhook_url (owner: ARCH_WIZARD, flags: "") = "";
   property world_name (owner: ARCH_WIZARD, flags: "") = "the MOO";
 
+  override description (owner: ARCH_WIZARD, flags: "rc") = "Relays what Discord speakers hear, and who arrives and leaves, to a Discord channel through its webhook, and speaks the channel's messages through the speakers. Uses the curl worker: posts go to the channel webhook and the bot reads the channel by polling.";
+
   method configure owner: ARCH_WIZARD
     "Set the channel's webhook, the bot token and the channel id, then start polling and listening for presence.";
     caller_perms().wizard || raise(E_PERM);
@@ -43,7 +43,7 @@ object DISCORD_BRIDGE [
     channel_id == this.channel_id || (this.cursor = "");
     this.channel_id = channel_id;
     this.world_name = world_name;
-    this in #0.presence_listeners || (#0.presence_listeners = {@#0.presence_listeners, this});
+    this in $presence_listeners || ($presence_listeners = {@$presence_listeners, this});
     this.enabled = true;
     schedule_stop(this.poll_schedule);
     this.poll_schedule = schedule_every(this, "_poll", this.poll_seconds, {}, ["pass_elapsed" -> false, "jitter" -> 1]);
@@ -56,7 +56,7 @@ object DISCORD_BRIDGE [
     this.enabled = false;
     schedule_stop(this.poll_schedule);
     this.poll_schedule = 0;
-    #0.presence_listeners = setremove(#0.presence_listeners, this);
+    $presence_listeners = setremove($presence_listeners, this);
     return true;
   endmethod
 
@@ -104,8 +104,7 @@ object DISCORD_BRIDGE [
     kind != 'created && time() - last < this.presence_quiet_seconds && return false;
     this.presence[key] = time();
     const name = user:name();
-    const text = kind == 'created ? "A new guest, " + name + ", has arrived for the first time."
-      | kind == 'connected ? name + " has arrived at " + this.world_name + "." | name + " has left.";
+    const text = kind == 'created ? "A new guest, " + name + ", has arrived for the first time." | kind == 'connected ? name + " has arrived at " + this.world_name + "." | name + " has left.";
     this:_queue(text);
     return true;
   endmethod
@@ -118,8 +117,7 @@ object DISCORD_BRIDGE [
     const query = first ? "?limit=1" | "?limit=50&after=" + this.cursor;
     let response = {};
     try
-      response = this:_request("GET", this.api_base + "/channels/" + this.channel_id + "/messages" + query, "",
-        {{"Authorization", "Bot " + this.bot_token}});
+      response = this:_request("GET", this.api_base + "/channels/" + this.channel_id + "/messages" + query, "", {{"Authorization", "Bot " + this.bot_token}});
     except error (ANY)
       server_log(tostr("Discord bridge poll failed: ", toliteral(error[1])));
       return 0;
@@ -137,7 +135,7 @@ object DISCORD_BRIDGE [
     typeof(messages) == TYPE_LIST || return 0;
     "An empty channel has no history to skip, so everything after it is new.";
     first && !length(messages) && (this.cursor = "0");
-    const ids = {`message["id"] ! ANY => "0"' for message in (messages)};
+    const ids = { `message["id"] ! ANY => "0"' for message in (messages) };
     let spoken = 0;
     for message in (sort(messages, ids, true))
       const id = `message["id"] ! ANY => ""';
@@ -201,7 +199,7 @@ object DISCORD_BRIDGE [
     "Count an inbound message against the per-minute limit.";
     caller == this || raise(E_PERM);
     const now = time();
-    const recent = {stamp for stamp in (this.inbound) if (now - stamp < 60)};
+    const recent = { stamp for stamp in (this.inbound) if now - stamp < 60 };
     length(recent) < this.inbound_per_minute || return false;
     this.inbound = {@recent, now};
     return true;
@@ -213,7 +211,7 @@ object DISCORD_BRIDGE [
     const {value, limit} = args;
     typeof(value) == TYPE_STR || return "";
     const text = pcre_replace(value, "s/[\\x00-\\x1f\\x7f]+/ /g"):trim();
-    return length(text) > limit ? text[1..limit - 1] + "…" | text;
+    return length(text) > limit ? text[1..limit - 1] + "\u2026" | text;
   endmethod
 
   method _escape owner: ARCH_WIZARD

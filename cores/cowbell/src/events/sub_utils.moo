@@ -156,7 +156,7 @@ object SUB_UTILS [
     "Backslash quotes braces, pipes, and backslashes. Other backslashes stay literal.";
     const {template, ?bindings = false} = args;
     typeof(template) == TYPE_STR || raise(E_TYPE, "template must be string");
-    (typeof(bindings) == TYPE_MAP || equal(bindings, false)) || raise(E_TYPE);
+    typeof(bindings) == TYPE_MAP || equal(bindings, false) || raise(E_TYPE);
     length(template) <= 65536 || raise(E_INVARG, "Template exceeds 65536 characters.");
     const lexemes = pcre_match(template, "\\\\[{}|\\\\]|[{}|]|[^{}|\\\\]+|\\\\", true, true);
     length(lexemes) <= 8192 || raise(E_INVARG, "Template exceeds 8192 text and delimiter pieces.");
@@ -232,7 +232,7 @@ object SUB_UTILS [
     endif
     name = $document_resolver:binding_name(name);
     if (!maphaskey(bindings, name))
-      const candidates = {tostr(key) for key in (mapkeys(bindings))};
+      const candidates = { tostr(key) for key in (mapkeys(bindings)) };
       const match = complex_match(tostr(name), candidates, 0.5);
       let message = "This message does not supply {" + tostr(name) + "}.";
       if (typeof(match) == TYPE_STR)
@@ -240,17 +240,13 @@ object SUB_UTILS [
       endif
       raise(E_INVARG, message);
     endif
-    bindings[name]['kind] in allowed || raise(E_INVARG,
-      "{" + tostr(name) + "} supplies " + tostr(bindings[name]['kind])
-      + "; this token needs " + {tostr(value) for value in (allowed)}:join(" or ") + ".");
+    bindings[name]['kind] in allowed || raise(E_INVARG, "{" + tostr(name) + "} supplies " + tostr(bindings[name]['kind]) + "; this token needs " + { tostr(value) for value in (allowed) }:join(" or ") + ".");
   endmethod
 
   method standard_bindings owner: HACKER
     "Describe the actor and captured location shared by event producers, including preview examples.";
     const {actor_description} = args;
-    return ['actor -> ['kind -> 'object, 'description -> actor_description, 'example -> 'actor],
-      'location -> ['kind -> 'object, 'description -> "The actor's location when the event starts.",
-        'example -> 'location]];
+    return ['actor -> ['kind -> 'object, 'description -> actor_description, 'example -> 'actor], 'location -> ['kind -> 'object, 'description -> "The actor's location when the event starts.", 'example -> 'location]];
   endmethod
 
   method _preview_object owner: ARCH_WIZARD
@@ -274,15 +270,13 @@ object SUB_UTILS [
     const effect_kind = typeof(effect) == TYPE_FLYWEIGHT ? effect.type | false;
     const content = $sub_utils:compile(template, bindings);
     const actor = $sub_utils:_preview_object("Alex", $pronouns.they_them, 'name);
-    const recipient = (effect_kind == 'emote || (effect_kind == 'tell && effect.target == 'Actor)) ? actor
-      | $sub_utils:_preview_object("Sam", $pronouns.she_her, 'name);
+    const recipient = effect_kind == 'emote || (effect_kind == 'tell && effect.target == 'Actor) ? actor | $sub_utils:_preview_object("Sam", $pronouns.she_her, 'name);
     const observer = $sub_utils:_preview_object("Robin", $pronouns.he_him, 'name);
     const subject = host;
     const room = $sub_utils:_preview_object("example room", $pronouns.it_its);
     const destination = $sub_utils:_preview_object("garden", $pronouns.it_its);
     const item = $sub_utils:_preview_object("pebble", $pronouns.it_its);
-    const examples = ['actor -> actor, 'recipient -> recipient, 'host -> subject, 'item -> item,
-      'location -> room, 'from_room -> room, 'to_room -> destination];
+    const examples = ['actor -> actor, 'recipient -> recipient, 'host -> subject, 'item -> item, 'location -> room, 'from_room -> room, 'to_room -> destination];
     let event;
     if (typeof(effect_kind) == TYPE_SYM)
       event = $reaction:message_event(effect_kind, actor, subject, content, recipient):with_location(room);
@@ -299,15 +293,13 @@ object SUB_UTILS [
         endif
       endfor
     endif
-    let lines = {"Example wording only. Nothing is saved or sent.",
-      "Alex uses they/them; Sam uses she/her; Robin uses he/him."};
+    let lines = {"Example wording only. Nothing is saved or sent.", "Alex uses they/them; Sam uses she/her; Robin uses he/him."};
     if (effect_kind == 'tell)
       lines = {@lines, "A tell step delivers only the recipient's view. Other views below are comparisons."};
     endif
     for view in ({{"Actor", event.actor}, {"Recipient", recipient}, {"Observer", observer}})
       const document = event:resolve(view[2]);
-      lines = {@lines, view[1] + " (" + view[2]:name() + "): "
-        + $document:render(document, 'text_plain)['body]};
+      lines = {@lines, view[1] + " (" + view[2]:name() + "): " + $document:render(document, 'text_plain)['body]};
     endfor
     return lines;
   endmethod
@@ -321,27 +313,23 @@ object SUB_UTILS [
       endif
       if (length(left) && typeof(left[1]) == TYPE_STR && index(left[1], "agree ", 1) == 1)
         const header = pcre_match(left[1], "^agree ([A-Za-z_][A-Za-z0-9_-]*) (name|pronoun):", true, false);
-        (length(header) && length(left) == 1 && length(parts) == 1 && typeof(parts[1]) == TYPE_STR)
-          || raise(E_INVARG, "Use {agree BINDING name:plural|singular} or pronoun in place of name.");
+        length(header) && length(left) == 1 && length(parts) == 1 && typeof(parts[1]) == TYPE_STR || raise(E_INVARG, "Use {agree BINDING name:plural|singular} or pronoun in place of name.");
         const fields = header[1];
-        return $sub:agree(tosym(fields["1"]["match"]), tosym(fields["2"]["match"]),
-          left[1][fields["0"]["position"][2] + 1..$], parts[1]);
+        return $sub:agree(tosym(fields["1"]["match"]), tosym(fields["2"]["match"]), left[1][fields["0"]["position"][2] + 1..$], parts[1]);
       endif
       return $sub:self_alt(left, parts);
     endif
     if (length(parts) && typeof(parts[1]) == TYPE_STR && index(parts[1], "cap ", 1) == 1)
       return $sub:capitalize({parts[1][5..$], @parts[2..$]});
     endif
-    (length(parts) == 1 && typeof(parts[1]) == TYPE_STR)
-      || raise(E_INVARG, "Expected a token name, cap content, or two alternatives.");
+    length(parts) == 1 && typeof(parts[1]) == TYPE_STR || raise(E_INVARG, "Expected a token name, cap content, or two alternatives.");
     return this:_parse_token(parts[1]);
   endmethod
 
   method _binding_name owner: HACKER
     "Require a binding identifier with letters, digits, underscores, or hyphens.";
     const {name} = args;
-    length(pcre_match(name, "^[A-Za-z_][A-Za-z0-9_-]*$", true, false))
-      || raise(E_INVARG, "Invalid binding name: " + name);
+    length(pcre_match(name, "^[A-Za-z_][A-Za-z0-9_-]*$", true, false)) || raise(E_INVARG, "Invalid binding name: " + name);
     return tosym(name);
   endmethod
 
@@ -384,7 +372,7 @@ object SUB_UTILS [
       const {value, depth, raw} = pending[$];
       pending = pending[1..$ - 1];
       count = count + 1;
-      (depth <= 48 && count <= 32768) || raise(E_INVARG, "Content exceeds template limits.");
+      depth <= 48 && count <= 32768 || raise(E_INVARG, "Content exceeds template limits.");
       if (raw)
         result = result + value;
       elseif (typeof(value) == TYPE_STR)
@@ -396,13 +384,10 @@ object SUB_UTILS [
         endfor
       elseif (typeof(value) == TYPE_FLYWEIGHT && value.delegate == $sub)
         if (value.type == 'capitalize)
-          pending = {@pending, {"}", depth, true}, {value.content, depth + 1, false},
-            {"{cap ", depth, true}};
+          pending = {@pending, {"}", depth, true}, {value.content, depth + 1, false}, {"{cap ", depth, true}};
         elseif (value.type == 'self_alt)
           const cap = `value.capitalize ! E_PROPNF => false';
-          pending = {@pending, {cap ? "}}" | "}", depth, true},
-            {value.for_others, depth + 1, false}, {"|", depth, true},
-            {value.for_self, depth + 1, false}, {cap ? "{cap {self:" | "{self:", depth, true}};
+          pending = {@pending, {cap ? "}}" | "}", depth, true}, {value.for_others, depth + 1, false}, {"|", depth, true}, {value.for_self, depth + 1, false}, {cap ? "{cap {self:" | "{self:", depth, true}};
         else
           result = result + this:_reconstruct_token(value, names);
         endif
@@ -441,7 +426,7 @@ object SUB_UTILS [
   method _reconstruct_token owner: HACKER
     "Reconstruct a supported substitution without discarding capitalization or nested content.";
     const {fw, names} = args;
-    (typeof(fw) == TYPE_FLYWEIGHT && fw.delegate == $sub) || raise(E_TYPE, "Expected a $sub token.");
+    typeof(fw) == TYPE_FLYWEIGHT && fw.delegate == $sub || raise(E_TYPE, "Expected a $sub token.");
     const kind = fw.type;
     const capitalize = `fw.capitalize ! E_PROPNF => false';
     let token = "";
@@ -455,8 +440,7 @@ object SUB_UTILS [
       this:_binding_name(name);
       const suffix = `fw.capitalize_binding ! E_PROPNF => false' ? "c" | "";
       if (suffix)
-        fw.binding_name in {'n, 'd, 'i, 't, 'l}
-          || raise(E_INVARG, "Unsupported capitalized article binding.");
+        fw.binding_name in {'n, 'd, 'i, 't, 'l} || raise(E_INVARG, "Unsupported capitalized article binding.");
       endif
       return "{" + (capitalize ? prefix:capitalize() | prefix) + " " + name + suffix + "}";
     elseif (kind == 'pronoun)
@@ -466,8 +450,7 @@ object SUB_UTILS [
     elseif (kind == 'agree)
       const name = tostr(fw.binding_name);
       this:_binding_name(name);
-      token = "{agree " + name + " " + tostr(fw.subject_form) + ":"
-        + this:_escape(fw.plural_form) + "|" + this:_escape(fw.singular_form) + "}";
+      token = "{agree " + name + " " + tostr(fw.subject_form) + ":" + this:_escape(fw.plural_form) + "|" + this:_escape(fw.singular_form) + "}";
     elseif (kind in {'binding, 'content_binding})
       const name = tostr(fw.binding_name);
       this:_binding_name(name);
@@ -489,27 +472,18 @@ object SUB_UTILS [
     const host = $thing:create(true);
     host.name = "pebble";
     const original = host.get_msg;
-    const lines = this:preview("{nc} {agree actor name:pick|picks} up {the d}.",
-      host:message_bindings("get_msg"), host);
-    $test_utils:assert_true(equal(lines[3..$], {"Actor (Alex): You pick up the pebble.",
-      "Recipient (Sam): Alex picks up the pebble.", "Observer (Robin): Alex picks up the pebble."}),
-      "all three readers use the document resolver");
+    const lines = this:preview("{nc} {agree actor name:pick|picks} up {the d}.", host:message_bindings("get_msg"), host);
+    $test_utils:assert_true(equal(lines[3..$], {"Actor (Alex): You pick up the pebble.", "Recipient (Sam): Alex picks up the pebble.", "Observer (Robin): Alex picks up the pebble."}), "all three readers use the document resolver");
     let bindings = this:standard_bindings("The person giving the coat.");
     bindings['recipient] = ['kind -> 'object, 'description -> "The recipient.", 'example -> 'recipient];
     const named = this:preview("{nc} {give|gives} {recipient} {pronoun recipient pos_adj} coat.", bindings, host);
-    $test_utils:assert_true(equal(named[3..$], {"Actor (Alex): You give Sam her coat.",
-      "Recipient (Sam): Alex gives you your coat.", "Observer (Robin): Alex gives Sam her coat."}),
-      "a named recipient sees their own pronouns");
+    $test_utils:assert_true(equal(named[3..$], {"Actor (Alex): You give Sam her coat.", "Recipient (Sam): Alex gives you your coat.", "Observer (Robin): Alex gives Sam her coat."}), "a named recipient sees their own pronouns");
     const emote = $reaction:parse_effect({'emote, "thanks {d}."});
     const action = $reaction:preview_message(emote, host);
-    $test_utils:assert_true(equal(action[3..$], {"Actor (pebble): pebble thanks Alex.",
-      "Recipient (Alex): pebble thanks you.", "Observer (Robin): pebble thanks Alex."}),
-      "emote preserves its automatic prefix and reversed roles");
+    $test_utils:assert_true(equal(action[3..$], {"Actor (pebble): pebble thanks Alex.", "Recipient (Alex): pebble thanks you.", "Observer (Robin): pebble thanks Alex."}), "emote preserves its automatic prefix and reversed roles");
     const tell = $reaction:parse_effect({'tell, 'Actor, "{nc} {see|sees} {recipient}."});
     const private = $reaction:preview_message(tell, host);
-    $test_utils:assert_true(equal(private[4..$], {"Actor (Alex): You see you.",
-      "Recipient (Alex): You see you.", "Observer (Robin): Alex sees Alex."}),
-      "tell actor preserves actor and recipient identity");
+    $test_utils:assert_true(equal(private[4..$], {"Actor (Alex): You see you.", "Recipient (Alex): You see you.", "Observer (Robin): Alex sees Alex."}), "tell actor preserves actor and recipient identity");
     $test_utils:assert_true(equal(host.get_msg, original), "draft preview leaves the stored message intact");
     return true;
   endmethod
@@ -517,10 +491,7 @@ object SUB_UTILS [
   method test_binding_diagnostics owner: HACKER
     "Editing reports the misspelled binding and its source position before saving.";
     const bindings = $thing:message_bindings("get_msg");
-    for example in ({{"Hello {dobbj}.", "At character 7:", "Did you mean {dobj}?"},
-      {"é {dobbj}", "At character 3:", "Did you mean {dobj}?"},
-      {"{self:ok|{missing}}", "At character 10:", "{missing}"},
-      {"{pronoun iobj subject}", "", ""}})
+    for example in ({{"Hello {dobbj}.", "At character 7:", "Did you mean {dobj}?"}, {"\u00E9 {dobbj}", "At character 3:", "Did you mean {dobj}?"}, {"{self:ok|{missing}}", "At character 10:", "{missing}"}, {"{pronoun iobj subject}", "", ""}})
       try
         this:compile(example[1], bindings);
         $test_utils:assert_eq(example[2], "", "unknown bindings must fail during editing");
@@ -532,22 +503,17 @@ object SUB_UTILS [
     endfor
     const movement = $passage:message_bindings("side_a_leave_msg");
     this:compile("{nc} goes {direction} to {to_room}.", movement);
-    $test_utils:assert_raises(E_INVARG, this, "compile", {"{pronoun direction subject}", movement},
-      "text bindings cannot supply pronouns");
-    $test_utils:assert_raises(E_INVARG, this, "compile", {"{the direction}", movement},
-      "text bindings cannot supply articles");
-    $test_utils:assert_raises(E_INVARG, this, "compile", {"{content direction}", movement},
-      "text bindings cannot supply content");
-    $test_utils:assert_raises(E_INVARG, $reaction, "parse_effect", {{'announce, "{i}"}},
-      "announce does not supply an indirect object");
+    $test_utils:assert_raises(E_INVARG, this, "compile", {"{pronoun direction subject}", movement}, "text bindings cannot supply pronouns");
+    $test_utils:assert_raises(E_INVARG, this, "compile", {"{the direction}", movement}, "text bindings cannot supply articles");
+    $test_utils:assert_raises(E_INVARG, this, "compile", {"{content direction}", movement}, "text bindings cannot supply content");
+    $test_utils:assert_raises(E_INVARG, $reaction, "parse_effect", {{'announce, "{i}"}}, "announce does not supply an indirect object");
     this:compile("literal text", []);
     return true;
   endmethod
 
   method test_producer_binding_declarations owner: HACKER
     "Each shipped editable template uses only bindings declared by its producer.";
-    for producer in ({$thing, $container, $consumable, $food, $drink, $wearable, $note,
-      $sittable, $passage, $llm_room_observer})
+    for producer in ({$thing, $container, $consumable, $food, $drink, $wearable, $note, $sittable, $passage, $llm_room_observer})
       for property in (properties(producer))
         if (!tostr(property):ends_with("_msg"))
           continue;
@@ -635,15 +601,11 @@ object SUB_UTILS [
     actor.name = "alex";
     const item = $thing:create(true);
     item.name = "pebble";
-    for example in ({{"{You see {d}|{nc} sees {d}}", "You see pebble", "Alex sees pebble"},
-      {"{you {take|takes} {d}|{nc} {take|takes} {d}}", "you take pebble", "Alex takes pebble"},
-      {"{ safe |{missing}}", " safe ", false}, {"{|other}", "", "other"}})
+    for example in ({{"{You see {d}|{nc} sees {d}}", "You see pebble", "Alex sees pebble"}, {"{you {take|takes} {d}|{nc} {take|takes} {d}}", "you take pebble", "Alex takes pebble"}, {"{ safe |{missing}}", " safe ", false}, {"{|other}", "", "other"}})
       const event = $event:mk_test(actor, @this:compile(example[1])):with_dobj(item);
-      $test_utils:assert_eq(strcmp($document:render(event:resolve(actor), 'text_plain)['body],
-        example[2]), 0, "actor: " + example[1]);
+      $test_utils:assert_eq(strcmp($document:render(event:resolve(actor), 'text_plain)['body], example[2]), 0, "actor: " + example[1]);
       if (typeof(example[3]) == TYPE_STR)
-        $test_utils:assert_eq(strcmp($document:render(event:resolve(player), 'text_plain)['body],
-          example[3]), 0, "observer: " + example[1]);
+        $test_utils:assert_eq(strcmp($document:render(event:resolve(player), 'text_plain)['body], example[3]), 0, "observer: " + example[1]);
       endif
     endfor
     for invalid in ({"{the {adj} key}", "{a|b|c}", "stray }", "{unclosed"})
@@ -695,23 +657,14 @@ object SUB_UTILS [
   method test_template_roundtrips owner: HACKER
     "Editing compiled templates preserves both perspectives, literal delimiters, and capitalization.";
     const actor = $thing:create(true);
-    actor.name = "éloïse";
+    actor.name = "\u00E9lo\u00EFse";
     const item = $thing:create(true);
     item.name = "apple";
-    const samples = {{"literal {n} | \\ end"}, {"plain ", this:compile("{nc}")[1]},
-      {$sub:bindingc('direction)}, {$sub:binding('s)}, {$sub:the('dc)},
-      {$sub:self_altc("you", {"they see ", $sub:d()})},
-      {$sub:self_alt({$sub:nc(), " | ", $sub:d()}, {$sub:thec('d), " is here"})},
-      {$sub:content_binding('detail)}, {$sub:self_alt("agree actor name:are", "is")},
-      {$sub:self_alt("self:literal", "other")}};
+    const samples = {{"literal {n} | \\ end"}, {"plain ", this:compile("{nc}")[1]}, {$sub:bindingc('direction)}, {$sub:binding('s)}, {$sub:the('dc)}, {$sub:self_altc("you", {"they see ", $sub:d()})}, {$sub:self_alt({$sub:nc(), " | ", $sub:d()}, {$sub:thec('d), " is here"})}, {$sub:content_binding('detail)}, {$sub:self_alt("agree actor name:are", "is")}, {$sub:self_alt("self:literal", "other")}};
     for content in (samples)
       const edited = this:compile(this:decompile(content));
-      const original = $event:mk_test(actor, @content):with_dobj(item)
-        :with_text_binding('direction, "north"):with_text_binding('s, "literal subject")
-        :with_content_binding('detail, $format.code:inline("{literal}"));
-      const rebuilt = $event:mk_test(actor, @edited):with_dobj(item)
-        :with_text_binding('direction, "north"):with_text_binding('s, "literal subject")
-        :with_content_binding('detail, $format.code:inline("{literal}"));
+      const original = $event:mk_test(actor, @content):with_dobj(item):with_text_binding('direction, "north"):with_text_binding('s, "literal subject"):with_content_binding('detail, $format.code:inline("{literal}"));
+      const rebuilt = $event:mk_test(actor, @edited):with_dobj(item):with_text_binding('direction, "north"):with_text_binding('s, "literal subject"):with_content_binding('detail, $format.code:inline("{literal}"));
       for viewer in ({actor, player})
         for format in ({'text_plain, 'text_html, 'text_djot})
           const expected = $document:render(original:resolve(viewer), format);
@@ -720,8 +673,7 @@ object SUB_UTILS [
         endfor
       endfor
     endfor
-    $test_utils:assert_raises(E_INVARG, this, "decompile", {{$format.code:inline("code")}},
-      "format nodes need explicit content bindings");
+    $test_utils:assert_raises(E_INVARG, this, "decompile", {{$format.code:inline("code")}}, "format nodes need explicit content bindings");
     $test_utils:assert_raises(E_INVARG, this, "decompile", {{123}}, "do not stringify unsupported values");
     return true;
   endmethod

@@ -13,8 +13,7 @@ object CONDITION [
     const tokens = $condition:_tokens(text);
     length(tokens) > 0 || raise(E_INVARG, "Empty condition");
     const {tree, next} = $condition:_parse_or(tokens, 1, 0);
-    next > length(tokens) || raise(E_INVARG,
-      "Unexpected token at character " + tostr(tokens[next]['start]));
+    next > length(tokens) || raise(E_INVARG, "Unexpected token at character " + tostr(tokens[next]['start]));
     return tree;
   endmethod
 
@@ -85,8 +84,7 @@ object CONDITION [
     "Require one token, retaining a source position in syntax errors.";
     const {tokens, pos, expected} = args;
     pos <= length(tokens) || raise(E_INVARG, "Expected " + expected + " at end of condition");
-    tokens[pos]['text] == expected || raise(E_INVARG,
-      "Expected " + expected + " at character " + tostr(tokens[pos]['start]));
+    tokens[pos]['text] == expected || raise(E_INVARG, "Expected " + expected + " at character " + tostr(tokens[pos]['start]));
     return pos + 1;
   endmethod
 
@@ -103,8 +101,7 @@ object CONDITION [
       pos = next;
     endwhile
     length(children) == 1 && return {children[1], pos};
-    return {['kind -> 'any, 'children -> children,
-      'source -> ['start -> tokens[start]['start], 'end -> tokens[pos - 1]['end]]], pos};
+    return {['kind -> 'any, 'children -> children, 'source -> ['start -> tokens[start]['start], 'end -> tokens[pos - 1]['end]]], pos};
   endmethod
 
   method _parse_and owner: HACKER
@@ -120,8 +117,7 @@ object CONDITION [
       pos = next;
     endwhile
     length(children) == 1 && return {children[1], pos};
-    return {['kind -> 'all, 'children -> children,
-      'source -> ['start -> tokens[start]['start], 'end -> tokens[pos - 1]['end]]], pos};
+    return {['kind -> 'all, 'children -> children, 'source -> ['start -> tokens[start]['start], 'end -> tokens[pos - 1]['end]]], pos};
   endmethod
 
   method _parse_term owner: HACKER
@@ -139,8 +135,7 @@ object CONDITION [
       const {child, next} = $condition:_parse_term(tokens, pos + 1, depth + 1);
       tree = ['kind -> 'not, 'child -> child];
       pos = next;
-    elseif (token in {"TRUE", "FALSE"} && (pos == length(tokens)
-      || !(tokens[pos + 1]['text] in {"==", "!=", "<", "<=", ">", ">="})))
+    elseif (token in {"TRUE", "FALSE"} && (pos == length(tokens) || !(tokens[pos + 1]['text] in {"==", "!=", "<", "<=", ">", ">="})))
       tree = ['kind -> token == "TRUE" ? 'all | 'any, 'children -> {}];
       pos = pos + 1;
     elseif (pos < length(tokens) && tokens[pos + 1]['text] == "(")
@@ -153,8 +148,7 @@ object CONDITION [
         arguments_pos = arguments_pos + 1;
         if (arguments_pos <= length(tokens) && tokens[arguments_pos]['text] != ")")
           arguments_pos = $condition:_expect(tokens, arguments_pos, ",");
-          (arguments_pos <= length(tokens) && tokens[arguments_pos]['text] != ")")
-            || raise(E_INVARG, "Expected a field after comma.");
+          arguments_pos <= length(tokens) && tokens[arguments_pos]['text] != ")" || raise(E_INVARG, "Expected a field after comma.");
         endif
       endif
       const {arguments, next} = $condition:_named(tokens, arguments_pos, false);
@@ -166,16 +160,13 @@ object CONDITION [
         bind = outputs;
         pos = after;
       endif
-      tree = token == "relation"
-        ? ['kind -> 'relation, 'relation -> relation, 'arguments -> arguments, 'bind -> bind]
-        | ['kind -> 'predicate, 'name -> tosym(token), 'arguments -> arguments, 'bind -> bind];
+      tree = token == "relation" ? ['kind -> 'relation, 'relation -> relation, 'arguments -> arguments, 'bind -> bind] | ['kind -> 'predicate, 'name -> tosym(token), 'arguments -> arguments, 'bind -> bind];
     else
       const left = $condition:_value(tokens[pos]);
       pos = pos + 1;
       pos <= length(tokens) || raise(E_INVARG, "Expected comparison operator");
       const operators = ["==" -> 'eq, "!=" -> 'ne, "<" -> 'lt, "<=" -> 'le, ">" -> 'gt, ">=" -> 'ge];
-      maphaskey(operators, tokens[pos]['text]) || raise(E_INVARG,
-        "Expected comparison at character " + tostr(tokens[pos]['start]));
+      maphaskey(operators, tokens[pos]['text]) || raise(E_INVARG, "Expected comparison at character " + tostr(tokens[pos]['start]));
       const op = operators[tokens[pos]['text]];
       pos = pos + 1;
       pos <= length(tokens) || raise(E_INVARG, "Expected right comparison value");
@@ -206,8 +197,7 @@ object CONDITION [
       pos = pos + 1;
       if (pos <= length(tokens) && tokens[pos]['text] == ",")
         pos = pos + 1;
-        (pos <= length(tokens) && tokens[pos]['text] != ")")
-          || raise(E_INVARG, "Expected argument after comma");
+        pos <= length(tokens) && tokens[pos]['text] != ")" || raise(E_INVARG, "Expected argument after comma");
       else
         break;
       endif
@@ -243,8 +233,7 @@ object CONDITION [
       return expression['value];
     endif
     expression['kind] == 'parameter || raise(E_INVARG, "Use a relation object or a reaction setting.");
-    maphaskey(parameters, expression['name])
-      || raise(E_INVARG, "Missing relation setting: " + tostr(expression['name]));
+    maphaskey(parameters, expression['name]) || raise(E_INVARG, "Missing relation setting: " + tostr(expression['name]));
     return parameters[expression['name]];
   endmethod
 
@@ -254,8 +243,7 @@ object CONDITION [
     let {tree, ?parameters = [], ?depth = 0} = args;
     depth <= 16 || raise(E_QUOTA, "Condition nesting exceeds 16 levels.");
     if (tree['kind] in {'all, 'any})
-      tree['children] = {$condition:prepare_relations(child, parameters, depth + 1)
-        for child in (tree['children])};
+      tree['children] = { $condition:prepare_relations(child, parameters, depth + 1) for child in (tree['children]) };
     elseif (tree['kind] == 'not)
       tree['child] = $condition:prepare_relations(tree['child], parameters, depth + 1);
     elseif (tree['kind] == 'relation)
@@ -272,7 +260,7 @@ object CONDITION [
     const kind = tree['kind];
     if (kind in {'all, 'any})
       length(tree['children]) == 0 && return kind == 'all ? "TRUE" | "FALSE";
-      const children = {$condition:print(child) for child in (tree['children])};
+      const children = { $condition:print(child) for child in (tree['children]) };
       return "(" + children:join(kind == 'all ? " AND " | " OR ") + ")";
     elseif (kind == 'not)
       return "NOT (" + $condition:print(tree['child]) + ")";
@@ -280,14 +268,11 @@ object CONDITION [
       const operators = ['eq -> "==", 'ne -> "!=", 'lt -> "<", 'le -> "<=", 'gt -> ">", 'ge -> ">="];
       return $condition:print_value(tree['left]) + " " + operators[tree['op]] + " " + $condition:print_value(tree['right]);
     elseif (kind in {'predicate, 'relation})
-      const arguments = {tostr(name) + ": " + $condition:print_value(tree['arguments][name])
-        for name in (mapkeys(tree['arguments]))};
-      const prefix = kind == 'relation
-        ? "relation(" + $condition:print_value(tree['relation]) + (length(arguments) > 0 ? ", " | "")
-        | tostr(tree['name]) + "(";
+      const arguments = { tostr(name) + ": " + $condition:print_value(tree['arguments][name]) for name in (mapkeys(tree['arguments])) };
+      const prefix = kind == 'relation ? "relation(" + $condition:print_value(tree['relation]) + (length(arguments) > 0 ? ", " | "") | tostr(tree['name]) + "(";
       let text = prefix + arguments:join(", ") + ")";
       if (length(tree['bind]) > 0)
-        const outputs = {tostr(name) + ": " + tostr(tree['bind][name]) for name in (mapkeys(tree['bind]))};
+        const outputs = { tostr(name) + ": " + tostr(tree['bind][name]) for name in (mapkeys(tree['bind])) };
         text = text + " -> (" + outputs:join(", ") + ")";
       endif
       return text;
@@ -342,7 +327,7 @@ object CONDITION [
     "Evaluate a validated condition with an explicit predicate callback under caller authority.";
     set_task_perms(caller_perms());
     const {tree, environment, provider, ?limit = 256} = args;
-    (typeof(limit) == TYPE_INT && limit > 0 && limit <= 256) || raise(E_INVARG, "Invalid condition limit");
+    typeof(limit) == TYPE_INT && limit > 0 && limit <= 256 || raise(E_INVARG, "Invalid condition limit");
     return $condition:_evaluate(tree, environment, provider, limit, 0);
   endmethod
 
@@ -389,16 +374,12 @@ object CONDITION [
       for name in (mapkeys(tree['arguments]))
         arguments[name] = $condition:resolve(tree['arguments][name], environment);
       endfor
-      const result = kind == 'relation
-        ? $relation:query_rows($condition:resolve(tree['relation], environment), tree['fields], arguments, limit)
-        | provider(tree['name], arguments, limit);
+      const result = kind == 'relation ? $relation:query_rows($condition:resolve(tree['relation], environment), tree['fields], arguments, limit) | provider(tree['name], arguments, limit);
       const outputs = mapkeys(tree['bind]);
-      const pattern = {{'var, tree['bind][output]} for output in (outputs)};
-      const rows = {{row[field] for field in (outputs)} for row in (result['rows])};
-      const bindings = term_match(pattern, rows, initial,
-        ['case_sensitive -> true, 'dedupe -> true, 'max_solutions -> limit + 1]);
-      return ['bindings -> bindings[1..min(length(bindings), limit)],
-        'complete -> result['complete] && length(bindings) <= limit];
+      const pattern = { {'var, tree['bind][output]} for output in (outputs) };
+      const rows = { { row[field] for field in (outputs) } for row in (result['rows]) };
+      const bindings = term_match(pattern, rows, initial, ['case_sensitive -> true, 'dedupe -> true, 'max_solutions -> limit + 1]);
+      return ['bindings -> bindings[1..min(length(bindings), limit)], 'complete -> result['complete] && length(bindings) <= limit];
     endif
     kind in {'all, 'any} || raise(E_INVARG, "Unknown condition kind");
     let bindings = kind == 'all ? {initial} | {};

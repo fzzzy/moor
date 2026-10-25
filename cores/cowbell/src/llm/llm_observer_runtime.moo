@@ -6,17 +6,17 @@ object LLM_OBSERVER_RUNTIME [
   parent: ROOT
   owner: ARCH_WIZARD
 
-  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
-  property controller (owner: ARCH_WIZARD, flags: "") = #-1;
   property agent (owner: ARCH_WIZARD, flags: "") = #-1;
   property agent_ready (owner: ARCH_WIZARD, flags: "") = false;
-  property queue (owner: ARCH_WIZARD, flags: "") = {};
-  property current (owner: ARCH_WIZARD, flags: "") = #-1;
-  property monitor_task (owner: ARCH_WIZARD, flags: "") = 0;
   property closed (owner: ARCH_WIZARD, flags: "") = false;
+  property controller (owner: ARCH_WIZARD, flags: "") = #-1;
+  property current (owner: ARCH_WIZARD, flags: "") = #-1;
+  property dropped_events (owner: ARCH_WIZARD, flags: "") = 0;
   property history (owner: ARCH_WIZARD, flags: "") = {};
   property last_spoke_at (owner: ARCH_WIZARD, flags: "") = 0;
-  property dropped_events (owner: ARCH_WIZARD, flags: "") = 0;
+  property monitor_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property queue (owner: ARCH_WIZARD, flags: "") = {};
+  property subject (owner: ARCH_WIZARD, flags: "") = #-1;
 
   method for_observer owner: ARCH_WIZARD
     "Create private state for this observer; never adopt a prototype's live runtime or agent.";
@@ -36,8 +36,7 @@ object LLM_OBSERVER_RUNTIME [
     runtime.controller = observer.owner;
     if (!is_clear_property(observer, "agent") && valid(observer.agent))
       const agent = observer.agent;
-      isa(agent, $llm_agent) && is_anonymous(agent) && agent.owner == observer.owner
-        && !agent.running || raise(E_PERM, "Observer agent must be private and idle.");
+      isa(agent, $llm_agent) && is_anonymous(agent) && agent.owner == observer.owner && !agent.running || raise(E_PERM, "Observer agent must be private and idle.");
       runtime.agent = agent;
       runtime.agent_ready = true;
     else
@@ -53,8 +52,7 @@ object LLM_OBSERVER_RUNTIME [
     const {runtime, ?allow_disabled = false} = args;
     isa(runtime, $llm_observer_runtime) && !runtime.closed || raise(E_INVARG, "Observer runtime is closed.");
     const observer = runtime.subject;
-    valid(observer) && observer.owner == runtime.controller && observer.runtime == runtime
-      && (observer.enabled || allow_disabled) || raise(E_PERM, "Observer binding changed.");
+    valid(observer) && observer.owner == runtime.controller && observer.runtime == runtime && (observer.enabled || allow_disabled) || raise(E_PERM, "Observer binding changed.");
     if (valid(runtime.agent))
       observer.agent == runtime.agent && runtime.agent.owner == runtime.controller || raise(E_PERM, "Observer agent changed.");
     else
@@ -71,8 +69,7 @@ object LLM_OBSERVER_RUNTIME [
     kind in {'observation, 'ask, 'poke, 'nudge, 'configure} || raise(E_INVARG);
     value_bytes(payload) <= 16384 || raise(E_QUOTA, "Observer input exceeds 16 KiB.");
     if (kind == 'observation)
-      typeof(payload) == TYPE_FLYWEIGHT && payload.delegate == $llm_observation
-        && payload.observer == this.subject && payload:current() || raise(E_TYPE);
+      typeof(payload) == TYPE_FLYWEIGHT && payload.delegate == $llm_observation && payload.observer == this.subject && payload:current() || raise(E_TYPE);
       if (length(this.queue) > 0)
         const last = this.queue[$];
         if (last.kind == 'observation && last.room == this.subject.location)
@@ -167,7 +164,7 @@ object LLM_OBSERVER_RUNTIME [
       if (job.interaction_task == task_id())
         break;
       endif
-      (job.retired || this.closed) && return;
+      job.retired || this.closed && return;
       suspend(0.1);
     endfor
     job.interaction_task == task_id() || return;
@@ -191,9 +188,8 @@ object LLM_OBSERVER_RUNTIME [
       suspend(0.1);
     endfor
     while (!this.closed && this.monitor_task == task_id())
-      const configuring = valid(this.current) ? this.current.kind == 'configure
-        | length(this.queue) > 0 && this.queue[1].kind == 'configure;
-      if (!`$llm_observer_runtime:check(this, configuring) ! ANY => false')
+      const configuring = valid(this.current) ? this.current.kind == 'configure | length(this.queue) > 0 && this.queue[1].kind == 'configure;
+      if (!(`$llm_observer_runtime:check(this, configuring) ! ANY => false'))
         this:close();
         return;
       endif
@@ -203,8 +199,7 @@ object LLM_OBSERVER_RUNTIME [
           this:_retire(job);
         elseif (time() >= job.deadline)
           this:_retire(job, 'timed_out);
-        elseif (!valid_task(job.interaction_task)
-            || !`$llm_observer_job:check(job) ! ANY => false')
+        elseif (!valid_task(job.interaction_task) || !(`$llm_observer_job:check(job) ! ANY => false'))
           this:_retire(job, 'cancelled);
         endif
       endif
@@ -254,9 +249,7 @@ object LLM_OBSERVER_RUNTIME [
       endif
       this.agent = #-1;
     endif
-    this.history = {@this.history, ['kind -> job.kind, 'status -> job.state,
-      'finished_at -> time(), 'recovery_required -> job.recovery_required,
-      'error -> job.state == 'failed && typeof(job.result) == TYPE_STR ? job.result[1..min(length(job.result), 1024)] | ""]};
+    this.history = {@this.history, ['kind -> job.kind, 'status -> job.state, 'finished_at -> time(), 'recovery_required -> job.recovery_required, 'error -> job.state == 'failed && typeof(job.result) == TYPE_STR ? job.result[1..min(length(job.result), 1024)] | ""]};
     length(this.history) > 20 && (this.history = listdelete(this.history, 1));
     this.current == job && (this.current = #-1);
     job:release();
@@ -324,12 +317,8 @@ object LLM_OBSERVER_RUNTIME [
     const last_error = is_clear_property(observer, "last_intake_error") ? [] | observer.last_intake_error;
     const runtime = is_clear_property(observer, "runtime") ? #-1 | observer.runtime;
     if (!valid(runtime) || runtime.closed)
-      return ['active -> false, 'queued -> 0, 'monitor_alive -> false, 'dropped_events -> 0, 'history -> {},
-        'intake_failures -> failures, 'last_intake_error -> last_error];
+      return ['active -> false, 'queued -> 0, 'monitor_alive -> false, 'dropped_events -> 0, 'history -> {}, 'intake_failures -> failures, 'last_intake_error -> last_error];
     endif
-    return ['active -> valid(runtime.current), 'queued -> length(runtime.queue),
-      'monitor_alive -> valid_task(runtime.monitor_task), 'dropped_events -> runtime.dropped_events,
-      'history -> runtime.history, 'intake_failures -> failures,
-      'last_intake_error -> last_error];
+    return ['active -> valid(runtime.current), 'queued -> length(runtime.queue), 'monitor_alive -> valid_task(runtime.monitor_task), 'dropped_events -> runtime.dropped_events, 'history -> runtime.history, 'intake_failures -> failures, 'last_intake_error -> last_error];
   endmethod
 endobject

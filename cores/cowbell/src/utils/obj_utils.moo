@@ -151,11 +151,10 @@ object OBJ_UTILS [
     const first = verb_name:words()[1];
     length(first) || return false;
     "Shorthands such as ` and | and http:// run when typed but read as noise in a list of commands.";
-    (index("abcdefghijklmnopqrstuvwxyz@", first[1]) && !index(first, "://")) || return false;
+    index("abcdefghijklmnopqrstuvwxyz@", first[1]) && !index(first, "://") || return false;
     "A verb that overrides an ancestor's method of the same name is a hook, such as maybe_handle_command.";
     for ancestor in (ancestors(definer))
-      if (verb_name in `verbs(ancestor) ! ANY => {}'
-          && `verb_args(ancestor, verb_name) ! ANY => {}' == {"this", "none", "this"})
+      if (verb_name in `verbs(ancestor) ! ANY => {}' && `verb_args(ancestor, verb_name) ! ANY => {}' == {"this", "none", "this"})
         return false;
       endif
     endfor
@@ -168,10 +167,10 @@ object OBJ_UTILS [
     try
       add_verb(room, {$arch_wizard, "rxd", "maybe_handle_command"}, {"none", "none", "none"});
       add_verb(room, {$arch_wizard, "rxd", "ring"}, {"none", "none", "none"});
-      const listed = {entry["verb"] for entry in (this:collect_ambient_verbs({room}))};
+      const listed = { entry["verb"] for entry in (this:collect_ambient_verbs({room})) };
       $test_utils:assert_true("ring" in listed, "an ordinary room verb is listed");
       $test_utils:assert_false("maybe_handle_command" in listed, "a hook override is not listed");
-      const player_listed = {item["verb"] for item in (this:collect_ambient_verbs({$social_features}))};
+      const player_listed = { item["verb"] for item in (this:collect_ambient_verbs({$social_features})) };
       $test_utils:assert_false("|*" in player_listed || "http://* https://*" in player_listed, "symbol shorthands are not listed");
     finally
       recycle(room);
@@ -222,7 +221,7 @@ object OBJ_UTILS [
       targetable_sigs = {};
       const actions = o:inspection_commands(player);
       "Fixed objects inherit $thing's get and drop, which only refuse; do not offer them.";
-      const fixed = !`o.portable ! E_PROPNF => true';
+      const fixed = !(`o.portable ! E_PROPNF => true');
       for verb_info in (exam.verbs)
         {verb_name, definer, dobj, prep, iobj} = verb_info;
         if (fixed && definer == $thing && verb_name in {"get", "drop"})
@@ -446,8 +445,7 @@ object OBJ_UTILS [
       except (E_PERM)
         continue;
       endtry
-      if (typeof(delegate) == TYPE_OBJ
-          && !(typeof(value) == TYPE_FLYWEIGHT && value.delegate == delegate))
+      if (typeof(delegate) == TYPE_OBJ && !(typeof(value) == TYPE_FLYWEIGHT && value.delegate == delegate))
         continue;
       endif
       result = {@result, {property, value}};
@@ -474,9 +472,8 @@ object OBJ_UTILS [
         endif
       endfor
       let changes = [];
-      if ((`local[old_fields[1]] ! E_RANGE => false') || (`local[old_fields[2]] ! E_RANGE => false'))
-        changes['kind] = (`old[old_fields[1]] ! E_RANGE => false') ? 'name
-          | ((`old[old_fields[2]] ! E_RANGE => true') ? 'count | 'mass);
+      if (`local[old_fields[1]] ! E_RANGE => false' || `local[old_fields[2]] ! E_RANGE => false')
+        changes['kind] = `old[old_fields[1]] ! E_RANGE => false' ? 'name | `old[old_fields[2]] ! E_RANGE => true' ? 'count | 'mass;
       endif
       if (`local[old_fields[3]] ! E_RANGE => false')
         changes['number] = old[old_fields[3]] ? 'plural | 'singular;
@@ -489,22 +486,17 @@ object OBJ_UTILS [
       let custom = {};
       for name in (verbs(target))
         const aliases = verb_info(target, name)[3]:words();
-        if (length({alias for alias in (aliases) if alias in {"is_plural", "is_countable", "is_proper_noun", "display_name"}})
-          && !(target in {$root, $thing, $wearable, $sub}))
+        if (length({ alias for alias in (aliases) if alias in {"is_plural", "is_countable", "is_proper_noun", "display_name"} }) && !(target in {$root, $thing, $wearable, $sub}))
           custom = {@custom, name};
         endif
       endfor
       const first = target.name:first_word();
       if (custom || (first && first[1] in {"a", "an", "the", "some"}))
-        review = {@review, ['object -> target, 'name -> target.name, 'verbs -> custom,
-          'reason -> custom ? "Convert custom naming verbs before applying this record."
-            | "Review the article in this name. No automatic rename will occur."]};
+        review = {@review, ['object -> target, 'name -> target.name, 'verbs -> custom, 'reason -> custom ? "Convert custom naming verbs before applying this record." | "Review the article in this name. No automatic rename will occur."]};
       endif
       const letter = target != $letter && isa(target, $letter);
       if (length(changes) || letter)
-        records = {@records, ['object -> target, 'name -> target.name, 'parent -> parent(target),
-          'owner -> target.owner, 'settings -> changes, 'custom -> custom, 'letter -> letter,
-          'subject -> letter && target.name != "letter" ? target.name | ""]};
+        records = {@records, ['object -> target, 'name -> target.name, 'parent -> parent(target), 'owner -> target.owner, 'settings -> changes, 'custom -> custom, 'letter -> letter, 'subject -> letter && target.name != "letter" ? target.name | ""]};
       endif
     endfor
     return ['records -> records, 'review -> review];
@@ -517,11 +509,9 @@ object OBJ_UTILS [
     "Validate the whole batch before writing; custom overrides require an explicitly reviewed record.";
     for record in (records)
       const target = record['object];
-      valid(target) && target.owner == record['owner] && parent(target) == record['parent]
-        || raise(E_INVARG, "Conversion target changed owner, parent, or validity.");
+      valid(target) && target.owner == record['owner] && parent(target) == record['parent] || raise(E_INVARG, "Conversion target changed owner, parent, or validity.");
       !record['custom] || raise(E_INVARG, "Convert custom naming verbs and clear this record's custom list after review.");
-      strcmp(target.name, record['name]) == 0 || (record['letter] && target.name == "letter" && target.subject == record['subject])
-        || raise(E_INVARG, "Conversion target was renamed: " + tostr(target));
+      strcmp(target.name, record['name]) == 0 || (record['letter] && target.name == "letter" && target.subject == record['subject]) || raise(E_INVARG, "Conversion target was renamed: " + tostr(target));
       if (record['letter])
         typeof(target.subject) == TYPE_STR || raise(E_TYPE, "Install the letter subject property before conversion.");
       endif
@@ -529,9 +519,7 @@ object OBJ_UTILS [
       for field in (mapkeys(settings))
         field in {'kind, 'number, 'article} || raise(E_INVARG, "Unknown converted naming field.");
       endfor
-      $root:_validate_noun_grammar(['kind -> `settings['kind] ! E_RANGE => target.noun_kind',
-        'number -> `settings['number] ! E_RANGE => target.noun_number',
-        'article -> `settings['article] ! E_RANGE => target.indefinite_article']);
+      $root:_validate_noun_grammar(['kind -> `settings['kind] ! E_RANGE => target.noun_kind', 'number -> `settings['number] ! E_RANGE => target.noun_number', 'article -> `settings['article] ! E_RANGE => target.indefinite_article']);
     endfor
     for record in (records)
       const target = record['object];

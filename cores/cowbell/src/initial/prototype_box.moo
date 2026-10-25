@@ -8,8 +8,7 @@ object PROTOTYPE_BOX [
   owner: ARCH_WIZARD
   readable: true
 
-  override aliases = {"box"};
-  override listing_form = 'definite;
-
+  override aliases (owner: ARCH_WIZARD, flags: "rc") = {"box"};
   override description (owner: ARCH_WIZARD, flags: "rc") = "A container for storing generic prototype objects. These objects serve as templates and base classes for the system.";
+  override listing_form (owner: ARCH_WIZARD, flags: "rc") = 'definite;
 endobject

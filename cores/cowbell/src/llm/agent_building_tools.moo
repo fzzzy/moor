@@ -46,16 +46,10 @@ object AGENT_BUILDING_TOOLS [
       $test_utils:assert_true(index(message, "Moved \"renamed metadata probe\"") > 0, "move_object should report the real object name");
       message = $llm_building_tools:set_integrated_description(["object" -> created, "integrated_description" -> "a renamed probe is here"], $hacker);
       $test_utils:assert_true(index(message, "Set integrated description of \"renamed metadata probe\"") > 0, "set_integrated_description should report the real object name");
-      $test_utils:assert_raises(E_INVARG, $llm_building_tools, "describe_object",
-        {["object" -> tostr(created), "description" -> "bad\u001B[2Jtext"], $hacker},
-        "description tool rejects terminal controls");
-      $test_utils:assert_raises(E_INVARG, $llm_building_tools, "set_integrated_description",
-        {["object" -> tostr(created), "integrated_description" -> "bad\u200Ftext"], $hacker},
-        "integrated description tool rejects directional controls");
-      $test_utils:assert_eq(created.description, "A probe with renamed metadata.",
-        "rejected tool edit preserves description");
-      $test_utils:assert_eq(created.integrated_description, "a renamed probe is here",
-        "rejected tool edit preserves integration");
+      $test_utils:assert_raises(E_INVARG, $llm_building_tools, "describe_object", {["object" -> tostr(created), "description" -> "bad\x1B[2Jtext"], $hacker}, "description tool rejects terminal controls");
+      $test_utils:assert_raises(E_INVARG, $llm_building_tools, "set_integrated_description", {["object" -> tostr(created), "integrated_description" -> "bad\u200Ftext"], $hacker}, "integrated description tool rejects directional controls");
+      $test_utils:assert_eq(created.description, "A probe with renamed metadata.", "rejected tool edit preserves description");
+      $test_utils:assert_eq(created.integrated_description, "a renamed probe is here", "rejected tool edit preserves integration");
       audit = $llm_inspection_tools:audit_owned([], $hacker);
       $test_utils:assert_true(index(audit, "renamed metadata probe") > 0, "audit_owned should list real object names");
       add_property(created, "probe_rule", 0, {$hacker, "rc"});
@@ -146,13 +140,10 @@ object AGENT_BUILDING_TOOLS [
       route = $llm_inspection_tools:mcp_find_route(["to_room" -> "Tool Test End"], actor);
       $test_utils:assert_true(index(route, "Route from Tool Test Start") > 0, "find_route should include start room name");
       $test_utils:assert_true(index(route, "Go east to Tool Test End") > 0, "find_route should include passage label and destination");
-      route = $llm_inspection_tools:mcp_find_route(
-        ["from_room" -> "Tool Test End", "to_room" -> "Tool Test Start"], actor);
-      $test_utils:assert_true(index(route, "Go west to Tool Test Start") > 0,
-        "Named starting rooms resolve across areas");
+      route = $llm_inspection_tools:mcp_find_route(["from_room" -> "Tool Test End", "to_room" -> "Tool Test Start"], actor);
+      $test_utils:assert_true(index(route, "Go west to Tool Test Start") > 0, "Named starting rooms resolve across areas");
       route = $llm_inspection_tools:find_route(["from_room" -> r2, "to_room" -> r1], actor);
-      $test_utils:assert_true(index(route, "Go west to Tool Test Start") > 0,
-        "Explicit starting objects are not replaced by the actor's location");
+      $test_utils:assert_true(index(route, "Go west to Tool Test Start") > 0, "Explicit starting objects are not replaced by the actor's location");
       details = $llm_inspection_tools:inspect_object(["object" -> r1], actor);
       $test_utils:assert_true(index(details, "Exits: east") > 0, "inspect_object should include real passage labels");
     finally
@@ -164,5 +155,4 @@ object AGENT_BUILDING_TOOLS [
     endtry
     return true;
   endmethod
-
 endobject

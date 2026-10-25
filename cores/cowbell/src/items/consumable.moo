@@ -10,32 +10,34 @@ object CONSUMABLE [
   readable: true
 
   property consume_denied_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "can't", .singular_form = "can't">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "can't", .singular_form = "can't">,
     " consume ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property consume_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "consume", .singular_form = "consumes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "consume", .singular_form = "consumes">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property consume_rule (owner: ARCH_WIZARD, flags: "rc") = 0;
   property empty_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
-    " ", <SUB, .type = 'agree, .binding_name = 'dobj, .subject_form = 'name, .plural_form = "are", .singular_form = "is">, " empty."
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
+    " ",
+    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    " empty."
   };
   property finish_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "finish", .singular_form = "finishes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "finish", .singular_form = "finishes">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property max_portions (owner: ARCH_WIZARD, flags: "rc") = 1;
@@ -118,8 +120,7 @@ object CONSUMABLE [
     const {property} = args;
     if (tostr(property) in {"consume_msg", "consume_denied_msg", "empty_msg", "finish_msg"})
       let bindings = $sub_utils:standard_bindings("The person consuming the item.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The food or drink.",
-        'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The food or drink.", 'example -> 'host];
       return bindings;
     endif
     return pass(@args);

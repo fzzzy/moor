@@ -34,59 +34,48 @@ object BEHAVIOR_SCHEMA [
     for i in [1..length(definition['reactions])]
       const reaction = definition['reactions][i];
       const path = "behavior.reactions[" + tostr(i) + "]";
-      $behavior_schema:_fields(reaction,
-        {'name, 'trigger, 'condition, 'selection, 'effects, 'enabled}, {}, path);
+      $behavior_schema:_fields(reaction, {'name, 'trigger, 'condition, 'selection, 'effects, 'enabled}, {}, path);
       $behavior_schema:_name(reaction['name], path + ".name");
       !(reaction['name] in names) || raise(E_INVARG, path + ": duplicate reaction name");
       names = {@names, reaction['name]};
       $behavior_schema:_type(reaction['enabled], 'boolean, path + ".enabled");
       const trigger = $behavior_schema:_entry(vocabulary['triggers], reaction['trigger], path);
-      const scope = ['input -> trigger['inputs], 'parameter -> definition['parameters],
-        'state -> state_types, 'binding -> []];
-      const checked = $behavior_schema:condition(reaction['condition], scope,
-        vocabulary['predicates], path + ".condition", 0, nodes);
+      const scope = ['input -> trigger['inputs], 'parameter -> definition['parameters], 'state -> state_types, 'binding -> []];
+      const checked = $behavior_schema:condition(reaction['condition], scope, vocabulary['predicates], path + ".condition", 0, nodes);
       nodes = checked['nodes];
       const selection = reaction['selection];
       $behavior_schema:_fields(selection, {'mode, 'limit, 'order}, {}, path + ".selection");
-      selection['mode] in {'once, 'one, 'each}
-        || raise(E_INVARG, path + ".selection: expected once, one, or each");
+      selection['mode] in {'once, 'one, 'each} || raise(E_INVARG, path + ".selection: expected once, one, or each");
       $behavior_schema:_type(selection['limit], 'integer, path + ".selection.limit");
-      (selection['limit] > 0 && selection['limit] <= 256)
-        || raise(E_INVARG, path + ".selection.limit: expected 1 through 256");
+      selection['limit] > 0 && selection['limit] <= 256 || raise(E_INVARG, path + ".selection.limit: expected 1 through 256");
       $behavior_schema:_type(selection['order], 'list, path + ".selection.order");
       let effect_scope = scope;
       if (selection['mode] == 'once)
-        length(selection['order]) == 0
-          || raise(E_INVARG, path + ": once does not expose selected bindings");
+        length(selection['order]) == 0 || raise(E_INVARG, path + ": once does not expose selected bindings");
       else
         effect_scope['binding] = checked['bindings];
         let ordered = {};
         for name in (selection['order])
-          maphaskey(checked['bindings], name)
-            || raise(E_INVARG, path + ": unknown ordering binding " + tostr(name));
+          maphaskey(checked['bindings], name) || raise(E_INVARG, path + ": unknown ordering binding " + tostr(name));
           !(name in ordered) || raise(E_INVARG, path + ": repeated ordering binding");
-          checked['bindings][name] in {'integer, 'float, 'string, 'symbol, 'object, 'boolean}
-            || raise(E_INVARG, path + ": ordering requires scalar bindings");
+          checked['bindings][name] in {'integer, 'float, 'string, 'symbol, 'object, 'boolean} || raise(E_INVARG, path + ": ordering requires scalar bindings");
           ordered = {@ordered, name};
         endfor
         if (selection['mode] == 'each)
-          length(ordered) == length(checked['bindings])
-            || raise(E_INVARG, path + ": each must order every selected binding");
+          length(ordered) == length(checked['bindings]) || raise(E_INVARG, path + ": each must order every selected binding");
         endif
       endif
       if (selection['mode] != 'each)
         selection['limit] == 1 || raise(E_INVARG, path + ": once and one require limit 1");
       endif
-      nodes = $behavior_schema:effects(reaction['effects], effect_scope,
-        vocabulary['actions], path + ".effects", 0, nodes);
+      nodes = $behavior_schema:effects(reaction['effects], effect_scope, vocabulary['actions], path + ".effects", 0, nodes);
     endfor
     return definition;
   endmethod
 
   method condition owner: HACKER
     "Validate one condition tree and return definitely bound output types and its node count.";
-    const {node, scope, predicates, ?path = "condition", ?depth = 0, ?count = 0,
-      ?bound_only = false} = args;
+    const {node, scope, predicates, ?path = "condition", ?depth = 0, ?count = 0, ?bound_only = false} = args;
     let nodes = $behavior_schema:_node(node, path, depth, count);
     const kind = node['kind];
     let bound = scope['binding];
@@ -97,8 +86,7 @@ object BEHAVIOR_SCHEMA [
       for i in [1..length(node['children])]
         let child_scope = scope;
         kind == 'all && (child_scope['binding] = bound);
-        const checked = $behavior_schema:condition(node['children][i], child_scope,
-          predicates, path + ".children[" + tostr(i) + "]", depth + 1, nodes, bound_only);
+        const checked = $behavior_schema:condition(node['children][i], child_scope, predicates, path + ".children[" + tostr(i) + "]", depth + 1, nodes, bound_only);
         nodes = checked['nodes];
         if (kind == 'all || first)
           bound = checked['bindings];
@@ -115,29 +103,24 @@ object BEHAVIOR_SCHEMA [
       endfor
     elseif (kind == 'not)
       $behavior_schema:_fields(node, {'kind, 'child}, {'source}, path);
-      const checked = $behavior_schema:condition(node['child], scope,
-        predicates, path + ".child", depth + 1, nodes, true);
+      const checked = $behavior_schema:condition(node['child], scope, predicates, path + ".child", depth + 1, nodes, true);
       nodes = checked['nodes];
-      equal(checked['bindings], bound)
-        || raise(E_INVARG, path + ": negation requires bound inputs and cannot bind outputs");
+      equal(checked['bindings], bound) || raise(E_INVARG, path + ": negation requires bound inputs and cannot bind outputs");
     elseif (kind == 'compare)
       $behavior_schema:_fields(node, {'kind, 'op, 'left, 'right}, {'source}, path);
-      node['op] in {'eq, 'ne, 'lt, 'le, 'gt, 'ge}
-        || raise(E_INVARG, path + ": unknown comparison");
+      node['op] in {'eq, 'ne, 'lt, 'le, 'gt, 'ge} || raise(E_INVARG, path + ": unknown comparison");
       const left_type = $behavior_schema:expression(node['left], scope, path + ".left");
       const right_type = $behavior_schema:expression(node['right], scope, path + ".right");
       $behavior_schema:_compatible(left_type, right_type, path);
       if (!(node['op] in {'eq, 'ne}))
-        left_type in {'integer, 'float, 'string}
-          || raise(E_INVARG, path + ": ordered comparison requires numbers or strings");
+        left_type in {'integer, 'float, 'string} || raise(E_INVARG, path + ": ordered comparison requires numbers or strings");
       endif
       nodes = nodes + 2;
     elseif (kind in {'predicate, 'relation})
       let predicate;
       if (kind == 'relation)
         $behavior_schema:_fields(node, {'kind, 'relation, 'fields, 'arguments, 'bind}, {'source}, path);
-        node['relation]['kind] in {'literal, 'parameter}
-          || raise(E_INVARG, path + ": use a relation object or reaction setting");
+        node['relation]['kind] in {'literal, 'parameter} || raise(E_INVARG, path + ": use a relation object or reaction setting");
         $behavior_schema:_compatible($behavior_schema:expression(node['relation], scope), 'object, path);
         $behavior_schema:_types(node['fields], path + ".fields");
         length(node['fields]) > 0 || raise(E_INVARG, path + ": declare relation fields first");
@@ -156,8 +139,7 @@ object BEHAVIOR_SCHEMA [
       for output in (mapkeys(node['bind]))
         const name = node['bind][output];
         $behavior_schema:_name(name, path + ".bind");
-        (!bound_only || maphaskey(bound, name))
-          || raise(E_INVARG, path + ": negation cannot introduce " + tostr(name));
+        !bound_only || maphaskey(bound, name) || raise(E_INVARG, path + ": negation cannot introduce " + tostr(name));
         if (maphaskey(bound, name))
           $behavior_schema:_compatible(bound[name], predicate['outputs][output], path);
         endif
@@ -180,13 +162,11 @@ object BEHAVIOR_SCHEMA [
       $behavior_schema:_fields(expression, {'kind, 'value}, {'source}, path);
       return $behavior_schema:type_of(expression['value]);
     endif
-    kind in {'input, 'parameter, 'state, 'binding}
-      || raise(E_INVARG, path + ": unknown value kind");
+    kind in {'input, 'parameter, 'state, 'binding} || raise(E_INVARG, path + ": unknown value kind");
     $behavior_schema:_fields(expression, {'kind, 'name}, {'source}, path);
     const name = expression['name];
     $behavior_schema:_name(name, path);
-    maphaskey(scope[kind], name)
-      || raise(E_INVARG, path + ": undeclared " + tostr(kind) + " " + tostr(name));
+    maphaskey(scope[kind], name) || raise(E_INVARG, path + ": undeclared " + tostr(kind) + " " + tostr(name));
     return scope[kind][name];
   endmethod
 
@@ -207,27 +187,22 @@ object BEHAVIOR_SCHEMA [
       elseif (kind == 'state)
         $behavior_schema:_fields(effect, {'kind, 'name, 'op, 'value}, {'source}, entry_path);
         const name = effect['name];
-        maphaskey(scope['state], name)
-          || raise(E_INVARG, entry_path + ": undeclared state " + tostr(name));
-        effect['op] in {'set, 'increment, 'decrement}
-          || raise(E_INVARG, entry_path + ": unknown state operation");
+        maphaskey(scope['state], name) || raise(E_INVARG, entry_path + ": undeclared state " + tostr(name));
+        effect['op] in {'set, 'increment, 'decrement} || raise(E_INVARG, entry_path + ": unknown state operation");
         const value_type = $behavior_schema:expression(effect['value], scope, entry_path + ".value");
         $behavior_schema:_compatible(value_type, scope['state][name], entry_path);
         if (effect['op] != 'set)
-          scope['state][name] in {'integer, 'float}
-            || raise(E_INVARG, entry_path + ": arithmetic requires numeric state");
+          scope['state][name] in {'integer, 'float} || raise(E_INVARG, entry_path + ": arithmetic requires numeric state");
         endif
         nodes = nodes + 1;
       elseif (kind == 'schedule)
         $behavior_schema:_fields(effect, {'kind, 'name, 'seconds, 'effects}, {'source}, entry_path);
         $behavior_schema:_name(effect['name], entry_path + ".name");
-        $behavior_schema:expression(effect['seconds], scope, entry_path + ".seconds") == 'integer
-          || raise(E_INVARG, entry_path + ": timer seconds must be an integer");
+        $behavior_schema:expression(effect['seconds], scope, entry_path + ".seconds") == 'integer || raise(E_INVARG, entry_path + ": timer seconds must be an integer");
         if (effect['seconds]['kind] == 'literal)
           effect['seconds]['value] >= 0 || raise(E_INVARG, entry_path + ": negative delay");
         endif
-        nodes = $behavior_schema:effects(effect['effects], scope, actions,
-          entry_path + ".effects", depth + 1, nodes + 1);
+        nodes = $behavior_schema:effects(effect['effects], scope, actions, entry_path + ".effects", depth + 1, nodes + 1);
       elseif (kind == 'cancel)
         $behavior_schema:_fields(effect, {'kind, 'name}, {'source}, entry_path);
         $behavior_schema:_name(effect['name], entry_path + ".name");
@@ -253,8 +228,7 @@ object BEHAVIOR_SCHEMA [
   method instance owner: HACKER
     "Validate one host's behavior values. Installation authorization remains a separate record.";
     const {instance, vocabulary} = args;
-    $behavior_schema:_fields(instance,
-      {'definition, 'parameters, 'state, 'revision, 'enabled}, {}, "instance");
+    $behavior_schema:_fields(instance, {'definition, 'parameters, 'state, 'revision, 'enabled}, {}, "instance");
     const definition = $behavior_schema:validate(instance['definition], vocabulary);
     $behavior_schema:bindings(instance['parameters], definition['parameters], "instance.parameters");
     let state_types = [];
@@ -271,9 +245,7 @@ object BEHAVIOR_SCHEMA [
   method type_of owner: HACKER
     "Return a behavioral value type. Opaque MOO values have type any.";
     const {value} = args;
-    const types = [TYPE_OBJ -> 'object, TYPE_INT -> 'integer, TYPE_FLOAT -> 'float,
-      TYPE_BOOL -> 'boolean, TYPE_STR -> 'string, TYPE_SYM -> 'symbol,
-      TYPE_LIST -> 'list, TYPE_MAP -> 'map];
+    const types = [TYPE_OBJ -> 'object, TYPE_INT -> 'integer, TYPE_FLOAT -> 'float, TYPE_BOOL -> 'boolean, TYPE_STR -> 'string, TYPE_SYM -> 'symbol, TYPE_LIST -> 'list, TYPE_MAP -> 'map];
     return `types[typeof(value)] ! E_RANGE => 'any';
   endmethod
 
@@ -287,16 +259,14 @@ object BEHAVIOR_SCHEMA [
         const path = "vocabulary." + tostr(category) + "." + tostr(name);
         $behavior_schema:_name(name, path);
         const entry = vocabulary[category][name];
-        const fields = category == 'predicates
-          ? {'description, 'inputs, 'outputs} | {'description, 'inputs};
+        const fields = category == 'predicates ? {'description, 'inputs, 'outputs} | {'description, 'inputs};
         $behavior_schema:_fields(entry, fields, {}, path);
         $behavior_schema:_type(entry['description], 'string, path + ".description");
         $behavior_schema:_types(entry['inputs], path + ".inputs");
         if (category == 'predicates)
           $behavior_schema:_types(entry['outputs], path + ".outputs");
         elseif (category == 'triggers)
-          (maphaskey(entry['inputs], 'Self) && entry['inputs]['Self] == 'object)
-            || raise(E_INVARG, path + ": triggers require Self of type object");
+          maphaskey(entry['inputs], 'Self) && entry['inputs]['Self] == 'object || raise(E_INVARG, path + ": triggers require Self of type object");
         endif
       endfor
     endfor
@@ -307,8 +277,7 @@ object BEHAVIOR_SCHEMA [
     const {arguments, inputs, scope, path, count} = args;
     $behavior_schema:_fields(arguments, mapkeys(inputs), {}, path + ".arguments");
     for name in (mapkeys(inputs))
-      const actual = $behavior_schema:expression(arguments[name], scope,
-        path + ".arguments." + tostr(name));
+      const actual = $behavior_schema:expression(arguments[name], scope, path + ".arguments." + tostr(name));
       $behavior_schema:_compatible(actual, inputs[name], path + ".arguments." + tostr(name));
     endfor
     return count + length(inputs);
@@ -319,8 +288,7 @@ object BEHAVIOR_SCHEMA [
     const {node, path, depth, count} = args;
     depth <= 16 || raise(E_QUOTA, path + ": nesting exceeds 16 levels");
     count < 1024 || raise(E_QUOTA, path + ": more than 1024 nodes");
-    (typeof(node) == TYPE_MAP && maphaskey(node, 'kind))
-      || raise(E_INVARG, path + ": expected a node with kind");
+    typeof(node) == TYPE_MAP && maphaskey(node, 'kind) || raise(E_INVARG, path + ": expected a node with kind");
     $behavior_schema:_name(node['kind], path + ".kind");
     return count + 1;
   endmethod
@@ -341,16 +309,14 @@ object BEHAVIOR_SCHEMA [
       maphaskey(record, name) || raise(E_INVARG, path + ": missing " + tostr(name));
     endfor
     for name in (mapkeys(record))
-      (typeof(name) == TYPE_SYM && name in {@required, @optional})
-        || raise(E_INVARG, path + ": unknown field " + toliteral(name));
+      typeof(name) == TYPE_SYM && name in {@required, @optional} || raise(E_INVARG, path + ": unknown field " + toliteral(name));
     endfor
     if ('source in optional && maphaskey(record, 'source))
       const source = record['source];
       $behavior_schema:_fields(source, {'start, 'end}, {}, path + ".source");
       $behavior_schema:_type(source['start], 'integer, path + ".source.start");
       $behavior_schema:_type(source['end], 'integer, path + ".source.end");
-      (source['start] >= 1 && source['end] >= source['start])
-        || raise(E_INVARG, path + ": invalid source positions");
+      source['start] >= 1 && source['end] >= source['start] || raise(E_INVARG, path + ": invalid source positions");
     endif
   endmethod
 
@@ -368,28 +334,24 @@ object BEHAVIOR_SCHEMA [
     "Require an identifier that authors can spell without MOO symbol quoting.";
     const {name, path} = args;
     typeof(name) == TYPE_SYM || raise(E_INVARG, path + ": expected symbol name");
-    match(tostr(name), "^[a-zA-Z_][a-zA-Z0-9_]*$", 1)
-      || raise(E_INVARG, path + ": invalid name");
+    match(tostr(name), "^[a-zA-Z_][a-zA-Z0-9_]*$", 1) || raise(E_INVARG, path + ": invalid name");
   endmethod
 
   method _type_name owner: HACKER
     "Reject unknown declared types.";
     const {type, path} = args;
-    type in {'object, 'integer, 'float, 'boolean, 'string, 'symbol, 'list, 'map, 'any}
-      || raise(E_INVARG, path + ": unknown type");
+    type in {'object, 'integer, 'float, 'boolean, 'string, 'symbol, 'list, 'map, 'any} || raise(E_INVARG, path + ": unknown type");
   endmethod
 
   method _type owner: HACKER
     "Check an actual value without resolving objects or executing callbacks.";
     const {value, expected, path} = args;
-    (expected == 'any || $behavior_schema:type_of(value) == expected)
-      || raise(E_INVARG, path + ": expected " + tostr(expected));
+    expected == 'any || $behavior_schema:type_of(value) == expected || raise(E_INVARG, path + ": expected " + tostr(expected));
   endmethod
 
   method _compatible owner: HACKER
     "A statically unknown value cannot satisfy a typed operation argument.";
     const {actual, expected, path} = args;
-    (expected == 'any || actual == expected)
-      || raise(E_INVARG, path + ": expected " + tostr(expected) + ", got " + tostr(actual));
+    expected == 'any || actual == expected || raise(E_INVARG, path + ": expected " + tostr(expected) + ", got " + tostr(actual));
   endmethod
 endobject

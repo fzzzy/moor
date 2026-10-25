@@ -32,13 +32,8 @@ object LLM_ROOM_RUNTIME [
   method limits owner: ARCH_WIZARD
     "Validate configurable limits against hard bounds before admission or dispatch.";
     const {room} = args;
-    for setting in ({
-      {room.max_workers, 1, 8}, {room.max_jobs, 1, 32},
-      {room.max_pending_per_player, 1, 8}, {room.max_query_length, 1, 16384},
-      {room.max_history_context_items, 0, 4}, {room.task_timeout_seconds, 1, 3600},
-      {room.max_iterations, 1, 100}})
-      typeof(setting[1]) == TYPE_INT && setting[1] >= setting[2] && setting[1] <= setting[3]
-        || raise(E_INVARG, "Invalid room execution limit");
+    for setting in ({{room.max_workers, 1, 8}, {room.max_jobs, 1, 32}, {room.max_pending_per_player, 1, 8}, {room.max_query_length, 1, 16384}, {room.max_history_context_items, 0, 4}, {room.task_timeout_seconds, 1, 3600}, {room.max_iterations, 1, 100}})
+      typeof(setting[1]) == TYPE_INT && setting[1] >= setting[2] && setting[1] <= setting[3] || raise(E_INVARG, "Invalid room execution limit");
     endfor
     return true;
   endmethod
@@ -71,12 +66,10 @@ object LLM_ROOM_RUNTIME [
     this:limits(room);
     const query = request['query];
     const context = maphaskey(request, 'context) ? request['context] | {};
-    typeof(query) == TYPE_STR && length(query) > 0 && length(query) <= room.max_query_length
-      || raise(E_INVARG, "Task text is empty or too long");
-    typeof(context) == TYPE_LIST && length(context) <= 256 && value_bytes(context) <= 1048576
-      || raise(E_QUOTA, "Task context exceeds the room limit");
+    typeof(query) == TYPE_STR && length(query) > 0 && length(query) <= room.max_query_length || raise(E_INVARG, "Task text is empty or too long");
+    typeof(context) == TYPE_LIST && length(context) <= 256 && value_bytes(context) <= 1048576 || raise(E_QUOTA, "Task context exceeds the room limit");
     length(room.jobs) < room.max_jobs || raise(E_QUOTA, "Room task queue is full");
-    const own = {candidate for candidate in (room.jobs) if (candidate.requester == request['player])};
+    const own = { candidate for candidate in (room.jobs) if candidate.requester == request['player] };
     length(own) < room.max_pending_per_player || raise(E_QUOTA, "Requester task limit reached");
     const job = $llm_job:new(room, request);
     job.timeout_seconds = room.task_timeout_seconds;
@@ -161,7 +154,7 @@ object LLM_ROOM_RUNTIME [
       endif
       const configured = room.max_workers;
       const workers = typeof(configured) == TYPE_INT && configured >= 1 && configured <= 8 ? configured | 1;
-      let active = length({running for running in (room.jobs) if (running.parent_task > 0)});
+      let active = length({ running for running in (room.jobs) if running.parent_task > 0 });
       for pending in (room.jobs)
         room.loop_task == task_id() || return;
         if (pending in room.jobs && pending.state == 'queued && pending.parent_task == 0 && active < workers)

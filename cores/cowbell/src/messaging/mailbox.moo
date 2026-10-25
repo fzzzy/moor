@@ -10,9 +10,8 @@ object MAILBOX [
   readable: true
 
   override aliases (owner: HACKER, flags: "rc") = {"mailbox"};
-  override noun_kind = 'name;
-
   override description (owner: HACKER, flags: "rc") = "A sturdy mailbox for receiving letters.";
+  override noun_kind (owner: HACKER, flags: "rc") = 'name;
   override object_documentation (owner: HACKER, flags: "rc") = "A mailbox holds letters for its owner. Anyone can deposit letters, but only the owner can view or take them.";
 
   method acceptable owner: ARCH_WIZARD

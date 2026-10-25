@@ -40,8 +40,7 @@ object LLM_BUILDING_TOOLS [
       fields["rationale"] = ["type" -> "string", "maxLength" -> 4096];
       schema["properties"] = fields;
       schema["additionalProperties"] = false;
-      bounded = {@bounded, $llm_agent_tool:mk(tool.name, tool.description, schema,
-        this, tool.target_verb, tool.effect)};
+      bounded = {@bounded, $llm_agent_tool:mk(tool.name, tool.description, schema, this, tool.target_verb, tool.effect)};
     endfor
     return bounded;
   endmethod
@@ -70,13 +69,11 @@ object LLM_BUILDING_TOOLS [
         for passage in ($room:passages(endpoint))
           passages[passage.connection_id] = passage;
         endfor
-        endpoints = {@endpoints, {endpoint, endpoint.owner, endpoint.location,
-          endpoint.passage_areas, passages}};
+        endpoints = {@endpoints, {endpoint, endpoint.owner, endpoint.location, endpoint.passage_areas, passages}};
       endfor
       return {@endpoints, area, area.owner};
     elseif (kind == 'move)
-      return {$llm_tool_provider:_snapshot(actor, target, 'object, ""),
-        $llm_tool_provider:_snapshot(actor, member, 'object, "")};
+      return {$llm_tool_provider:_snapshot(actor, target, 'object, ""), $llm_tool_provider:_snapshot(actor, member, 'object, "")};
     elseif (kind == 'rename)
       return {$llm_tool_provider:_snapshot(actor, target, 'object, ""), target.aliases};
     endif
@@ -98,8 +95,7 @@ object LLM_BUILDING_TOOLS [
     set_task_perms(actor);
     {room_name, area_spec, parent_spec} = {args_map["name"], maphaskey(args_map, "area") ? args_map["area"] | "", maphaskey(args_map, "parent") ? args_map["parent"] | "$room"};
     const parent_obj = this:_resolve_object(parent_spec, actor);
-    (typeof(parent_obj) == TYPE_OBJ && valid(parent_obj) && isa(parent_obj, $room))
-      || raise(E_INVARG, "The parent must be a room prototype.");
+    typeof(parent_obj) == TYPE_OBJ && valid(parent_obj) && isa(parent_obj, $room) || raise(E_INVARG, "The parent must be a room prototype.");
     typeof(room_name) == TYPE_STR && room_name:trim() != "" || raise(E_INVARG, "A room needs a name.");
     "Parse area - default to current area if not specified, 'ether' means free-floating";
     let target_area = #-1;
@@ -125,12 +121,10 @@ object LLM_BUILDING_TOOLS [
       try
         $root:_check_permissions_as(area_target, actor, 'add_room);
       except (E_PERM)
-        return $llm_tool_result:mk('failure, "Permission denied: "
-          + $grant_utils:format_denial(target_area, 'area, {'add_room}), "permission_denied");
+        return $llm_tool_result:mk('failure, "Permission denied: " + $grant_utils:format_denial(target_area, 'area, {'add_room}), "permission_denied");
       endtry
     endif
-    const approval = this:_approve(actor, 'build_room, approval_target, 'construction,
-      {parent_obj, target_area}, args_map, preview);
+    const approval = this:_approve(actor, 'build_room, approval_target, 'construction, {parent_obj, target_area}, args_map, preview);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     "Create room";
     if (!valid(target_area))
@@ -208,10 +202,8 @@ object LLM_BUILDING_TOOLS [
     const target_room = this:_resolve_object(args_map["target_room"], actor);
     valid(source_room) && valid(target_room) || raise(E_INVARG, "Endpoint no longer exists.");
     const direction = `args_map["direction"] ! E_RANGE => ""';
-    const passage = direction == "" ? $room:passage_to(source_room, target_room)
-      | $room:find_passage(source_room, direction);
-    typeof(passage) == TYPE_FLYWEIGHT || return $llm_tool_result:mk('failure,
-      "No passage found between " + tostr(source_room) + " and " + tostr(target_room) + ".", "passage_missing");
+    const passage = direction == "" ? $room:passage_to(source_room, target_room) | $room:find_passage(source_room, direction);
+    typeof(passage) == TYPE_FLYWEIGHT || return $llm_tool_result:mk('failure, "No passage found between " + tostr(source_room) + " and " + tostr(target_room) + ".", "passage_missing");
     passage:other_room(source_room) == target_room || raise(E_INVARG, "That exit leads to a different room.");
     const area = $room:find_connection(source_room, passage.connection_id)[1];
     const preview = this:_preview(actor, source_room, 'connections, {target_room, area});
@@ -220,11 +212,9 @@ object LLM_BUILDING_TOOLS [
     try
       source:check_can_dig_from();
     except (E_PERM)
-      return $llm_tool_result:mk('failure, "Permission denied: "
-        + $grant_utils:format_denial(source_room, 'room, {'dig_from}), "permission_denied");
+      return $llm_tool_result:mk('failure, "Permission denied: " + $grant_utils:format_denial(source_room, 'room, {'dig_from}), "permission_denied");
     endtry
-    const approval = this:_approve(actor, 'remove_passage, source_room, 'connections,
-      {target_room, area}, args_map, preview);
+    const approval = this:_approve(actor, 'remove_passage, source_room, 'connections, {target_room, area}, args_map, preview);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     const removed = store:remove_passage(source, target_room, passage.connection_id);
     removed || return $llm_tool_result:mk('failure, "The passage was not removed.", "passage_missing");
@@ -250,8 +240,7 @@ object LLM_BUILDING_TOOLS [
     const ambient = `args_map["ambient"] ! E_RANGE => true';
     const updated = current:with_description_from(room, description, kind):with_ambient_from(room, ambient);
     const subject = $area:_subject_for(actor, room, 'room);
-    const approval = this:_approve(actor, 'set_passage_description, room, 'connections,
-      {destination, area}, args_map, preview);
+    const approval = this:_approve(actor, 'set_passage_description, room, 'connections, {destination, area}, args_map, preview);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     area:update_passage(subject, destination, updated);
     return "Set description for '" + direction + "' passage.";
@@ -284,8 +273,7 @@ object LLM_BUILDING_TOOLS [
     try
       new_obj.r = 1;
       new_obj:set_name_aliases(primary_name, final_aliases);
-      strcmp(new_obj.name, primary_name) == 0 && new_obj.aliases == final_aliases
-        || raise(E_INVARG, "The new object did not retain its requested name and aliases.");
+      strcmp(new_obj.name, primary_name) == 0 && new_obj.aliases == final_aliases || raise(E_INVARG, "The new object did not retain its requested name and aliases.");
       $llm_tool_provider:check(this, actor, actor);
       const moved = new_obj:moveto(actor);
       typeof(moved) != TYPE_ERR || raise(error_code(moved), "Could not place the new object.");
@@ -296,11 +284,9 @@ object LLM_BUILDING_TOOLS [
         try
           new_obj:destroy();
         except cleanup (ANY)
-          return $llm_tool_result:mk('unknown, "Creation failed; cleanup also failed for "
-            + tostr(new_obj) + ": " + tostr(cleanup[2]), "creation_cleanup_failed");
+          return $llm_tool_result:mk('unknown, "Creation failed; cleanup also failed for " + tostr(new_obj) + ": " + tostr(cleanup[2]), "creation_cleanup_failed");
         endtry
-        !valid(new_obj) || return $llm_tool_result:mk('unknown,
-          "Creation failed; the object still exists: " + tostr(new_obj), "creation_cleanup_failed");
+        !valid(new_obj) || return $llm_tool_result:mk('unknown, "Creation failed; the object still exists: " + tostr(new_obj), "creation_cleanup_failed");
       endif
       raise(error[1], error[2]);
     endtry
@@ -324,8 +310,7 @@ object LLM_BUILDING_TOOLS [
     const approval = this:_approve(actor, 'recycle_object, target_obj, 'object, "", args_map);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     target_obj:destroy();
-    !valid(target_obj) || return $llm_tool_result:mk('unknown,
-      "The object still exists after its destruction callback.", "recycle_incomplete");
+    !valid(target_obj) || return $llm_tool_result:mk('unknown, "The object still exists after its destruction callback.", "recycle_incomplete");
     return "Recycled \"" + obj_name + "\" (" + obj_id + ").";
   endmethod
 
@@ -410,5 +395,4 @@ object LLM_BUILDING_TOOLS [
     const obj_name = target_obj.name;
     return args_map["integrated_description"] == "" ? "Cleared integrated description of \"" + obj_name + "\" (" + tostr(target_obj) + ")." | "Set integrated description of \"" + obj_name + "\" (" + tostr(target_obj) + "). When in a room, this will appear in the room description.";
   endmethod
-
 endobject

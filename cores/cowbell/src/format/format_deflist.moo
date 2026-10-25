@@ -17,8 +17,7 @@ object FORMAT_DEFLIST [
     let items = {};
     for pair in (pairs)
       const {term, definition} = pair;
-      items = {@items, ['term -> $format:inlines({term}),
-        'definition -> $format:blocks({definition})]};
+      items = {@items, ['term -> $format:inlines({term}), 'definition -> $format:blocks({definition})]};
     endfor
     return $document_template:mk('definition_list, items);
   endmethod

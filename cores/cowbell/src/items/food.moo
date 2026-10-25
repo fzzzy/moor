@@ -10,62 +10,62 @@ object FOOD [
   readable: true
 
   property bite_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
     " a bite of ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property consume_amounts (owner: ARCH_WIZARD, flags: "rc") = ["bite" -> 2, "devour" -> 99, "eat" -> 2, "nibble" -> 1];
   property devour_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "devour", .singular_form = "devours">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "devour", .singular_form = "devours">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property eat_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "eat", .singular_form = "eats">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "eat", .singular_form = "eats">,
     " some of ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property munch_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "munch", .singular_form = "munches">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "munch", .singular_form = "munches">,
     " on ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property nibble_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "nibble", .singular_form = "nibbles">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "nibble", .singular_form = "nibbles">,
     " at ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
 
   override consume_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "eat", .singular_form = "eats">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "eat", .singular_form = "eats">,
     " some of ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   override description (owner: ARCH_WIZARD, flags: "rc") = "Prototype for edible food items. Supports eat, bite, nibble, devour commands.";
   override finish_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "finish", .singular_form = "finishes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "finish", .singular_form = "finishes">,
     " eating ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   override object_documentation (owner: ARCH_WIZARD, flags: "rc") = {
@@ -177,8 +177,7 @@ object FOOD [
     const {property} = args;
     if (tostr(property) in {"bite_msg", "devour_msg", "eat_msg", "munch_msg", "nibble_msg"})
       let bindings = $sub_utils:standard_bindings("The person eating.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The food.",
-        'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The food.", 'example -> 'host];
       return bindings;
     endif
     return pass(@args);

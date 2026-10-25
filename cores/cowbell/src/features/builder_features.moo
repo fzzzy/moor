@@ -33,8 +33,7 @@ object BUILDER_FEATURES [
       if (editing)
         const field = tosym(words[$ - 1][1]);
         const text = words[$][1];
-        const value = text == "inherit" ? 'inherit | field == 'article
-          ? (text == "auto" ? "" | text) | tosym(text);
+        const value = text == "inherit" ? 'inherit | field == 'article ? text == "auto" ? "" | text | tosym(text);
         let subject = target;
         if (target.owner != player && !player.wizard)
           const capability = player:find_capability_for(target, 'object);
@@ -42,15 +41,12 @@ object BUILDER_FEATURES [
           subject = capability;
         endif
         subject:set_grammar([field -> value]);
-        player:inform_current($event:mk_info(player, "Grammar updated for " + target:name() + ".")
-          :with_audience('utility));
+        player:inform_current($event:mk_info(player, "Grammar updated for " + target:name() + "."):with_audience('utility));
       else
-        player:inform_current($event:mk_info(player, this:_grammar_details(target, player))
-          :with_audience('utility));
+        player:inform_current($event:mk_info(player, this:_grammar_details(target, player)):with_audience('utility));
       endif
     except problem (E_PERM)
-      player:inform_current($event:mk_error(player,
-        "You need builder privileges and permission to edit that object's grammar."):with_audience('utility));
+      player:inform_current($event:mk_error(player, "You need builder privileges and permission to edit that object's grammar."):with_audience('utility));
     except problem (E_INVARG, E_TYPE, E_PROPNF, E_INVIND, E_RANGE)
       player:inform_current($event:mk_error(player, problem[2]):with_audience('utility));
     endtry
@@ -61,8 +57,7 @@ object BUILDER_FEATURES [
     set_task_perms(caller_perms());
     const {target, viewer} = args;
     let lines = {"Name: " + target:name(), "Aliases: " + target:aliases():join(", ")};
-    for setting in ({{"Kind", "noun_kind"}, {"Number", "noun_number"},
-      {"Article", "indefinite_article"}, {"Room listing", "listing_form"}})
+    for setting in ({{"Kind", "noun_kind"}, {"Number", "noun_number"}, {"Article", "indefinite_article"}, {"Room listing", "listing_form"}})
       const {label, property} = setting;
       const value = `target.(property) ! E_PROPNF => E_PROPNF';
       if (value == E_PROPNF)
@@ -90,10 +85,7 @@ object BUILDER_FEATURES [
     const grammar = $root:_validate_noun_grammar(target:noun_grammar(viewer));
     const phrase = target:noun_phrase('definite, viewer);
     const agreement = target == viewer || grammar['number] == 'plural ? "are" | "is";
-    lines = {@lines, "Room: You see " + target:noun_phrase('listing, viewer) + " here.",
-      "Action: You examine " + phrase + ".", "Subject: " + phrase:capitalize() + " " + agreement + " here.",
-      "Matching names: " + target:match_names(viewer):join("; "),
-      "Use VALUE inherit to reset a setting; article auto selects a/an automatically. Pronouns use @set-pronouns."};
+    lines = {@lines, "Room: You see " + target:noun_phrase('listing, viewer) + " here.", "Action: You examine " + phrase + ".", "Subject: " + phrase:capitalize() + " " + agreement + " here.", "Matching names: " + target:match_names(viewer):join("; "), "Use VALUE inherit to reset a setting; article auto selects a/an automatically. Pronouns use @set-pronouns."};
     return $format.block:mk(@lines);
   endmethod
 
@@ -104,8 +96,7 @@ object BUILDER_FEATURES [
     try
       this:_require_builder_command(player);
       set_task_perms(player);
-      (length(dobjstr) && prepstr == "to" && length(iobjstr)) || raise(E_INVARG,
-        "Usage: @set-pronouns ACTOR to PRESET|custom. See help @set-pronouns.");
+      length(dobjstr) && prepstr == "to" && length(iobjstr) || raise(E_INVARG, "Usage: @set-pronouns ACTOR to PRESET|custom. See help @set-pronouns.");
       const reference = dobjstr:trim();
       const target = $match:match_object(reference, player);
       isa(target, $actor) || raise(E_INVARG, "Choose an actor, such as an NPC or player.");
@@ -117,16 +108,12 @@ object BUILDER_FEATURES [
       endif
       "Prompts commit. Recheck the builder role, actor type, and editing authority before saving.";
       this:_require_builder_command(player);
-      (valid(target) && isa(target, $actor)) || raise(E_INVARG, "That actor no longer exists.");
+      valid(target) && isa(target, $actor) || raise(E_INVARG, "That actor no longer exists.");
       $root:_check_permissions_as(target, player, 'set_pronouns);
       target:set_pronouns(input);
-      player:inform_current($event:mk_info(player,
-        "Pronouns for " + target.name + " set to: " + target:pronouns_display())
-        :with_audience('utility));
+      player:inform_current($event:mk_info(player, "Pronouns for " + target.name + " set to: " + target:pronouns_display()):with_audience('utility));
     except problem (E_PERM)
-      player:inform_current($event:mk_error(player,
-        "You need builder privileges and permission to set that actor's pronouns.")
-        :with_audience('utility));
+      player:inform_current($event:mk_error(player, "You need builder privileges and permission to set that actor's pronouns."):with_audience('utility));
     except problem (E_INVARG, E_TYPE, E_PROPNF, E_INVIND)
       player:inform_current($event:mk_error(player, problem[2]):with_audience('utility));
     endtry
@@ -466,7 +453,7 @@ object BUILDER_FEATURES [
     parent_obj = $room;
     working = command_str;
     const scanned = command_words(working);
-    tokens = {word[1] for word in (scanned)};
+    tokens = { word[1] for word in (scanned) };
     "Parse trailing 'as <parent>'";
     if (length(tokens) >= 2 && !scanned[length(tokens) - 1][4] && tokens[$ - 1]:lowercase() == "as")
       parent_spec = tokens[$];
@@ -844,16 +831,14 @@ object BUILDER_FEATURES [
         endif
         new_description = description_text;
         !new_description && raise(E_INVARG, "Description cannot be blank.");
-        this:_do_describe_object(target_obj, new_description,
-          typeof(description_kind) == TYPE_SYM ? description_kind | target_obj.description_kind);
+        this:_do_describe_object(target_obj, new_description, typeof(description_kind) == TYPE_SYM ? description_kind | target_obj.description_kind);
         obj_name = `target_obj.name ! ANY => tostr(target_obj)';
         message = "Set description of \"" + obj_name + "\" (" + tostr(target_obj) + ").";
         player:inform_current($event:mk_info(player, message));
         return 1;
       else
         "Not an object - try to match as a passage direction";
-        result = this:_do_describe_passage(target_spec, description_text,
-          description_kind == 'djot_blocks ? 'djot_inline | description_kind);
+        result = this:_do_describe_passage(target_spec, description_text, description_kind == 'djot_blocks ? 'djot_inline | description_kind);
         if (result)
           return 1;
         else
@@ -906,16 +891,14 @@ object BUILDER_FEATURES [
         old_kind = passage:description_kind_for(target);
         title = passage:label_for(target) + " at " + target.name;
       endif
-      typeof(source) == TYPE_STR
-        || raise(E_INVARG, "This description is built in code. Use @describe to replace it with editable text.");
+      typeof(source) == TYPE_STR || raise(E_INVARG, "This description is built in code. Use @describe to replace it with editable text.");
       let kind = typeof(requested_kind) == TYPE_SYM ? requested_kind | old_kind;
       identity != "" && kind == 'djot_blocks && (kind = 'djot_inline);
       if (identity == "")
         kind in {'literal, 'djot_blocks} || raise(E_INVARG, "Object descriptions use --literal or --djot.");
       endif
       const conn = connection();
-      const state = ['connection -> conn, 'passage -> identity, 'format -> kind,
-        'original -> source, 'original_format -> old_kind];
+      const state = ['connection -> conn, 'passage -> identity, 'format -> kind, 'original -> source, 'original_format -> old_kind];
       const session_id = player:start_edit_session(target, "edit_description", state);
       const content_type = kind in {'djot_blocks, 'djot_inline} ? "text/djot" | "text/plain";
       $builder_features:_present_description_editor(player, session_id, source, title, content_type);
@@ -932,17 +915,14 @@ object BUILDER_FEATURES [
     const session = who.editing_sessions[session_id];
     session['verb] == "edit_description" || raise(E_PERM);
     const conn = session['args]['connection];
-    conn in {entry[1] for entry in (connections(who))} || raise(E_PERM);
-    present(conn, session_id, content_type, "text-editor", source,
-      {{"object", $url_utils:to_curie_str($builder_features)}, {"verb", "receive_description_edit"},
-      {"title", "Edit Description: " + title}, {"text_mode", "string"}, {"session_id", session_id}});
+    conn in { entry[1] for entry in (connections(who)) } || raise(E_PERM);
+    present(conn, session_id, content_type, "text-editor", source, {{"object", $url_utils:to_curie_str($builder_features)}, {"verb", "receive_description_edit"}, {"title", "Edit Description: " + title}, {"text_mode", "string"}, {"session_id", session_id}});
   endmethod
 
   method receive_description_edit owner: ARCH_WIZARD
     "Save under the editor's current authority, rejecting replacement exits and conflicting source edits.";
     const principal = caller_perms();
-    ((principal == #-1 && caller == player) || principal == player
-      || (valid(principal) && principal.wizard)) || raise(E_PERM);
+    principal == #-1 && caller == player || principal == player || (valid(principal) && principal.wizard) || raise(E_PERM);
     set_task_perms(player);
     const {session_id, content} = args;
     const session = player:get_edit_session(session_id);
@@ -951,7 +931,7 @@ object BUILDER_FEATURES [
     const conn = state['connection];
     const request_conn = `connection() ! E_INVARG => #-1';
     request_conn == #-1 || request_conn == conn || raise(E_PERM);
-    request_conn == #-1 || conn in {entry[1] for entry in (connections(player))} || raise(E_PERM);
+    request_conn == #-1 || conn in { entry[1] for entry in (connections(player)) } || raise(E_PERM);
     if (content == 'close)
       player:end_edit_session(session_id);
       return;
@@ -961,17 +941,14 @@ object BUILDER_FEATURES [
     valid(target) || raise(E_INVARG, "The edited object no longer exists.");
     if (state['passage] == "")
       $root:_check_permissions_as(target, player, 'set_description);
-      equal(target.description, state['original]) && target.description_kind == state['original_format]
-        || raise(E_INVARG, "The description changed while this editor was open. Reopen it before saving.");
+      equal(target.description, state['original]) && target.description_kind == state['original_format] || raise(E_INVARG, "The description changed while this editor was open. Reopen it before saving.");
       target:set_description(content, state['format]);
     else
       const found = $room:find_connection(target, state['passage]);
       length(found) || raise(E_INVARG, "The edited passage is no longer connected. Reopen the editor.");
       const {area, passage} = found;
       const subject = $area:_subject_for(player, target, 'room);
-      equal(passage:description_for(target), state['original])
-        && passage:description_kind_for(target) == state['original_format]
-        || raise(E_INVARG, "The description changed while this editor was open. Reopen it before saving.");
+      equal(passage:description_for(target), state['original]) && passage:description_kind_for(target) == state['original_format] || raise(E_INVARG, "The description changed while this editor was open. Reopen it before saving.");
       const updated = passage:with_description_from(target, content, state['format]);
       equal(player:get_edit_session(session_id), session) || raise(E_PERM, "The editing session changed.");
       area:update_passage(subject, passage:other_room(target), updated);
@@ -1402,8 +1379,7 @@ object BUILDER_FEATURES [
       "New message properties require ownership; existing writes use native permissions after compilation.";
       const existing = $obj_utils:property_key(target_obj, prop_name);
       if (existing == E_PROPNF)
-        (target_obj.owner == player || player.wizard)
-          || raise(E_PERM, "You must own the object to add a message.");
+        target_obj.owner == player || player.wizard || raise(E_PERM, "You must own the object to add a message.");
       endif
       "Compile and validate the template";
       const {success, result} = $obj_utils:validate_and_compile_template(template_string, target_obj, prop_name);
@@ -1416,8 +1392,7 @@ object BUILDER_FEATURES [
       "Set the compiled message";
       const prop_key = $obj_utils:property_key(target_obj, prop_name);
       if (prop_key == E_PROPNF)
-        (target_obj.owner == player || player.wizard)
-          || raise(E_PERM, "You no longer own the object.");
+        target_obj.owner == player || player.wizard || raise(E_PERM, "You no longer own the object.");
         const value = prop_name:ends_with("_msg") ? compiled_list | $msg_bag:mk(compiled_list);
         add_property(target_obj, prop_name, value, {target_obj.owner, "rc"});
       else
@@ -1439,9 +1414,7 @@ object BUILDER_FEATURES [
     set_task_perms(player);
     length(args) >= 1 || raise(E_INVARG, "Use " + verb + " OBJECT.PROPERTY.");
     const parsed = $prog_utils:parse_target_spec(argstr:raw_words()[1]);
-    (parsed && parsed['type] == 'compound && length(parsed['selectors]) == 1
-      && parsed['selectors][1]['kind] == 'property)
-      || raise(E_INVARG, "Use an object.property reference.");
+    parsed && parsed['type] == 'compound && length(parsed['selectors]) == 1 && parsed['selectors][1]['kind] == 'property || raise(E_INVARG, "Use an object.property reference.");
     const target = $match:match_object(parsed['object_str], player);
     const property = parsed['selectors][1]['item_name];
     const bindings = target:message_bindings(property);
@@ -1453,12 +1426,10 @@ object BUILDER_FEATURES [
     else
       length(args) == 1 || raise(E_INVARG, "Use @message-bindings OBJECT.PROPERTY.");
       for name in (mapkeys(bindings))
-        lines = {@lines, "{" + tostr(name) + "}: " + bindings[name]['description]
-          + " (" + tostr(bindings[name]['kind]) + ")"};
+        lines = {@lines, "{" + tostr(name) + "}: " + bindings[name]['description] + " (" + tostr(bindings[name]['kind]) + ")"};
       endfor
       if (!length(bindings))
-        lines = {@lines, "This message has no declared bindings. Literal text is allowed.",
-          "Its programmer must declare any participants before you can use their names or pronouns."};
+        lines = {@lines, "This message has no declared bindings. Literal text is allowed.", "Its programmer must declare any participants before you can use their names or pronouns."};
       endif
     endif
     for line in (lines)
@@ -1785,10 +1756,6 @@ object BUILDER_FEATURES [
     return length(rule_props);
   endverb
 
-
-
-
-
   verb "@par*ents @anc*estors" (any none none) owner: ARCH_WIZARD flags: "rxd"
     "HINT: <object> [--brief|--full] -- Show the ancestor chain of an object.";
     caller != player && raise(E_PERM);
@@ -1900,9 +1867,7 @@ object BUILDER_FEATURES [
     "Return help topics for builder/programmer commands via configured help source.";
     {for_player, ?topic = ""} = args;
     if (topic in {"@reaction", "@state", "@rule", "@facts", "reactions", "rules"})
-      return <$help, .name = topic, .content_kind = 'djot_blocks,
-        .content = $builder_features:reaction_help():join("\n\n"), .category = 'building,
-        .summary = "Make objects respond without writing code", .aliases = {}, .see_also = {}>;
+      return <$help, .name = topic, .content_kind = 'djot_blocks, .content = $builder_features:reaction_help():join("\n\n"), .category = 'building, .summary = "Make objects respond without writing code", .aliases = {}, .see_also = {}>;
     endif
     source = this.help_source;
     if (valid(source))
@@ -1930,36 +1895,19 @@ object BUILDER_FEATURES [
       const destination = passage:other_room(room);
       const source = passage:description_for(room);
       const label = passage:label_for(room);
-      let rows = {
-        {"Direction", label}, {"Aliases", passage:aliases_for(room):join(", ")},
-        {"Description source", typeof(source) == TYPE_STR ? source | toliteral(source)},
-        {"Description syntax", tostr(passage:description_kind_for(room))},
-        {"In room prose", passage.(room == passage.side_a_room ? "side_a_ambient" | "side_b_ambient") ? "yes" | "no"},
-        {"Prose style", tostr(passage:prose_style_for(room))},
-        {"Departure phrase", passage:departure_phrase_for(room)},
-        {"Arrival phrase", passage:arrival_phrase_for(room)},
-        {"Destination", destination.name + " (" + tostr(destination) + ")"},
-        {"Return direction", $passage:allows_direction(passage, destination) ? passage:label_for(destination) | "one-way"},
-        {"Open", passage.is_open ? "yes" | "no"}, {"Locked", passage.is_locked ? "yes" | "no"}
-      };
+      let rows = {{"Direction", label}, {"Aliases", passage:aliases_for(room):join(", ")}, {"Description source", typeof(source) == TYPE_STR ? source | toliteral(source)}, {"Description syntax", tostr(passage:description_kind_for(room))}, {"In room prose", passage.(room == passage.side_a_room ? "side_a_ambient" | "side_b_ambient") ? "yes" | "no"}, {"Prose style", tostr(passage:prose_style_for(room))}, {"Departure phrase", passage:departure_phrase_for(room)}, {"Arrival phrase", passage:arrival_phrase_for(room)}, {"Destination", destination.name + " (" + tostr(destination) + ")"}, {"Return direction", $passage:allows_direction(passage, destination) ? passage:label_for(destination) | "one-way"}, {"Open", passage.is_open ? "yes" | "no"}, {"Locked", passage.is_locked ? "yes" | "no"}};
       const rule = passage.unlock_rule;
-      rows = {@rows, {"Access condition", typeof(rule) == TYPE_FLYWEIGHT
-        ? $builder_features:_author_condition_text(rule.condition) | "none"}};
+      rows = {@rows, {"Access condition", typeof(rule) == TYPE_FLYWEIGHT ? $builder_features:_author_condition_text(rule.condition) | "none"}};
       for property in ({"open_msg", "close_msg", "lock_msg", "unlock_msg"})
         const message = passage.(property);
         const authored = typeof(message) in {TYPE_STR, TYPE_LIST, TYPE_FLYWEIGHT};
-        rows = {@rows, {property, authored && message != "" && message != {}
-          ? $sub_utils:decompile(message) | "default message"}};
+        rows = {@rows, {property, authored && message != "" && message != {} ? $sub_utils:decompile(message) | "default message"}};
       endfor
       const context = $event:mk_look(player):with_dobj(room);
-      const prose = $look:_ambient({{$passage:description_content(passage, room),
-        passage:prose_style_for(room), label, destination}}, [label -> room:exit_annotation(label)], context, player);
+      const prose = $look:_ambient({{$passage:description_content(passage, room), passage:prose_style_for(room), label, destination}}, [label -> room:exit_annotation(label)], context, player);
       const departure = $passage:movement_from(passage, player, room, destination, false):resolve(player);
       const arrival = $passage:movement_from(passage, player, room, destination, true):resolve(player);
-      const content = $format.block:mk($format.title:mk("Passage: " + label, 3),
-        $format.table:mk({"Property", "Value"}, rows), $format.title:mk("Room prose", 4), @prose,
-        $format.title:mk("Leaving this room", 4), @flycontents(departure),
-        $format.title:mk("Arriving at the other room", 4), @flycontents(arrival));
+      const content = $format.block:mk($format.title:mk("Passage: " + label, 3), $format.table:mk({"Property", "Value"}, rows), $format.title:mk("Room prose", 4), @prose, $format.title:mk("Leaving this room", 4), @flycontents(departure), $format.title:mk("Arriving at the other room", 4), @flycontents(arrival));
       player:inform_current($event:mk_info(player, content));
     except problem (E_INVARG, E_PERM, E_TYPE)
       player:inform_current($event:mk_error(player, problem[2]));
@@ -2072,14 +2020,13 @@ object BUILDER_FEATURES [
       const parsed_reference = $prog_utils:parse_target_spec(lookup);
       parsed_reference || raise(E_INVARG, "Invalid object reference.");
       let reference = parsed_reference['object_str]:reference_text();
-      const properties = {selector['item_name] for selector in (parsed_reference['selectors])};
+      const properties = { selector['item_name] for selector in (parsed_reference['selectors]) };
       for selector in (parsed_reference['selectors])
         !selector['inherited] || raise(E_INVARG, "A dot must be followed by a property name.");
         selector['kind] == 'property || raise(E_INVARG, "Use .PROPERTY after the object name.");
       endfor
       if (!length(reference))
-        return player:inform_current($event:mk_info(player,
-          "Use #NAME[.PROPERTY...] [exit|player|inventory] [for EXPRESSION], or #NAME.PROPERTY = EXPRESSION. See help #."));
+        return player:inform_current($event:mk_info(player, "Use #NAME[.PROPERTY...] [exit|player|inventory] [for EXPRESSION], or #NAME.PROPERTY = EXPRESSION. See help #."));
       endif
       for property in (properties)
         length(property) || raise(E_INVARG, "A dot must be followed by a property name.");
@@ -2101,8 +2048,7 @@ object BUILDER_FEATURES [
         endif
         if (length(rest))
           rest == "for" && raise(E_INVARG, "Missing expression after for.");
-          index(rest, "for ") == 1 || raise(E_INVARG,
-            "Use exit, player, inventory, or for EXPRESSION after the object name.");
+          index(rest, "for ") == 1 || raise(E_INVARG, "Use exit, player, inventory, or for EXPRESSION after the object name.");
           expression = rest[5..$]:trim();
           length(expression) || raise(E_INVARG, "Missing expression after for.");
           player.programmer || raise(E_PERM, "The for clause requires programmer privileges.");
@@ -2118,10 +2064,10 @@ object BUILDER_FEATURES [
         const room = player.location;
         valid(room) || return {$failed_match, 0};
         const area = room.location;
-        (valid(area) && respond_to(area, 'passages_from)) || return {$failed_match, 0};
+        valid(area) && respond_to(area, 'passages_from) || return {$failed_match, 0};
         const passages = area:passages_from(room);
         length(passages) || return {$failed_match, 0};
-        const aliases = {$passage:command_names(passage, room) for passage in (passages)};
+        const aliases = { $passage:command_names(passage, room) for passage in (passages) };
         const matched = $builder_features:_hash_match(name, passages, aliases);
         if (typeof(matched) != TYPE_FLYWEIGHT)
           return {matched, 0};
@@ -2184,8 +2130,7 @@ object BUILDER_FEATURES [
         except problem (E_PROPNF)
           raise(E_PROPNF, "Property ." + property + " not found on " + toliteral(result));
         endtry
-        player:inform_current($event:mk_info(player,
-          toliteral(target) + "." + properties:join(".") + " = " + toliteral(value)));
+        player:inform_current($event:mk_info(player, toliteral(target) + "." + properties:join(".") + " = " + toliteral(value)));
         return value;
       endif
       if (length(expression))
@@ -2195,24 +2140,17 @@ object BUILDER_FEATURES [
         const room = player.location;
         const destination = result:other_room(room);
         const label = passage_side == 'a ? result.side_a_label | result.side_b_label;
-        let items = {{"Passage", label + " (" + result:aliases_for(room):join(", ") + ")"},
-          {"From", room.name + " (" + tostr(room) + ")"},
-          {"To", destination.name + " (" + tostr(destination) + ")"},
-          {"Open", result.is_open ? "yes" | "no"}};
+        let items = {{"Passage", label + " (" + result:aliases_for(room):join(", ") + ")"}, {"From", room.name + " (" + tostr(room) + ")"}, {"To", destination.name + " (" + tostr(destination) + ")"}, {"Open", result.is_open ? "yes" | "no"}};
         const description = result:description_for(room);
         if (description)
           items = {@items, {"Description", description}};
         endif
-        player:inform_current($event:mk_info(player, $format.deflist:mk(items))
-          :with_presentation_hint('inset));
+        player:inform_current($event:mk_info(player, $format.deflist:mk(items)):with_presentation_hint('inset));
       elseif (typeof(result) == TYPE_OBJ && valid(result))
         const owner = `result.owner ! E_PERM => #-1';
         const location = `result.location ! E_PERM => #-1';
-        const items = {{"Object", tostr(result)}, {"Name", result.name},
-          {"Owner", valid(owner) ? owner.name + " (" + tostr(owner) + ")" | "???"},
-          {"Location", valid(location) ? location.name + " (" + tostr(location) + ")" | "nowhere"}};
-        player:inform_current($event:mk_info(player, $format.deflist:mk(items))
-          :with_presentation_hint('inset));
+        const items = {{"Object", tostr(result)}, {"Name", result.name}, {"Owner", valid(owner) ? owner.name + " (" + tostr(owner) + ")" | "???"}, {"Location", valid(location) ? location.name + " (" + tostr(location) + ")" | "nowhere"}};
+        player:inform_current($event:mk_info(player, $format.deflist:mk(items)):with_presentation_hint('inset));
       else
         player:inform_current($event:mk_info(player, "=> " + toliteral(result)));
       endif
@@ -2281,10 +2219,11 @@ object BUILDER_FEATURES [
     endtry
     return true;
   endmethod
+
   method _author_tokens owner: HACKER
     "Tokenize the authoring language, including fields, assignments, and condition operators.";
     const {text} = args;
-    return {token['text] for token in ($condition:_tokens(text))};
+    return { token['text] for token in ($condition:_tokens(text)) };
   endmethod
 
   method _author_text owner: HACKER
@@ -2301,12 +2240,12 @@ object BUILDER_FEATURES [
     length(name) || raise(E_INVARG, "Supply an object name or identifier.");
     if (name[1] in {"#", "$", "@"} || name in {"me", "here", "player"})
       const object = $match:match_object(name, who);
-      (typeof(object) == TYPE_OBJ && valid(object)) || raise(E_INVARG, "No object matches " + name + ".");
+      typeof(object) == TYPE_OBJ && valid(object) || raise(E_INVARG, "No object matches " + name + ".");
       return object;
     endif
     let object = $builder_features:_hash_match(name, $match:environment(who));
     if (object == $failed_match && valid(who.location) && valid(who.location.location))
-      const rooms = {room for room in (who.location.location.contents) if isa(room, $room)};
+      const rooms = { room for room in (who.location.location.contents) if isa(room, $room) };
       object = $builder_features:_hash_match(name, rooms);
     endif
     object != $failed_match || raise(E_INVARG, "No object matches " + name + ".");
@@ -2316,8 +2255,7 @@ object BUILDER_FEATURES [
   method _author_type owner: HACKER
     "Translate the small builder vocabulary for settings and state types.";
     const {word} = args;
-    const types = ["number" -> 'integer, "decimal" -> 'float, "text" -> 'string,
-      "flag" -> 'boolean, "object" -> 'object, "choice" -> 'string];
+    const types = ["number" -> 'integer, "decimal" -> 'float, "text" -> 'string, "flag" -> 'boolean, "object" -> 'object, "choice" -> 'string];
     maphaskey(types, word) || raise(E_INVARG, "Use number, decimal, text, flag, object, or choice.");
     return types[word];
   endmethod
@@ -2326,10 +2264,7 @@ object BUILDER_FEATURES [
     "Resolve a builder value to the shared literal or reference form, with an optional expected type.";
     set_task_perms(caller_perms());
     const {word, scope, who, ?expected = 'any} = args;
-    const aliases = ["this" -> 'This, "actor" -> maphaskey(scope['input], 'Actor) ? 'Actor | 'Accessor,
-      "place" -> 'Location, "item" -> maphaskey(scope['input], 'Item) ? 'Item | 'Dobj,
-      "key" -> 'Key, "food" -> 'Food, "who" -> 'Who, "from" -> 'From, "to" -> 'To,
-      "exit" -> 'Direction, "connection" -> 'Connection, "passage" -> 'Passage];
+    const aliases = ["this" -> 'This, "actor" -> maphaskey(scope['input], 'Actor) ? 'Actor | 'Accessor, "place" -> 'Location, "item" -> maphaskey(scope['input], 'Item) ? 'Item | 'Dobj, "key" -> 'Key, "food" -> 'Food, "who" -> 'Who, "from" -> 'From, "to" -> 'To, "exit" -> 'Direction, "connection" -> 'Connection, "passage" -> 'Passage];
     if (maphaskey(aliases, word) && maphaskey(scope['input], aliases[word]))
       return ['kind -> 'input, 'name -> aliases[word]];
     endif
@@ -2413,23 +2348,19 @@ object BUILDER_FEATURES [
           const offset = i * 3;
           const field = tosym(words[offset + 1]);
           maphaskey(fields, field) || raise(E_INVARG, "Unknown relation field: " + tostr(field));
-          (!maphaskey(values, field) && !maphaskey(bind, field))
-            || raise(E_INVARG, "Repeated relation field: " + tostr(field));
+          !maphaskey(values, field) && !maphaskey(bind, field) || raise(E_INVARG, "Repeated relation field: " + tostr(field));
           if (words[offset + 2] == "=")
             values[field] = $builder_features:_author_value(words[offset + 3], scope, who, fields[field]);
           elseif (words[offset + 2] == "as")
             const name = tosym(words[offset + 3]);
             $behavior_schema:_name(name, "match name");
-            !(words[offset + 3] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"})
-              && !maphaskey(scope['state], name) && !maphaskey(scope['parameter], name)
-              || raise(E_INVARG, "Choose a match name that differs from event inputs, state, and settings.");
+            !(words[offset + 3] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"}) && !maphaskey(scope['state], name) && !maphaskey(scope['parameter], name) || raise(E_INVARG, "Choose a match name that differs from event inputs, state, and settings.");
             bind[field] = name;
           else
             raise(E_INVARG, "Use FIELD=VALUE or FIELD as NAME.");
           endif
         endfor
-        return ['kind -> 'relation, 'relation -> reference, 'fields -> fields,
-          'arguments -> values, 'bind -> bind];
+        return ['kind -> 'relation, 'relation -> reference, 'fields -> fields, 'arguments -> values, 'bind -> bind];
       endif
       length(words) >= 2 || raise(E_INVARG, "Use fact NAME FIELD=VALUE, or fact in RELATION FIELD=VALUE.");
       const name = tosym(words[2]);
@@ -2438,15 +2369,10 @@ object BUILDER_FEATURES [
       const values = $builder_features:_author_arguments(words[3..$], schemas[name]['inputs], scope, who);
       return ['kind -> 'predicate, 'name -> name, 'arguments -> values, 'bind -> []];
     elseif (words[1] == "find")
-      (length(words) == 6 && words[2] == "occupant" && words[3] == "in" && words[5] == "as")
-        || raise(E_INVARG, "Use find occupant in PLACE as NAME.");
+      length(words) == 6 && words[2] == "occupant" && words[3] == "in" && words[5] == "as" || raise(E_INVARG, "Use find occupant in PLACE as NAME.");
       $behavior_schema:_name(tosym(words[6]), "match name");
-      !(words[6] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"})
-        && !maphaskey(scope['state], tosym(words[6])) && !maphaskey(scope['parameter], tosym(words[6]))
-        || raise(E_INVARG, "Choose a match name that differs from event inputs, state, and settings.");
-      return ['kind -> 'predicate, 'name -> 'occupants,
-        'arguments -> ['location -> $builder_features:_author_value(words[4], scope, who, 'object)],
-        'bind -> ['object -> tosym(words[6])]];
+      !(words[6] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"}) && !maphaskey(scope['state], tosym(words[6])) && !maphaskey(scope['parameter], tosym(words[6])) || raise(E_INVARG, "Choose a match name that differs from event inputs, state, and settings.");
+      return ['kind -> 'predicate, 'name -> 'occupants, 'arguments -> ['location -> $builder_features:_author_value(words[4], scope, who, 'object)], 'bind -> ['object -> tosym(words[6])]];
     endif
     length(words) >= 3 || raise(E_INVARG, "Use a comparison such as visits >= 4 or actor is me.");
     if (words[2] == "is" && words[3] == "not")
@@ -2460,24 +2386,19 @@ object BUILDER_FEATURES [
     elseif (words[2] == "is" && length(words) == 4 && words[3] in {"in", "a"})
       predicate = words[3] == "in" ? 'location_is | 'isa;
       const field = words[3] == "in" ? 'location | 'prototype;
-      values = ['object -> $builder_features:_author_value(words[1], scope, who, 'object),
-        field -> $builder_features:_author_value(words[4], scope, who, 'object)];
+      values = ['object -> $builder_features:_author_value(words[1], scope, who, 'object), field -> $builder_features:_author_value(words[4], scope, who, 'object)];
     elseif (length(words) == 5 && words[2..4] == {"is", "owned", "by"})
       predicate = 'owner_is;
-      values = ['object -> $builder_features:_author_value(words[1], scope, who, 'object),
-        'owner -> $builder_features:_author_value(words[5], scope, who, 'object)];
+      values = ['object -> $builder_features:_author_value(words[1], scope, who, 'object), 'owner -> $builder_features:_author_value(words[5], scope, who, 'object)];
     else
-      const ops = ["is" -> 'eq, "=" -> 'eq, "==" -> 'eq, "!=" -> 'ne,
-        ">" -> 'gt, "<" -> 'lt, ">=" -> 'ge, "<=" -> 'le];
-      (length(words) == 3 && maphaskey(ops, words[2]))
-        || raise(E_INVARG, "Unknown condition. Use @reaction conditions for examples.");
+      const ops = ["is" -> 'eq, "=" -> 'eq, "==" -> 'eq, "!=" -> 'ne, ">" -> 'gt, "<" -> 'lt, ">=" -> 'ge, "<=" -> 'le];
+      length(words) == 3 && maphaskey(ops, words[2]) || raise(E_INVARG, "Unknown condition. Use @reaction conditions for examples.");
       const left = $builder_features:_author_value(words[1], scope, who);
       if (left['kind] == 'literal && typeof(left['value]) == TYPE_STR && !words[1]:starts_with("\""))
         raise(E_INVARG, "Unknown name: " + words[1] + ". Use @state OBJECT to see declared state, or add a named setting with with.");
       endif
       const kind = $behavior_schema:expression(left, scope);
-      return ['kind -> 'compare, 'op -> ops[words[2]], 'left -> left,
-        'right -> $builder_features:_author_value(words[3], scope, who, kind)];
+      return ['kind -> 'compare, 'op -> ops[words[2]], 'left -> left, 'right -> $builder_features:_author_value(words[3], scope, who, kind)];
     endif
     return ['kind -> 'predicate, 'name -> predicate, 'arguments -> values, 'bind -> []];
   endmethod
@@ -2508,8 +2429,7 @@ object BUILDER_FEATURES [
     try
       const words = $builder_features:_author_tokens(argstr);
       if (length(words) == 0 || words == {"help"})
-        player:inform_current($event:mk_info(player,
-          "Use @act Henri sit target=couch. Use @reaction actions to list actions and arguments."));
+        player:inform_current($event:mk_info(player, "Use @act Henri sit target=couch. Use @reaction actions to list actions and arguments."));
         return;
       endif
       length(words) >= 2 || raise(E_INVARG, "Use @act ACTOR ACTION target=OBJECT ...");
@@ -2519,8 +2439,7 @@ object BUILDER_FEATURES [
       const schemas = $reaction:action_schemas();
       maphaskey(schemas, action) || raise(E_INVARG, "Unknown action. Use @reaction actions.");
       const inputs = mapdelete(schemas[action]['inputs], 'actor);
-      const expressions = $builder_features:_author_arguments(words[3..$], inputs,
-        $rule_engine:scope(), player);
+      const expressions = $builder_features:_author_arguments(words[3..$], inputs, $rule_engine:scope(), player);
       let values = ['actor -> actor];
       for field in (mapkeys(expressions))
         values[field] = expressions[field]['value];
@@ -2547,8 +2466,7 @@ object BUILDER_FEATURES [
     try
       const words = $builder_features:_author_tokens(argstr);
       if (length(words) == 0 || words == {"help"})
-        player:inform_current($event:mk_info(player,
-          "Use @exit-provider ROOM to list custom exits, or @exit-provider ROOM add|remove|refresh OBJECT."));
+        player:inform_current($event:mk_info(player, "Use @exit-provider ROOM to list custom exits, or @exit-provider ROOM add|remove|refresh OBJECT."));
         return;
       endif
       const room = $builder_features:_author_object(words[1], player);
@@ -2557,14 +2475,12 @@ object BUILDER_FEATURES [
         let lines = {"Custom exit providers for " + room.name + ":"};
         for provider in (mapkeys(room.exit_providers))
           const label = valid(provider) ? provider.name + " (" + tostr(provider) + ")" | tostr(provider);
-          lines = {@lines, label + (length($room:_exit_registration(room, provider))
-            ? " — approved" | " — needs approval again")};
+          lines = {@lines, label + (length($room:_exit_registration(room, provider)) ? " \u2014 approved" | " \u2014 needs approval again")};
         endfor
         player:inform_current($event:mk_info(player, @$format:literal_inline(lines:join("\n"))));
         return;
       endif
-      (length(words) == 3 && words[2] in {"add", "remove", "refresh"})
-        || raise(E_INVARG, "Use @exit-provider ROOM add|remove|refresh OBJECT.");
+      length(words) == 3 && words[2] in {"add", "remove", "refresh"} || raise(E_INVARG, "Use @exit-provider ROOM add|remove|refresh OBJECT.");
       const provider = $builder_features:_author_object(words[3], player);
       const capability = player:find_capability_for(room, 'room);
       const subject = typeof(capability) == TYPE_FLYWEIGHT ? capability | room;
@@ -2575,8 +2491,7 @@ object BUILDER_FEATURES [
       else
         $room:exit_options_changed(subject, provider);
       endif
-      player:inform_current($event:mk_info(player,
-        "Custom exit " + words[2] + ": " + provider.name + " in " + room.name + "."));
+      player:inform_current($event:mk_info(player, "Custom exit " + words[2] + ": " + provider.name + " in " + room.name + "."));
     except problem (E_INVARG, E_TYPE, E_PERM, E_PROPNF)
       player:inform_current($event:mk_error(player, problem[2]));
     endtry
@@ -2584,20 +2499,7 @@ object BUILDER_FEATURES [
 
   method reaction_steps owner: HACKER
     "Supply the accepted step names and their command help from one catalog.";
-    return [
-      'announce -> "announce \"MESSAGE\" or announce message NAME — show a message in the event's room",
-      'tell -> "tell actor \"MESSAGE\" or tell actor message NAME — send a private message",
-      'emote -> "emote \"MESSAGE\" or emote message NAME — describe what this object does",
-      'set -> "set STATE VALUE — change a declared state value",
-      'add -> "add COUNTER AMOUNT — increase a declared counter",
-      'subtract -> "subtract COUNTER AMOUNT — decrease a declared counter",
-      'schedule -> "schedule NAME SECONDS STEP — replace a timer with this name",
-      'cancel -> "cancel NAME — cancel a timer on this object",
-      'trigger -> "trigger OBJECT EVENT — send an event to an object you control",
-      'record -> "record in RELATION FIELD=VALUE ... — store a fact once",
-      'forget -> "forget in RELATION FIELD=VALUE ... — remove a fact if present",
-      'do -> "do ACTION target=OBJECT actor=ACTOR ... — request a normal world action"
-    ];
+    return ['announce -> "announce \"MESSAGE\" or announce message NAME \u2014 show a message in the event's room", 'tell -> "tell actor \"MESSAGE\" or tell actor message NAME \u2014 send a private message", 'emote -> "emote \"MESSAGE\" or emote message NAME \u2014 describe what this object does", 'set -> "set STATE VALUE \u2014 change a declared state value", 'add -> "add COUNTER AMOUNT \u2014 increase a declared counter", 'subtract -> "subtract COUNTER AMOUNT \u2014 decrease a declared counter", 'schedule -> "schedule NAME SECONDS STEP \u2014 replace a timer with this name", 'cancel -> "cancel NAME \u2014 cancel a timer on this object", 'trigger -> "trigger OBJECT EVENT \u2014 send an event to an object you control", 'record -> "record in RELATION FIELD=VALUE ... \u2014 store a fact once", 'forget -> "forget in RELATION FIELD=VALUE ... \u2014 remove a fact if present", 'do -> "do ACTION target=OBJECT actor=ACTOR ... \u2014 request a normal world action"];
   endmethod
 
   method _author_message owner: ARCH_WIZARD
@@ -2607,11 +2509,9 @@ object BUILDER_FEATURES [
     if (length(words) == 1)
       return $builder_features:_author_text(words[1]);
     endif
-    (length(words) == 2 && words[1] == "message")
-      || raise(E_INVARG, "Use a quoted message, or message PROPERTY_NAME.");
+    length(words) == 2 && words[1] == "message" || raise(E_INVARG, "Use a quoted message, or message PROPERTY_NAME.");
     const name = $builder_features:_author_text(words[2]);
-    (name:ends_with("_msg") || name:ends_with("_msgs") || name:ends_with("_msg_bag"))
-      || raise(E_INVARG, "A message property ends with _msg, _msgs, or _msg_bag.");
+    name:ends_with("_msg") || name:ends_with("_msgs") || name:ends_with("_msg_bag") || raise(E_INVARG, "A message property ends with _msg, _msgs, or _msg_bag.");
     for template in ($reaction:message_templates(tosym(name), host))
       $sub_utils:compile($sub_utils:decompile(template), $reaction:message_bindings(kind));
     endfor
@@ -2625,16 +2525,12 @@ object BUILDER_FEATURES [
     depth <= 16 || raise(E_QUOTA, "Steps are nested too deeply.");
     length(words) > 0 || raise(E_INVARG, "Supply a step. Use @reaction steps for examples.");
     const kind = tosym(words[1]);
-    maphaskey($builder_features:reaction_steps(), kind)
-      || raise(E_INVARG, "Unknown step: " + words[1] + ". Use @reaction steps.");
+    maphaskey($builder_features:reaction_steps(), kind) || raise(E_INVARG, "Unknown step: " + words[1] + ". Use @reaction steps.");
     if (kind in {'announce, 'emote})
-      return $reaction:parse_effect({kind,
-        $builder_features:_author_message(words[2..$], host, kind)});
+      return $reaction:parse_effect({kind, $builder_features:_author_message(words[2..$], host, kind)});
     elseif (kind == 'tell)
-      (length(words) >= 3 && words[2] == "actor")
-        || raise(E_INVARG, "Use tell actor followed by a quoted message or message NAME.");
-      return $reaction:parse_effect({'tell, 'Actor,
-        $builder_features:_author_message(words[3..$], host, kind)});
+      length(words) >= 3 && words[2] == "actor" || raise(E_INVARG, "Use tell actor followed by a quoted message or message NAME.");
+      return $reaction:parse_effect({'tell, 'Actor, $builder_features:_author_message(words[3..$], host, kind)});
     elseif (kind in {'set, 'add, 'subtract})
       length(words) == 3 || raise(E_INVARG, "Supply a state name and a value.");
       const field = tosym(words[2]);
@@ -2643,7 +2539,7 @@ object BUILDER_FEATURES [
       kind == 'set || expected in {'integer, 'float} || raise(E_INVARG, "Only a number can be increased or decreased.");
       const value = $builder_features:_author_value(words[3], $rule_engine:scope(), who, expected)['value];
       kind == 'set && $reaction:_check_state_value(value, host.reaction_state_fields[field]);
-      return $reaction:parse_effect({kind == 'set ? 'set | (kind == 'add ? 'increment | 'decrement), field, value});
+      return $reaction:parse_effect({kind == 'set ? 'set | kind == 'add ? 'increment | 'decrement, field, value});
     elseif (kind == 'trigger)
       length(words) == 3 || raise(E_INVARG, "Use trigger OBJECT EVENT, such as trigger Henri cupboard_open.");
       $behavior_schema:_name(tosym(words[3]), "event name");
@@ -2655,18 +2551,15 @@ object BUILDER_FEATURES [
       const name = tosym(words[2]);
       $behavior_schema:_name(name, "timer name");
       seconds >= 0 && seconds <= 86400 || raise(E_INVARG, "Timers must wait zero seconds through one day.");
-      return <$reaction, .type = 'schedule, .name = name, .seconds = seconds,
-        .effect = $builder_features:_author_step(words[4..$], scope, who, host, depth + 1, parameters)>;
+      return <$reaction, .type = 'schedule, .name = name, .seconds = seconds, .effect = $builder_features:_author_step(words[4..$], scope, who, host, depth + 1, parameters)>;
     elseif (kind == 'cancel)
       length(words) == 2 || raise(E_INVARG, "Use cancel NAME.");
       return $reaction:parse_effect({'cancel, tosym(words[2])});
     endif
     if (kind in {'record, 'forget})
-      (length(words) >= 3 && words[2] == "in")
-        || raise(E_INVARG, "Use record in RELATION FIELD=VALUE, or forget in RELATION FIELD=VALUE.");
+      length(words) >= 3 && words[2] == "in" || raise(E_INVARG, "Use record in RELATION FIELD=VALUE, or forget in RELATION FIELD=VALUE.");
       const {reference, fields} = $builder_features:_author_relation(words[3], scope, who, parameters);
-      return $reaction:parse_effect({kind, reference,
-        $builder_features:_author_arguments(words[4..$], fields, scope, who), fields});
+      return $reaction:parse_effect({kind, reference, $builder_features:_author_arguments(words[4..$], fields, scope, who), fields});
     endif
     length(words) >= 2 || raise(E_INVARG, "Use do ACTION name=value. See @reaction actions.");
     const schemas = $reaction:action_schemas();
@@ -2675,6 +2568,7 @@ object BUILDER_FEATURES [
     const values = $builder_features:_author_arguments(words[3..$], schemas[action]['inputs], scope, who);
     return $reaction:parse_effect({'action, action, values});
   endmethod
+
   method _author_value_text owner: ARCH_WIZARD
     "Show a value or reference in the builder command vocabulary without executing object methods.";
     set_task_perms(caller_perms());
@@ -2685,13 +2579,11 @@ object BUILDER_FEATURES [
         return valid(value) ? value.name + " (" + tostr(value) + ")" | tostr(value) + " (removed)";
       endif
       typeof(value) == TYPE_SYM && return tostr(value);
-      return typeof(value) == TYPE_BOOL ? (value ? "yes" | "no") | toliteral(value);
+      return typeof(value) == TYPE_BOOL ? value ? "yes" | "no" | toliteral(value);
     endif
     const name = expression['name];
     if (expression['kind] == 'input)
-      const aliases = ['This -> "this", 'Actor -> "actor", 'Accessor -> "actor", 'Location -> "place",
-        'Item -> "item", 'Dobj -> "item", 'Key -> "key", 'Food -> "food", 'Who -> "who", 'From -> "from", 'To -> "to",
-        'Direction -> "exit", 'Connection -> "connection", 'Passage -> "passage"];
+      const aliases = ['This -> "this", 'Actor -> "actor", 'Accessor -> "actor", 'Location -> "place", 'Item -> "item", 'Dobj -> "item", 'Key -> "key", 'Food -> "food", 'Who -> "who", 'From -> "from", 'To -> "to", 'Direction -> "exit", 'Connection -> "connection", 'Passage -> "passage"];
       return `aliases[name] ! E_RANGE => tostr(name)';
     endif
     return tostr(name);
@@ -2704,14 +2596,12 @@ object BUILDER_FEATURES [
     const kind = tree['kind];
     if (kind in {'all, 'any})
       length(tree['children]) == 0 && return kind == 'all ? "always" | "never";
-      return "(" + {$builder_features:_author_condition_text(child) for child in (tree['children])}
-        :join(kind == 'all ? " AND " | " OR ") + ")";
+      return "(" + { $builder_features:_author_condition_text(child) for child in (tree['children]) }:join(kind == 'all ? " AND " | " OR ") + ")";
     elseif (kind == 'not)
       return "NOT (" + $builder_features:_author_condition_text(tree['child]) + ")";
     elseif (kind == 'compare)
       const ops = ['eq -> "is", 'ne -> "is not", 'lt -> "<", 'le -> "<=", 'gt -> ">", 'ge -> ">="];
-      return $builder_features:_author_value_text(tree['left]) + " " + ops[tree['op]] + " "
-        + $builder_features:_author_value_text(tree['right]);
+      return $builder_features:_author_value_text(tree['left]) + " " + ops[tree['op]] + " " + $builder_features:_author_value_text(tree['right]);
     endif
     if (kind == 'relation)
       let parts = {"fact in", $builder_features:_author_value_text(tree['relation])};
@@ -2754,15 +2644,13 @@ object BUILDER_FEATURES [
     const effect = typeof(raw) == TYPE_LIST ? $reaction:parse_effect(raw) | raw;
     const kind = effect.type;
     if (kind in {'announce, 'emote, 'tell})
-      const message = typeof(effect.msg) == TYPE_SYM ? "message " + tostr(effect.msg)
-        | toliteral($sub_utils:decompile(effect.msg));
+      const message = typeof(effect.msg) == TYPE_SYM ? "message " + tostr(effect.msg) | toliteral($sub_utils:decompile(effect.msg));
       return tostr(kind) + (kind == 'tell ? " " + tostr(effect.target) | "") + " " + message;
     elseif (kind in {'set, 'increment, 'decrement})
       const words = ['set -> "set", 'increment -> "add", 'decrement -> "subtract"];
       return words[kind] + " " + tostr(effect.prop) + " " + toliteral(kind == 'set ? effect.value | effect.by);
     elseif (kind == 'schedule)
-      return "schedule " + tostr(effect.name) + " " + tostr(effect.seconds) + " "
-        + $builder_features:_author_step_text(effect.effect, environment);
+      return "schedule " + tostr(effect.name) + " " + tostr(effect.seconds) + " " + $builder_features:_author_step_text(effect.effect, environment);
     elseif (kind == 'cancel)
       return "cancel " + tostr(effect.name);
     elseif (kind in {'action, 'record, 'forget})
@@ -2770,8 +2658,7 @@ object BUILDER_FEATURES [
       if (kind == 'action)
         parts = {"do", tostr(effect.action)};
       else
-        const reference = typeof(environment) == TYPE_MAP
-          ? ['kind -> 'literal, 'value -> $condition:resolve(effect.relation, environment)] | effect.relation;
+        const reference = typeof(environment) == TYPE_MAP ? ['kind -> 'literal, 'value -> $condition:resolve(effect.relation, environment)] | effect.relation;
         parts = {tostr(kind), "in", $builder_features:_author_value_text(reference)};
       endif
       for field in (mapkeys(effect.arguments))
@@ -2785,14 +2672,12 @@ object BUILDER_FEATURES [
     elseif (kind == 'move)
       return "move to " + tostr(effect.destination);
     elseif (kind == 'trigger)
-      let target = typeof(effect.target) == TYPE_MAP ? effect.target
-        | ['kind -> 'literal, 'value -> effect.target];
+      let target = typeof(effect.target) == TYPE_MAP ? effect.target | ['kind -> 'literal, 'value -> effect.target];
       if (typeof(environment) == TYPE_MAP)
         target = ['kind -> 'literal, 'value -> $condition:resolve(target, environment)];
       endif
       const event = tostr(effect.event);
-      return "trigger " + $builder_features:_author_value_text(target) + " "
-        + (event:starts_with("on_") ? event[4..$] | event);
+      return "trigger " + $builder_features:_author_value_text(target) + " " + (event:starts_with("on_") ? event[4..$] | event);
     endif
     raise(E_INVARG, "Unknown step: " + tostr(kind));
   endmethod
@@ -2813,74 +2698,27 @@ object BUILDER_FEATURES [
     set_task_perms(caller_perms());
     const {?topic = "help"} = args;
     if (topic == "events")
-      let lines = {"These events come from core operations. Programmers can also send custom events with fire_trigger.",
-        "Use after NAME for a custom event named on_NAME. Event names belong to the receiving object.",
-        "Custom events supply actor and place; their producer defines when they happen."};
+      let lines = {"These events come from core operations. Programmers can also send custom events with fire_trigger.", "Use after NAME for a custom event named on_NAME. Event names belong to the receiving object.", "Custom events supply actor and place; their producer defines when they happen."};
       for event in ($reaction.event_triggers)
         const scope = $rule_engine:trigger_scope(event);
-        lines = {@lines, $builder_features:_author_trigger_text(event) + ": "
-          + {$builder_features:_author_value_text(['kind -> 'input, 'name -> field]) for field in (mapkeys(scope['input]))}:join(", ")};
+        lines = {@lines, $builder_features:_author_trigger_text(event) + ": " + { $builder_features:_author_value_text(['kind -> 'input, 'name -> field]) for field in (mapkeys(scope['input])) }:join(", ")};
       endfor
       return lines;
     elseif (topic == "steps")
       return mapvalues($builder_features:reaction_steps());
     elseif (topic == "actions" || topic == "facts")
       const schemas = topic == "actions" ? $reaction:action_schemas() | $rule_engine:schemas();
-      let lines = topic == "facts" ? {
-        "Stored facts: fact in RELATION FIELD=VALUE. Use FIELD as NAME to select a value.",
-        "RELATION is an object or a reaction setting. @facts OBJECT show lists its fields and facts.",
-        "General world conditions:"} | {};
+      let lines = topic == "facts" ? {"Stored facts: fact in RELATION FIELD=VALUE. Use FIELD as NAME to select a value.", "RELATION is an object or a reaction setting. @facts OBJECT show lists its fields and facts.", "General world conditions:"} | {};
       for name in (mapkeys(schemas))
         const entry = schemas[name];
-        const arguments = {tostr(field) + "=" + tostr(entry['inputs][field]) for field in (mapkeys(entry['inputs]))};
-        lines = {@lines, (topic == "actions" ? "do " | "fact ") + tostr(name) + " " + arguments:join(" ")
-          + " — " + entry['description]};
+        const arguments = { tostr(field) + "=" + tostr(entry['inputs][field]) for field in (mapkeys(entry['inputs])) };
+        lines = {@lines, (topic == "actions" ? "do " | "fact ") + tostr(name) + " " + arguments:join(" ") + " \u2014 " + entry['description]};
       endfor
       return lines;
     elseif (topic == "conditions")
-      return {"A condition decides whether a reaction runs. Use always to remove a condition.",
-        "Examples: actor is me; this is open; actor is in place; visits >= 4; mood is sleepy.",
-        "AND requires both conditions. OR accepts either condition. NOT reverses a condition.",
-        "Use parentheses for groups: (mood is awake OR visits >= 4) AND actor is me.",
-        "this is the object with the reaction. actor is the participant. place is the event's room.",
-        "State names come from @state. Settings come from with. Put text with spaces in double quotes.",
-        "find occupant in place as visitor selects nearby objects. Add AND visitor is a $actor to select actors.",
-        "Choose select each by visitor to run steps for each match, or select one to require exactly one match.",
-        "Select once runs the steps once if anything matches, without exposing found objects to those steps.",
-        "Select one requires exactly one match. Select each runs the steps for every distinct match.",
-        "Selection orders object references by identity. It never relies on arrival order.",
-        "Use fact in RELATION FIELD=VALUE to check stored facts. Use FIELD as NAME to select a value."};
+      return {"A condition decides whether a reaction runs. Use always to remove a condition.", "Examples: actor is me; this is open; actor is in place; visits >= 4; mood is sleepy.", "AND requires both conditions. OR accepts either condition. NOT reverses a condition.", "Use parentheses for groups: (mood is awake OR visits >= 4) AND actor is me.", "this is the object with the reaction. actor is the participant. place is the event's room.", "State names come from @state. Settings come from with. Put text with spaces in double quotes.", "find occupant in place as visitor selects nearby objects. Add AND visitor is a $actor to select actors.", "Choose select each by visitor to run steps for each match, or select one to require exactly one match.", "Select once runs the steps once if anything matches, without exposing found objects to those steps.", "Select one requires exactly one match. Select each runs the steps for every distinct match.", "Selection orders object references by identity. It never relies on arrival order.", "Use fact in RELATION FIELD=VALUE to check stored facts. Use FIELD as NAME to select a value."};
     endif
-    return {"A reaction makes an object respond to an event. You choose when it runs and the steps it takes.",
-      "Example: @reaction cupboard welcome after open",
-      "Then: @reaction cupboard welcome then announce \"The cupboard smells of cedar.\"",
-      "Inspect: @reaction cupboard welcome show",
-      "Preview: @reaction cupboard welcome preview actor=me",
-      "Start: @reaction cupboard welcome enable",
-      "New reactions start disabled. Their steps run in numbered order. Reactions for the same event run by name. A denied step stops later steps.",
-      "Use @reaction OBJECT to list reactions. Quote an object name if it contains spaces.",
-      "@reaction OBJECT NAME after EVENT — create a reaction or change its event",
-      "@reaction OBJECT NAME when COUNTER >= NUMBER — respond when a value crosses a threshold",
-      "@reaction OBJECT NAME if CONDITION — replace its condition",
-      "@reaction OBJECT NAME then STEP — append a step",
-      "Message steps accept quoted text or message NAME, such as then announce message greeting_msg.",
-      "Use then trigger OBJECT EVENT to send an event, such as then trigger Henri cupboard_open.",
-      "@reaction OBJECT NAME step NUMBER STEP — replace a numbered step",
-      "@reaction OBJECT NAME remove-step NUMBER — delete a step",
-      "@reaction OBJECT NAME with SETTING TYPE VALUE — choose a reusable setting",
-      "@reaction OBJECT NAME select once|one|each [by NAME ...] — choose how matches are used",
-      "@reaction OBJECT NAME show|check|preview|enable|disable|remove",
-      "@reaction OBJECT NAME trace on|off — record its latest run; trace shows that report",
-      "@reaction OBJECT NAME copy to OBJECT [as NAME] — copy disabled, with fresh state",
-      "@reaction events|conditions|steps|actions|facts — discover the available parts",
-      "@state OBJECT NAME number 0 — declare a counter; use choice awake sleepy for named states",
-      "@state OBJECT — show declared state; @state OBJECT NAME set VALUE changes it",
-      "@rule OBJECT OPERATION CONDITION — control open, take, put, view, or another supported operation",
-      "@facts OBJECT define FIELD:TYPE ... — define fields on this relation",
-      "@facts OBJECT add FIELD=VALUE ... — record a fact; use remove to delete it, or show to read it",
-      "Disabling, replacing, or removing a reaction cancels its timers. Earlier completed steps remain completed.",
-      "A preview reads current facts and shows planned steps. It sends no messages and changes no state.",
-      "Preview does not run action permission checks or extension conditions. Actual actions can still be denied."};
+    return {"A reaction makes an object respond to an event. You choose when it runs and the steps it takes.", "Example: @reaction cupboard welcome after open", "Then: @reaction cupboard welcome then announce \"The cupboard smells of cedar.\"", "Inspect: @reaction cupboard welcome show", "Preview: @reaction cupboard welcome preview actor=me", "Start: @reaction cupboard welcome enable", "New reactions start disabled. Their steps run in numbered order. Reactions for the same event run by name. A denied step stops later steps.", "Use @reaction OBJECT to list reactions. Quote an object name if it contains spaces.", "@reaction OBJECT NAME after EVENT \u2014 create a reaction or change its event", "@reaction OBJECT NAME when COUNTER >= NUMBER \u2014 respond when a value crosses a threshold", "@reaction OBJECT NAME if CONDITION \u2014 replace its condition", "@reaction OBJECT NAME then STEP \u2014 append a step", "Message steps accept quoted text or message NAME, such as then announce message greeting_msg.", "Use then trigger OBJECT EVENT to send an event, such as then trigger Henri cupboard_open.", "@reaction OBJECT NAME step NUMBER STEP \u2014 replace a numbered step", "@reaction OBJECT NAME remove-step NUMBER \u2014 delete a step", "@reaction OBJECT NAME with SETTING TYPE VALUE \u2014 choose a reusable setting", "@reaction OBJECT NAME select once|one|each [by NAME ...] \u2014 choose how matches are used", "@reaction OBJECT NAME show|check|preview|enable|disable|remove", "@reaction OBJECT NAME trace on|off \u2014 record its latest run; trace shows that report", "@reaction OBJECT NAME copy to OBJECT [as NAME] \u2014 copy disabled, with fresh state", "@reaction events|conditions|steps|actions|facts \u2014 discover the available parts", "@state OBJECT NAME number 0 \u2014 declare a counter; use choice awake sleepy for named states", "@state OBJECT \u2014 show declared state; @state OBJECT NAME set VALUE changes it", "@rule OBJECT OPERATION CONDITION \u2014 control open, take, put, view, or another supported operation", "@facts OBJECT define FIELD:TYPE ... \u2014 define fields on this relation", "@facts OBJECT add FIELD=VALUE ... \u2014 record a fact; use remove to delete it, or show to read it", "Disabling, replacing, or removing a reaction cancels its timers. Earlier completed steps remain completed.", "A preview reads current facts and shows planned steps. It sends no messages and changes no state.", "Preview does not run action permission checks or extension conditions. Actual actions can still be denied."};
   endmethod
 
   method _author_inspect owner: ARCH_WIZARD
@@ -2889,12 +2727,9 @@ object BUILDER_FEATURES [
     const {host, name, reaction} = args;
     const property = name + "_reaction";
     const installed = `host.(property) ! E_PROPNF => 0';
-    const active = reaction.enabled && installed != 0
-      && $reaction:_authority(host, property, installed) != 0;
-    const status = !reaction.enabled ? "disabled" | (active ? "enabled" | "inactive until you enable it on this object");
-    let lines = {name + " on " + host.name + ": " + status,
-      $builder_features:_author_trigger_text(reaction.trigger),
-      "if " + (reaction.when == 0 ? "always" | $builder_features:_author_condition_text(reaction.when.condition))};
+    const active = reaction.enabled && installed != 0 && $reaction:_authority(host, property, installed) != 0;
+    const status = !reaction.enabled ? "disabled" | active ? "enabled" | "inactive until you enable it on this object";
+    let lines = {name + " on " + host.name + ": " + status, $builder_features:_author_trigger_text(reaction.trigger), "if " + (reaction.when == 0 ? "always" | $builder_features:_author_condition_text(reaction.when.condition))};
     const parameters = `reaction.parameters ! E_PROPNF => []';
     for field in (mapkeys(parameters))
       lines = {@lines, "Setting " + tostr(field) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> parameters[field]])};
@@ -2904,8 +2739,7 @@ object BUILDER_FEATURES [
       lines = {@lines, "State " + tostr(field) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> state[field]])};
     endfor
     const selection = `reaction.selection ! E_PROPNF => ['mode -> 'one, 'order -> {}, 'limit -> 256]';
-    lines = {@lines, "Matches: " + tostr(selection['mode]) + (length(selection['order]) > 0
-      ? " by " + {tostr(ordered_name) for ordered_name in (selection['order])}:join(", ") | "")};
+    lines = {@lines, "Matches: " + tostr(selection['mode]) + (length(selection['order]) > 0 ? " by " + { tostr(ordered_name) for ordered_name in (selection['order]) }:join(", ") | "")};
     for i in [1..length(reaction.effects)]
       lines = {@lines, "Step " + tostr(i) + ": " + $builder_features:_author_step_text(reaction.effects[i])};
     endfor
@@ -2923,23 +2757,18 @@ object BUILDER_FEATURES [
     "Plan effects using read-only canonical queries. Never invoke an action, message recipient, or extension predicate.";
     set_task_perms(caller_perms());
     const {host, reaction, context} = args;
-    let lines = {"Preview only: nothing changes. This reaction is " + (reaction.enabled ? "enabled." | "disabled."),
-      $builder_features:_author_trigger_text(reaction.trigger),
-      "Condition: " + (reaction.when == 0 ? "always" | $builder_features:_author_condition_text(reaction.when.condition))};
+    let lines = {"Preview only: nothing changes. This reaction is " + (reaction.enabled ? "enabled." | "disabled."), $builder_features:_author_trigger_text(reaction.trigger), "Condition: " + (reaction.when == 0 ? "always" | $builder_features:_author_condition_text(reaction.when.condition))};
     const initial_state = $reaction:state_values(host);
     for name in (mapkeys(initial_state))
-      lines = {@lines, "Current " + tostr(name) + ": " + $builder_features:_author_value_text(
-        ['kind -> 'literal, 'value -> initial_state[name]])};
+      lines = {@lines, "Current " + tostr(name) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> initial_state[name]])};
     endfor
     for name in (mapkeys(reaction.parameters))
-      lines = {@lines, "Setting " + tostr(name) + ": " + $builder_features:_author_value_text(
-        ['kind -> 'literal, 'value -> reaction.parameters[name]])};
+      lines = {@lines, "Setting " + tostr(name) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> reaction.parameters[name]])};
     endfor
     const rows = $reaction:_select(reaction, context, true);
     lines = {@lines, "Condition " + (length(rows) > 0 ? "matched." | "did not match. No steps would run.")};
     for row in (rows)
-      let environment = ['input -> context, 'parameter -> reaction.parameters,
-        'state -> $reaction:state_values(host), 'binding -> row];
+      let environment = ['input -> context, 'parameter -> reaction.parameters, 'state -> $reaction:state_values(host), 'binding -> row];
       for field in (mapkeys(row))
         lines = {@lines, "Selected " + tostr(field) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> row[field]])};
       endfor
@@ -2951,14 +2780,13 @@ object BUILDER_FEATURES [
           const old = environment['state][effect.prop];
           let amount = effect.type == 'set ? effect.value | effect.by;
           typeof(old) == TYPE_FLOAT && typeof(amount) == TYPE_INT && (amount = tofloat(amount));
-          environment['state][effect.prop] = effect.type == 'set ? amount
-            | (effect.type == 'increment ? old + amount | old - amount);
+          environment['state][effect.prop] = effect.type == 'set ? amount | effect.type == 'increment ? old + amount | old - amount;
         endif
       endfor
     endfor
-    return {@lines, "State changes can start other reactions; this preview does not expand those later reactions.",
-      "Actions and timer rechecks can fail when the reaction actually runs. No actions were attempted."};
+    return {@lines, "State changes can start other reactions; this preview does not expand those later reactions.", "Actions and timer rechecks can fail when the reaction actually runs. No actions were attempted."};
   endmethod
+
   verb "@reaction @reactions @state @rule @facts" (any any any) owner: ARCH_WIZARD flags: "rd"
     "HINT: help -- Author reactions, state, and access rules without programming privileges.";
     caller == player || raise(E_PERM);
@@ -2976,7 +2804,7 @@ object BUILDER_FEATURES [
     "Shared command and tool service. Authenticate the builder before interpreting any request.";
     const {command, text, who} = args;
     const principal = caller_perms();
-    (principal == who || principal.wizard) || raise(E_PERM);
+    principal == who || principal.wizard || raise(E_PERM);
     who.is_builder || raise(E_PERM, "Builder privileges are required. Programmer privileges are not.");
     set_task_perms(who);
     const words = $builder_features:_author_tokens(text);
@@ -3008,9 +2836,7 @@ object BUILDER_FEATURES [
       const reactions = $obj_utils:reaction_properties(host, who);
       let lines = {"Reactions on " + host.name + ":"};
       for entry in (reactions)
-        lines = {@lines, tostr(entry[1])[1..$ - 9] + " — "
-          + $builder_features:_author_trigger_text(entry[2].trigger) + " — "
-          + (entry[2].enabled ? "enabled" | "disabled")};
+        lines = {@lines, tostr(entry[1])[1..$ - 9] + " \u2014 " + $builder_features:_author_trigger_text(entry[2].trigger) + " \u2014 " + (entry[2].enabled ? "enabled" | "disabled")};
       endfor
       return length(reactions) > 0 ? lines | {"No reactions. Use @reaction OBJECT NAME after EVENT to create one."};
     endif
@@ -3047,8 +2873,7 @@ object BUILDER_FEATURES [
       effect.type in {'announce, 'emote, 'tell} || raise(E_INVARG, "Choose announce, emote, or tell actor.");
       return $reaction:preview_message(effect, host);
     elseif (operation == "preview")
-      const supplied = length(rest) == 0 ? []
-        | $builder_features:_author_preview_inputs(rest, scope, who);
+      const supplied = length(rest) == 0 ? [] | $builder_features:_author_preview_inputs(rest, scope, who);
       const location = isa(host, $room) ? host | host.location;
       const context = mapmerge(['This -> host, 'Actor -> who, 'Location -> location], supplied);
       return $builder_features:_author_preview(host, reaction, context);
@@ -3057,7 +2882,7 @@ object BUILDER_FEATURES [
         const report = $reaction:report(host, property);
         return length(report) > 0 ? report | {"No recorded run. Use trace on, then cause the event."};
       endif
-      (length(rest) == 1 && rest[1] in {"on", "off"}) || raise(E_INVARG, "Use trace on, trace off, or trace.");
+      length(rest) == 1 && rest[1] in {"on", "off"} || raise(E_INVARG, "Use trace on, trace off, or trace.");
       reaction.trace = rest[1] == "on";
     elseif (operation == "after")
       length(rest) == 1 || raise(E_INVARG, "Use after EVENT. @reaction events lists the events.");
@@ -3078,14 +2903,11 @@ object BUILDER_FEATURES [
       reaction.when = $rule:mk(name, tree, scope, reaction.parameters);
     elseif (operation == "then" || operation == "step")
       length(rest) > 0 || raise(E_INVARG, "Supply a step. Use @reaction steps for examples.");
-      const index = operation == "then" ? length(reaction.effects) + 1
-        | $builder_features:_author_value(rest[1], $rule_engine:scope(), who, 'integer)['value];
-      index > 0 && index <= length(reaction.effects) + (operation == "then" ? 1 | 0)
-        || raise(E_INVARG, "That step number does not exist. Use show to see the step numbers.");
+      const index = operation == "then" ? length(reaction.effects) + 1 | $builder_features:_author_value(rest[1], $rule_engine:scope(), who, 'integer)['value];
+      index > 0 && index <= length(reaction.effects) + (operation == "then" ? 1 | 0) || raise(E_INVARG, "That step number does not exist. Use show to see the step numbers.");
       const effect_words = operation == "then" ? rest | rest[2..$];
       const effect = $builder_features:_author_step(effect_words, scope, who, host, 0, reaction.parameters);
-      reaction.effects = operation == "then" ? {@reaction.effects, effect}
-        | {@reaction.effects[1..index - 1], effect, @reaction.effects[index + 1..$]};
+      reaction.effects = operation == "then" ? {@reaction.effects, effect} | {@reaction.effects[1..index - 1], effect, @reaction.effects[index + 1..$]};
     elseif (operation == "remove-step")
       length(rest) == 1 || raise(E_INVARG, "Use remove-step NUMBER.");
       const index = $builder_features:_author_value(rest[1], $rule_engine:scope(), who, 'integer)['value];
@@ -3095,8 +2917,7 @@ object BUILDER_FEATURES [
       length(rest) == 3 || raise(E_INVARG, "Use with NAME TYPE VALUE, such as with cat object Henri.");
       const setting = tosym(rest[1]);
       $behavior_schema:_name(setting, "setting name");
-      !(rest[1] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"})
-        && !maphaskey(scope['state], setting) || raise(E_INVARG, "That name already identifies an event input or state.");
+      !(rest[1] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"}) && !maphaskey(scope['state], setting) || raise(E_INVARG, "That name already identifies an event input or state.");
       const kind = $builder_features:_author_type(rest[2]);
       const value = $builder_features:_author_value(rest[3], $rule_engine:scope(), who, kind)['value];
       if (maphaskey(reaction.parameter_types, setting))
@@ -3123,10 +2944,8 @@ object BUILDER_FEATURES [
       $reaction:remove(host, property);
       return {"Removed " + tostr(name) + ". Its pending timers are canceled."};
     elseif (operation == "copy")
-      (length(rest) == 2 || (length(rest) == 4 && rest[3] == "as")) && rest[1] == "to"
-        || raise(E_INVARG, "Use copy to OBJECT, or copy to OBJECT as NAME.");
-      const destination = typeof(copy_target) == TYPE_OBJ ? copy_target
-        | $builder_features:_author_object(rest[2], who);
+      length(rest) == 2 || (length(rest) == 4 && rest[3] == "as") && rest[1] == "to" || raise(E_INVARG, "Use copy to OBJECT, or copy to OBJECT as NAME.");
+      const destination = typeof(copy_target) == TYPE_OBJ ? copy_target | $builder_features:_author_object(rest[2], who);
       valid(destination) && (destination.owner == who || who.wizard) || raise(E_PERM, "You do not own the destination.");
       const copy_name = length(rest) == 4 ? tosym(rest[4]) | name;
       $behavior_schema:_name(copy_name, "reaction name");
@@ -3134,11 +2953,9 @@ object BUILDER_FEATURES [
       `destination.(copy_property) ! E_PROPNF => 0' == 0 || raise(E_INVARG, "That reaction name is already in use on the destination.");
       for field in (mapkeys(reaction.state_types))
         if (maphaskey(destination.reaction_state_fields, field))
-          equal(destination.reaction_state_fields[field], host.reaction_state_fields[field])
-            || raise(E_INVARG, "The destination declares different choices or initial state for " + tostr(field) + ".");
+          equal(destination.reaction_state_fields[field], host.reaction_state_fields[field]) || raise(E_INVARG, "The destination declares different choices or initial state for " + tostr(field) + ".");
         else
-          $obj_utils:property_key(destination, tostr(field)) == E_PROPNF
-            || raise(E_INVARG, "The destination already uses the state name " + tostr(field) + ".");
+          $obj_utils:property_key(destination, tostr(field)) == E_PROPNF || raise(E_INVARG, "The destination already uses the state name " + tostr(field) + ".");
         endif
       endfor
       for field in (mapkeys(reaction.state_types))
@@ -3187,16 +3004,12 @@ object BUILDER_FEATURES [
     const {host, words, who} = args;
     if (length(words) == 0)
       const values = $reaction:state_values(host);
-      return length(values) == 0 ? {"No declared state. Use @state OBJECT NAME number 0."}
-        | {tostr(field) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> values[field]])
-          + (length(host.reaction_state_fields[field]['choices]) > 0
-            ? " (choices: " + host.reaction_state_fields[field]['choices]:join(", ") + ")" | "") for field in (mapkeys(values))};
+      return length(values) == 0 ? {"No declared state. Use @state OBJECT NAME number 0."} | { tostr(field) + ": " + $builder_features:_author_value_text(['kind -> 'literal, 'value -> values[field]]) + (length(host.reaction_state_fields[field]['choices]) > 0 ? " (choices: " + host.reaction_state_fields[field]['choices]:join(", ") + ")" | "") for field in (mapkeys(values)) };
     endif
     length(words) >= 3 || raise(E_INVARG, "Use @state OBJECT NAME TYPE VALUE, or @state OBJECT NAME set VALUE.");
     const name = tosym(words[1]);
     $behavior_schema:_name(name, "state name");
-    !(words[1] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"})
-      || raise(E_INVARG, "That name already identifies an event input.");
+    !(words[1] in {"this", "actor", "place", "item", "key", "food", "who", "me", "here", "from", "to"}) || raise(E_INVARG, "That name already identifies an event input.");
     if (words[2] == "set")
       length(words) == 3 || raise(E_INVARG, "Use set VALUE. Quote text that contains spaces.");
       maphaskey(host.reaction_state_fields, name) || raise(E_INVARG, "Declare the state first.");
@@ -3230,8 +3043,7 @@ object BUILDER_FEATURES [
     length(words) >= 2 || raise(E_INVARG, "Use @rule OBJECT OPERATION CONDITION, show, or clear.");
     const property = words[1] + "_rule";
     const scope = $rule_engine:policy_scope(property);
-    length(scope['input]) > 0 && $obj_utils:property_key(host, property) != E_PROPNF
-      || raise(E_INVARG, "That object has no rule for " + words[1] + ".");
+    length(scope['input]) > 0 && $obj_utils:property_key(host, property) != E_PROPNF || raise(E_INVARG, "That object has no rule for " + words[1] + ".");
     if (length(words) == 2 && words[2] == "show")
       const rule = host.(property);
       return {words[1] + ": " + (rule == 0 ? "default access" | $builder_features:_author_condition_text(rule.condition))};
@@ -3243,14 +3055,14 @@ object BUILDER_FEATURES [
     host.(property) = $rule:mk(tosym(property), tree, scope);
     return {"Set " + words[1] + " rule: " + $builder_features:_author_condition_text(tree)};
   endmethod
+
   method _author_facts owner: ARCH_WIZARD
     "Define fields on one relation and edit its facts without registering a global name.";
     set_task_perms(caller_perms());
     const {host, words, who} = args;
     isa(host, $relation) || raise(E_INVARG, "Use @create $relation named NAME to create a place for these facts.");
     if (length(words) > 0 && words[1] == "define")
-      (length(words) >= 4 && (length(words) - 1) % 3 == 0)
-        || raise(E_INVARG, "Use @facts OBJECT define person:object group:text.");
+      length(words) >= 4 && (length(words) - 1) % 3 == 0 || raise(E_INVARG, "Use @facts OBJECT define person:object group:text.");
       let columns = {};
       let types = [];
       for i in [1..(length(words) - 1) / 3]
@@ -3267,15 +3079,14 @@ object BUILDER_FEATURES [
     endif
     const schema = $relation:schema(host);
     if (length(words) == 0 || words == {"show"})
-      const definitions = {tostr(field) + ":" + tostr(schema['types][field]) for field in (schema['columns])};
+      const definitions = { tostr(field) + ":" + tostr(schema['types][field]) for field in (schema['columns]) };
       let lines = {"Facts in " + host.name + " (" + tostr(host) + ")", "Fields: " + definitions:join(", ")};
       const tuples = $relation:tuples(host);
       for tuple in (tuples)
         $relation:_check_tuple(tuple, schema);
         let fields = {};
         for i in [1..length(schema['columns])]
-          fields = {@fields, tostr(schema['columns][i]) + "="
-            + $builder_features:_author_value_text(['kind -> 'literal, 'value -> tuple[i]])};
+          fields = {@fields, tostr(schema['columns][i]) + "=" + $builder_features:_author_value_text(['kind -> 'literal, 'value -> tuple[i]])};
         endfor
         lines = {@lines, fields:join(", ")};
       endfor
@@ -3290,19 +3101,16 @@ object BUILDER_FEATURES [
     $relation:change_fact(host, schema['types], values, words[1] == "add" ? 'record | 'forget);
     return {words[1] == "add" ? "Recorded fact. Repeating it does not create a duplicate." | "Removed fact if present."};
   endmethod
+
   method author_schedule owner: ARCH_WIZARD
     "Manage one recurring event per author, object, and event name through native schedules.";
     const {text, who} = args;
-    (caller_perms() == who || caller_perms().wizard) || raise(E_PERM);
-    (who.is_builder || who.programmer) || raise(E_PERM, "Builder privileges are required.");
+    caller_perms() == who || caller_perms().wizard || raise(E_PERM);
+    who.is_builder || who.programmer || raise(E_PERM, "Builder privileges are required.");
     set_task_perms(who);
     const words = $builder_features:_author_tokens(text);
     if (length(words) == 0 || words == {"help"})
-      return {"Usage: @schedule OBJECT EVENT every SECONDS [jitter SECONDS], or @schedule ID.",
-        "Example: @schedule Henri idle every 300 jitter 60.",
-        "Inspect with @schedule Henri idle; stop with @schedule Henri idle stop.",
-        "The event is sent to this object. Its reactions supply the response.",
-        "Repeating the start command replaces your previous schedule for that event."};
+      return {"Usage: @schedule OBJECT EVENT every SECONDS [jitter SECONDS], or @schedule ID.", "Example: @schedule Henri idle every 300 jitter 60.", "Inspect with @schedule Henri idle; stop with @schedule Henri idle stop.", "The event is sent to this object. Its reactions supply the response.", "Repeating the start command replaces your previous schedule for that event."};
     endif
     length(words) >= 2 || raise(E_INVARG, "Supply an object and event, or a schedule ID.");
     const host = $builder_features:_author_object(words[1], who);
@@ -3314,8 +3122,7 @@ object BUILDER_FEATURES [
       let lines = {};
       for id in (ids)
         const info = schedule_info(id);
-        lines = {@lines, label + ": every " + tostr(info["interval"]) + " seconds, jitter "
-          + tostr(info["jitter"]) + " seconds (schedule " + tostr(id) + ")."};
+        lines = {@lines, label + ": every " + tostr(info["interval"]) + " seconds, jitter " + tostr(info["jitter"]) + " seconds (schedule " + tostr(id) + ")."};
       endfor
       return length(lines) ? lines | {"No schedule for " + label + "."};
     elseif (length(words) == 3 && words[3] == "stop")
@@ -3324,8 +3131,7 @@ object BUILDER_FEATURES [
       endfor
       return {"Stopped schedule for " + label + "."};
     endif
-    (length(words) in {4, 6} && words[3] == "every")
-      || raise(E_INVARG, "Use every SECONDS [jitter SECONDS], or stop.");
+    length(words) in {4, 6} && words[3] == "every" || raise(E_INVARG, "Use every SECONDS [jitter SECONDS], or stop.");
     const interval = $builder_features:_author_value(words[4], $rule_engine:scope(), who, 'float)['value];
     let jitter = 0.0;
     if (length(words) == 6)
@@ -3333,11 +3139,10 @@ object BUILDER_FEATURES [
       jitter = $builder_features:_author_value(words[6], $rule_engine:scope(), who, 'float)['value];
     endif
     interval > 0.0 || raise(E_INVARG, "The interval must be greater than zero.");
-    (jitter >= 0.0 && jitter < interval) || raise(E_INVARG, "Jitter must be zero or less than the interval.");
-    (who == host.owner || who.wizard) || raise(E_PERM, "You must own the object to schedule its events.");
+    jitter >= 0.0 && jitter < interval || raise(E_INVARG, "Jitter must be zero or less than the interval.");
+    who == host.owner || who.wizard || raise(E_PERM, "You must own the object to schedule its events.");
     "Validate and create before canceling the previous schedule. Both changes commit together.";
-    const id = schedule_every($reaction, "scheduled_event", interval, {host, event, host.owner, interval},
-      ['player -> host, 'pass_elapsed -> false, 'adaptive -> true, 'jitter -> jitter]);
+    const id = schedule_every($reaction, "scheduled_event", interval, {host, event, host.owner, interval}, ['player -> host, 'pass_elapsed -> false, 'adaptive -> true, 'jitter -> jitter]);
     for previous in (ids)
       schedule_stop(previous);
     endfor
@@ -3395,7 +3200,7 @@ object BUILDER_FEATURES [
   verb "@schedules" (none none none) owner: ARCH_WIZARD flags: "rd"
     "USAGE: @schedules -- List your live schedules; wizards see all owners.";
     caller == player || raise(E_PERM);
-    (player.is_builder || player.programmer) || raise(E_PERM, "Builder privileges are required.");
+    player.is_builder || player.programmer || raise(E_PERM, "Builder privileges are required.");
     set_task_perms(player);
     const rows = $builder_features:_schedule_rows();
     const output = $format.block:mk($format.title:mk("Schedules", 3), length(rows) ? $builder_features:_schedule_table(rows) | "(none)", tostr(length(rows)) + " scheduled", "Use @schedule <id> for details or @stop-schedule <id> to stop future firings.");
@@ -3405,7 +3210,7 @@ object BUILDER_FEATURES [
   verb "@schedule" (any any any) owner: ARCH_WIZARD flags: "rd"
     "Usage: @schedule OBJECT EVENT [every SECONDS [jitter SECONDS]|stop], or @schedule ID.";
     caller == player || raise(E_PERM);
-    (player.is_builder || player.programmer) || raise(E_PERM, "Builder privileges are required.");
+    player.is_builder || player.programmer || raise(E_PERM, "Builder privileges are required.");
     set_task_perms(player);
     if (!match(argstr:trim(), "^[-+0-9]"))
       try
@@ -3437,7 +3242,7 @@ object BUILDER_FEATURES [
   verb "@stop-schedule @kill-schedule" (any none none) owner: ARCH_WIZARD flags: "rd"
     "USAGE: @stop-schedule <id> -- Stop future firings of your schedule; wizards may stop any schedule.";
     caller == player || raise(E_PERM);
-    (player.is_builder || player.programmer) || raise(E_PERM, "Builder privileges are required.");
+    player.is_builder || player.programmer || raise(E_PERM, "Builder privileges are required.");
     set_task_perms(player);
     let id = 0;
     try
@@ -3456,5 +3261,4 @@ object BUILDER_FEATURES [
       player:inform_current($event:mk_error(player, "Permission denied: you don't own schedule " + tostr(id) + "."));
     endtry
   endverb
-
 endobject

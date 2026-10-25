@@ -11,8 +11,7 @@ object FORMAT_ANNOTATION [
     "Construct a reference from an interaction-protocol descriptor and literal inline content.";
     const {label, descriptor} = args;
     typeof(descriptor) == TYPE_MAP || raise(E_TYPE);
-    return $document_template:mk('reference, $format:inlines({label}),
-      ['descriptor -> $document_schema:_descriptor_from_wire(descriptor)]);
+    return $document_template:mk('reference, $format:inlines({label}), ['descriptor -> $document_schema:_descriptor_from_wire(descriptor)]);
   endmethod
 
   method object owner: ARCH_WIZARD
@@ -69,5 +68,4 @@ object FORMAT_ANNOTATION [
     is_anonymous(object) && return $format.paragraph:inline(label);
     return this:mk(label, ["kind" -> "property", "object" -> $url_utils:to_curie_str(object), "name" -> name]);
   endmethod
-
 endobject

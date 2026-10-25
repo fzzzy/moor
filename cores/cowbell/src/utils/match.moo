@@ -95,7 +95,7 @@ object MATCH [
     typeof(matches) == TYPE_LIST && length(matches) > 1 || return matches;
     let narrowed = matches;
     const room = valid(context) ? context.location | #-1;
-    const others = {match for match in (narrowed) if (match != room)};
+    const others = { match for match in (narrowed) if match != room };
     length(others) && (narrowed = others);
     this:interchangeable(narrowed) && (narrowed = {narrowed[1]});
     return narrowed;
@@ -136,8 +136,7 @@ object MATCH [
     const first = objects[1];
     valid(first) && !length(verbs(first)) || return false;
     for object in (objects[2..$])
-      valid(object) && parent(object) == parent(first) && object.name == first.name
-        && !length(verbs(object)) || return false;
+      valid(object) && parent(object) == parent(first) && object.name == first.name && !length(verbs(object)) || return false;
     endfor
     return true;
   endmethod
@@ -163,7 +162,7 @@ object MATCH [
       endif
       if (typeof(entry) == TYPE_LIST && length(entry) > 1)
         const source_names = entry[2..$];
-        const names = {name for name in (source_names) if typeof(name) == TYPE_STR && length(name) > 0};
+        const names = { name for name in (source_names) if typeof(name) == TYPE_STR && length(name) > 0 };
         if (names)
           const position = positions[object];
           for name in (names)
@@ -180,7 +179,7 @@ object MATCH [
         for name in (names)
           typeof(name) == TYPE_STR || raise(E_TYPE, "Matching names must be strings.");
         endfor
-        keys[positions[object]] = {candidate_name for candidate_name in (names) if length(candidate_name)};
+        keys[positions[object]] = { candidate_name for candidate_name in (names) if length(candidate_name) };
       endif
     endfor
     return {objects, keys};
@@ -207,11 +206,11 @@ object MATCH [
         return object in objects ? {object} | {};
       endif
     endif
-    const exact = {objects[i] for i in [1..length(objects)] if text in keys[i]};
+    const exact = { objects[i] for i in [1..length(objects)] if text in keys[i] };
     length(exact) && return exact;
     const {query, prepared} = this:_article_keys(text, objects, keys, context);
     const threshold = `options['fuzzy_threshold] ! E_RANGE => 0.3';
-    const fuzzy = typeof(threshold) == TYPE_BOOL ? (threshold ? 0.3 | 0.0) | tofloat(threshold);
+    const fuzzy = typeof(threshold) == TYPE_BOOL ? threshold ? 0.3 | 0.0 | tofloat(threshold);
     return complex_matches(query, objects, prepared, fuzzy, false);
   endmethod
 
@@ -295,7 +294,7 @@ object MATCH [
     matches || raise(E_INVARG, "No " + label + " found matching '" + text + "'.");
     if (length(matches) > 1)
       const shown = matches[1..min(8, length(matches))];
-      const names = {tostr(object.name, " (", object, ")") for object in (shown)};
+      const names = { tostr(object.name, " (", object, ")") for object in (shown) };
       raise(E_INVARG, "More than one match for '" + text + "'. Candidates: " + names:join(", ") + ". Use a more specific name or object number.");
     endif
     return matches[1];
@@ -307,7 +306,7 @@ object MATCH [
     const {context} = args;
     !valid(context) && return {};
     is_player(context) && return context:match_environment();
-    return {context, @context.contents, @(valid(context.location) ? {context.location, @context.location.contents} | {})};
+    return {context, @context.contents, @valid(context.location) ? {context.location, @context.location.contents} | {}};
   endmethod
 
   method test_match_object owner: ARCH_WIZARD
@@ -393,8 +392,7 @@ object MATCH [
     let result = {};
     for i in [1..length(objects)]
       const object = objects[i];
-      result = {@result, ["id" -> tostr(object), "label" -> object:name(), "value" -> tostr(object),
-        "detail" -> tostr(object), "objectKind" -> object:reference_kind(), "keys" -> keys[i]]};
+      result = {@result, ["id" -> tostr(object), "label" -> object:name(), "value" -> tostr(object), "detail" -> tostr(object), "objectKind" -> object:reference_kind(), "keys" -> keys[i]]};
     endfor
     return result;
   endmethod
@@ -490,8 +488,7 @@ object MATCH [
       if (maphaskey(seen, id))
         continue;
       endif
-      const keys = maphaskey(candidate, "keys") ? candidate["keys"]
-        | {candidate["label"], candidate["value"]};
+      const keys = maphaskey(candidate, "keys") ? candidate["keys"] | {candidate["label"], candidate["value"]};
       let rank = 6;
       if (!needle || needle in keys || needle == candidate["value"])
         rank = 1;
@@ -523,9 +520,7 @@ object MATCH [
       seen[id] = true;
       count = count + 1;
       if (length(buckets[rank]) < limit)
-        buckets[rank] = {@buckets[rank], ["id" -> id, "label" -> candidate["label"],
-          "value" -> candidate["value"], "detail" -> `candidate["detail"] ! E_RANGE => ""',
-          "objectKind" -> `candidate["objectKind"] ! E_RANGE => "object"']};
+        buckets[rank] = {@buckets[rank], ["id" -> id, "label" -> candidate["label"], "value" -> candidate["value"], "detail" -> `candidate["detail"] ! E_RANGE => ""', "objectKind" -> `candidate["objectKind"] ! E_RANGE => "object"']};
       endif
     endfor
     const ranked = {@buckets[1], @buckets[2], @buckets[3], @buckets[4], @buckets[5]};

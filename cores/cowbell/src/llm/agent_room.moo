@@ -7,19 +7,19 @@ object AGENT_ROOM [
   owner: ARCH_WIZARD
   readable: true
 
-  property max_iterations (owner: ARCH_WIZARD, flags: "rc") = 30;
-  property system_prompt (owner: ARCH_WIZARD, flags: "rc") = "You are a room-based coding agent for MOO development. Use tools to inspect code, propose targeted changes, and program verbs safely. Prefer showing concise reports and code snippets.";
-  property task_timeout_seconds (owner: ARCH_WIZARD, flags: "rc") = 180;
   property history (owner: ARCH_WIZARD, flags: "") = {};
+  property jobs (owner: ARCH_WIZARD, flags: "") = {};
   property llm_client (owner: ARCH_WIZARD, flags: "rc") = #-1;
   property loop_task (owner: ARCH_WIZARD, flags: "") = 0;
   property max_history_context_items (owner: ARCH_WIZARD, flags: "rc") = 4;
+  property max_iterations (owner: ARCH_WIZARD, flags: "rc") = 30;
+  property max_jobs (owner: ARCH_WIZARD, flags: "rc") = 32;
   property max_pending_per_player (owner: ARCH_WIZARD, flags: "rc") = 3;
   property max_query_length (owner: ARCH_WIZARD, flags: "rc") = 2000;
   property max_workers (owner: ARCH_WIZARD, flags: "rc") = 1;
-  property max_jobs (owner: ARCH_WIZARD, flags: "rc") = 32;
   property spent_requests (owner: ARCH_WIZARD, flags: "") = [];
-  property jobs (owner: ARCH_WIZARD, flags: "") = {};
+  property system_prompt (owner: ARCH_WIZARD, flags: "rc") = "You are a room-based coding agent for MOO development. Use tools to inspect code, propose targeted changes, and program verbs safely. Prefer showing concise reports and code snippets.";
+  property task_timeout_seconds (owner: ARCH_WIZARD, flags: "rc") = 180;
 
   override description (owner: ARCH_WIZARD, flags: "rc") = "A virtual workspace for agent interaction.";
 
@@ -112,11 +112,7 @@ object AGENT_ROOM [
 
   verb description (none none none) owner: ARCH_WIZARD flags: "rxd"
     "Describe the workspace without exposing requests or transcripts in room output.";
-    return {"A workspace for LLM tasks.", $format.title:mk("Commands", 4),
-      $format.list:mk({"do <task> - Queue a task", "status - Show your active tasks",
-        "queue - Show your queued tasks", "history - Show your recent results",
-        "fix <instructions> - Continue from your latest result", "context - Show your context",
-        "halt - Cancel your tasks"}, false)};
+    return {"A workspace for LLM tasks.", $format.title:mk("Commands", 4), $format.list:mk({"do <task> - Queue a task", "status - Show your active tasks", "queue - Show your queued tasks", "history - Show your recent results", "fix <instructions> - Continue from your latest result", "context - Show your context", "halt - Cancel your tasks"}, false)};
   endverb
 
   verb reset (none none none) owner: ARCH_WIZARD flags: "rxd"
@@ -191,7 +187,7 @@ object AGENT_ROOM [
     const context = maphaskey(task, 'context) ? task['context] | {};
     typeof(context) == TYPE_LIST || raise(E_TYPE);
     length(context) <= 256 && value_bytes(context) <= 1048576 || raise(E_QUOTA);
-    return paseto_make_local(["purpose" -> "agent_room_task", "room" -> room, "actor" -> actor, "query" -> query, "context" -> context, "connection" -> (maphaskey(task, 'connection) ? task['connection] | 0), "jti" -> uuid(), "exp" -> time() + 60]);
+    return paseto_make_local(["purpose" -> "agent_room_task", "room" -> room, "actor" -> actor, "query" -> query, "context" -> context, "connection" -> maphaskey(task, 'connection) ? task['connection] | 0, "jti" -> uuid(), "exp" -> time() + 60]);
   endmethod
 
   method _consume_task owner: ARCH_WIZARD
@@ -214,10 +210,7 @@ object AGENT_ROOM [
     const context = maphaskey(task, 'context) ? task['context] | {};
     const destination = maphaskey(task, 'connection) ? task['connection] | 0;
     const signed_destination = maphaskey(claims, "connection") ? claims["connection"] | 0;
-    claims["purpose"] == "agent_room_task" && claims["room"] == room && claims["actor"] == task['player]
-      && strcmp(toliteral(claims["query"]), toliteral(task['query])) == 0
-      && strcmp(toliteral(claims["context"]), toliteral(context)) == 0
-      && signed_destination == destination || raise(E_PERM, "Room task authorization does not match request");
+    claims["purpose"] == "agent_room_task" && claims["room"] == room && claims["actor"] == task['player] && strcmp(toliteral(claims["query"]), toliteral(task['query])) == 0 && strcmp(toliteral(claims["context"]), toliteral(context)) == 0 && signed_destination == destination || raise(E_PERM, "Room task authorization does not match request");
     typeof(claims["actor"]) == TYPE_OBJ && valid(claims["actor"]) || raise(E_PERM);
     typeof(claims["jti"]) == TYPE_STR && length(claims["jti"]) > 0 || raise(E_PERM);
     const now = time();
@@ -234,6 +227,7 @@ object AGENT_ROOM [
     room.spent_requests = spent;
     return claims;
   endmethod
+
   method _get_tools owner: ARCH_WIZARD
     "Compose shared domain and change tools; jobs supply their own presentation destination.";
     set_task_perms(caller_perms());

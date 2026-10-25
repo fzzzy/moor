@@ -29,12 +29,10 @@ object DOCUMENT_RESOLVER [
     "An absent viewer is false. Facts are captured values; a supplied principal is never accepted.";
     set_task_perms(caller_perms());
     const {blocks, viewer, facts} = args;
-    (typeof(viewer) == TYPE_BOOL && !viewer)
-      || (typeof(viewer) == TYPE_OBJ && valid(viewer)) || raise(E_INVARG, "Invalid viewer");
+    typeof(viewer) == TYPE_BOOL && !viewer || (typeof(viewer) == TYPE_OBJ && valid(viewer)) || raise(E_INVARG, "Invalid viewer");
     typeof(facts) == TYPE_MAP || raise(E_TYPE, "Event facts must be a map");
     const context = ['viewer -> viewer, 'principal -> caller_perms(), 'event -> facts];
-    const {resolved, state} = $document_resolver:_sequence(
-      blocks, 'block, context, "document.blocks", 1, ['expansions -> 0, 'subjects -> []]);
+    const {resolved, state} = $document_resolver:_sequence(blocks, 'block, context, "document.blocks", 1, ['expansions -> 0, 'subjects -> []]);
     return $document:mk(resolved);
   endmethod
 
@@ -47,8 +45,7 @@ object DOCUMENT_RESOLVER [
     length(values) <= 8192 || raise(E_QUOTA, path + ": too many template entries");
     let result = {};
     for i in [1..length(values)]
-      const {nodes, next_state} = $document_resolver:_walk(values[i], expected, context,
-        path + "[" + tostr(i - 1) + "]", depth, state);
+      const {nodes, next_state} = $document_resolver:_walk(values[i], expected, context, path + "[" + tostr(i - 1) + "]", depth, state);
       state = next_state;
       result = {@result, @nodes};
       length(result) <= 8192 || raise(E_QUOTA, path + ": too many resolved entries");
@@ -76,29 +73,23 @@ object DOCUMENT_RESOLVER [
         expansion = inline;
         state = next_state;
       else
-        value.delegate in {$document_node, $document_template}
-          || raise(E_INVARG, path + ": use an explicit producer constructor for custom content");
+        value.delegate in {$document_node, $document_template} || raise(E_INVARG, path + ": use an explicit producer constructor for custom content");
         fields = flyslots(value);
         maphaskey(fields, 'kind) || raise(E_INVARG, path + ": missing node kind");
         kind = fields['kind];
         contents = flycontents(value);
         if (value.delegate == $document_template && kind in {'inline, 'capitalize, 'blocks})
-          (kind in {'inline, 'capitalize} && expected == 'inline)
-            || (kind == 'blocks && expected == 'block)
-            || raise(E_INVARG, path + ": wrong template context");
+          kind in {'inline, 'capitalize} && expected == 'inline || (kind == 'blocks && expected == 'block) || raise(E_INVARG, path + ": wrong template context");
           length(fields) == 1 || raise(E_INVARG, path + ": unexpected group field");
           expansion = contents;
         elseif (value.delegate == $document_template && kind in {'producer_inline, 'producer_blocks})
           const role = kind == 'producer_inline ? 'inline | 'block;
           role == expected || raise(E_INVARG, path + ": wrong producer context");
-          length(fields) == 2 && maphaskey(fields, 'producer) && !length(contents)
-            || raise(E_INVARG, path + ": invalid producer fields");
+          length(fields) == 2 && maphaskey(fields, 'producer) && !length(contents) || raise(E_INVARG, path + ": invalid producer fields");
           const producer = fields['producer];
-          typeof(producer) in {TYPE_OBJ, TYPE_FLYWEIGHT}
-            || raise(E_INVARG, path + ": invalid content producer");
+          typeof(producer) in {TYPE_OBJ, TYPE_FLYWEIGHT} || raise(E_INVARG, path + ": invalid content producer");
           try
-            expansion = role == 'inline
-              ? producer:resolve_inline(context) | producer:resolve_blocks(context);
+            expansion = role == 'inline ? producer:resolve_inline(context) | producer:resolve_blocks(context);
           except error (ANY)
             raise(error[1], path + ": producer failed: " + error[2]);
           endtry
@@ -113,8 +104,7 @@ object DOCUMENT_RESOLVER [
       length(expansion) <= 8192 || raise(E_QUOTA, path + ": too many expanded entries");
       let result = {};
       for i in [1..length(expansion)]
-        const {nodes, next_state} = $document_resolver:_walk(expansion[i], expected,
-          context, path + ".expanded[" + tostr(i - 1) + "]", depth + 1, state);
+        const {nodes, next_state} = $document_resolver:_walk(expansion[i], expected, context, path + ".expanded[" + tostr(i - 1) + "]", depth + 1, state);
         state = next_state;
         result = {@result, @nodes};
       endfor
@@ -153,10 +143,8 @@ object DOCUMENT_RESOLVER [
         length(sequence) <= 8192 || raise(E_QUOTA, entry_path + ": too many entries");
         let resolved = {};
         for j in [1..length(sequence)]
-          const item_path = cardinality == 'matrix_optional
-            ? entry_path + "[" + tostr(j - 1) + "]" | entry_path;
-          const {nodes, next_state} = $document_resolver:_walk(sequence[j], child_kind,
-            context, item_path, depth + 1, state);
+          const item_path = cardinality == 'matrix_optional ? entry_path + "[" + tostr(j - 1) + "]" | entry_path;
+          const {nodes, next_state} = $document_resolver:_walk(sequence[j], child_kind, context, item_path, depth + 1, state);
           state = next_state;
           resolved = {@resolved, @nodes};
         endfor
@@ -179,7 +167,7 @@ object DOCUMENT_RESOLVER [
     "Read one object answer once within a resolution. Return {answer, local capture map}.";
     set_task_perms(caller_perms());
     const {target, viewer, request, subjects} = args;
-    (typeof(target) == TYPE_OBJ && valid(target)) || raise(E_INVARG, "Invalid naming subject.");
+    typeof(target) == TYPE_OBJ && valid(target) || raise(E_INVARG, "Invalid naming subject.");
     let perspectives = maphaskey(subjects, target) ? subjects[target] | [];
     let captured = maphaskey(perspectives, viewer) ? perspectives[viewer] | [];
     if (maphaskey(captured, request))
@@ -191,8 +179,7 @@ object DOCUMENT_RESOLVER [
     elseif (request == 'pronouns)
       answer = $pronouns:validate(target:pronouns());
     else
-      request in {'label, 'bare, 'definite, 'indefinite, 'listing}
-        || raise(E_INVARG, "Unknown naming request.");
+      request in {'label, 'bare, 'definite, 'indefinite, 'listing} || raise(E_INVARG, "Unknown naming request.");
       answer = target:noun_phrase(request, viewer);
       typeof(answer) == TYPE_STR || raise(E_TYPE, "noun_phrase must return literal text.");
     endif
@@ -220,9 +207,7 @@ object DOCUMENT_RESOLVER [
   method binding_name owner: HACKER
     "Expand the aliases shared by resolution and template validation.";
     const {name} = args;
-    const aliases = ['n -> 'actor, 'nc -> 'actor, 'd -> 'dobj, 'dc -> 'dobj,
-      'i -> 'iobj, 'ic -> 'iobj, 't -> 'this_obj, 'tc -> 'this_obj,
-      'this -> 'this_obj, 'l -> 'location, 'lc -> 'location];
+    const aliases = ['n -> 'actor, 'nc -> 'actor, 'd -> 'dobj, 'dc -> 'dobj, 'i -> 'iobj, 'ic -> 'iobj, 't -> 'this_obj, 'tc -> 'this_obj, 'this -> 'this_obj, 'l -> 'location, 'lc -> 'location];
     return maphaskey(aliases, name) ? aliases[name] | name;
   endmethod
 

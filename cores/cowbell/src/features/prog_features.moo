@@ -1645,9 +1645,7 @@ object PROG_FEATURES [
     parsed = $prog_utils:parse_target_spec(target_spec);
     if (!parsed)
       if (!this:suggest_doc_topic('builtin, target_spec))
-        player:inform_current($event:mk_error(player, "Invalid format. Use ",
-          $format.code:inline("object"), ", ", $format.code:inline("object:verb"), ", ",
-          $format.code:inline("object.property"), ", or ", $format.code:inline("builtin_function")));
+        player:inform_current($event:mk_error(player, "Invalid format. Use ", $format.code:inline("object"), ", ", $format.code:inline("object:verb"), ", ", $format.code:inline("object.property"), ", or ", $format.code:inline("builtin_function")));
       endif
       return;
     endif
@@ -1885,9 +1883,7 @@ object PROG_FEATURES [
     items = {@items, {"Properties", prop_summary}};
     items = {@items, {"Verbs", verb_summary}};
     deflist = $format.deflist:mk(items);
-    hint = $format.paragraph:mk("Try: ", $format.code:inline("@show " + obj_ref + ".:"),
-      " (local) or ", $format.code:inline("@show " + obj_ref + "..::"), " (all). See ",
-      $format.code:inline("@show"), " for syntax.");
+    hint = $format.paragraph:mk("Try: ", $format.code:inline("@show " + obj_ref + ".:"), " (local) or ", $format.code:inline("@show " + obj_ref + "..::"), " (all). See ", $format.code:inline("@show"), " for syntax.");
     content = $format.block:mk(deflist, hint);
     event = $event:mk_info(player, content);
     player:inform_current(event);
@@ -1926,8 +1922,7 @@ object PROG_FEATURES [
     const destination = `connection() ! E_INVARG => 0';
     typeof(destination) == TYPE_OBJ || return false;
     set_task_perms(actor);
-    return $llm_doc_suggestion:offer(actor, destination,
-      ['kind -> kind, 'spec -> spec, 'target -> target, 'member -> member]);
+    return $llm_doc_suggestion:offer(actor, destination, ['kind -> kind, 'spec -> spec, 'target -> target, 'member -> member]);
   endmethod
 
   method _do_resolve_verb_name owner: HACKER

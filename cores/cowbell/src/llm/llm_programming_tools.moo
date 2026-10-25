@@ -18,35 +18,13 @@ object LLM_PROGRAMMING_TOOLS [
     const member = ["object" -> reference, "verb" -> reference];
     const property = ["object" -> reference, "property" -> reference];
     const value = ["description" -> "JSON value, used directly without evaluating MOO code."];
-    const definitions = {
-      {"add_verb", "Add an empty verb. Commands default to rd, methods to rxd.",
-        ["object" -> reference, "verb" -> reference, "permissions" -> permissions, "dobj" -> argument, "prep" -> reference, "iobj" -> argument], {"object", "verb"}},
-      {"program_verb", "Compile and replace a verb's code. Compiler errors leave its code unchanged.",
-        ["object" -> reference, "verb" -> reference, "code" -> ["type" -> "string", "maxLength" -> 32768]], {"object", "verb", "code"}},
-      {"delete_verb", "Delete a verb defined on the specified object.", member, {"object", "verb"}},
-      {"set_verb_info", "Update supplied verb permissions, names, or owner.",
-        ["object" -> reference, "verb" -> reference, "permissions" -> permissions, "names" -> reference, "owner" -> reference], {"object", "verb"}},
-      {"set_verb_args", "Set the verb's direct object, preposition, and indirect object specifications.",
-        ["object" -> reference, "verb" -> reference, "dobj" -> argument, "prep" -> reference, "iobj" -> argument], {"object", "verb", "dobj", "prep", "iobj"}},
-      {"add_property", "Add a property with a JSON value (default 0) and flags (default rc).",
-        ["object" -> reference, "property" -> reference, "value" -> value, "permissions" -> permissions], {"object", "property"}},
-      {"set_property", "Set a property to the supplied JSON value.",
-        ["object" -> reference, "property" -> reference, "value" -> value], {"object", "property", "value"}},
-      {"delete_property", "Delete a property defined on the specified object.", property, {"object", "property"}},
-      {"set_property_info", "Update supplied property permissions or owner.",
-        ["object" -> reference, "property" -> reference, "permissions" -> permissions, "owner" -> reference], {"object", "property"}},
-      {"grant_capability", "Grant building permissions on an area or room to a player.",
-        ["target" -> reference, "category" -> ["type" -> "string", "enum" -> {"area", "room"}],
-          "permissions" -> ["type" -> "array", "items" -> reference, "maxItems" -> 32, "minItems" -> 1],
-          "grantee" -> reference], {"target", "category", "permissions", "grantee"}}
-    };
+    const definitions = {{"add_verb", "Add an empty verb. Commands default to rd, methods to rxd.", ["object" -> reference, "verb" -> reference, "permissions" -> permissions, "dobj" -> argument, "prep" -> reference, "iobj" -> argument], {"object", "verb"}}, {"program_verb", "Compile and replace a verb's code. Compiler errors leave its code unchanged.", ["object" -> reference, "verb" -> reference, "code" -> ["type" -> "string", "maxLength" -> 32768]], {"object", "verb", "code"}}, {"delete_verb", "Delete a verb defined on the specified object.", member, {"object", "verb"}}, {"set_verb_info", "Update supplied verb permissions, names, or owner.", ["object" -> reference, "verb" -> reference, "permissions" -> permissions, "names" -> reference, "owner" -> reference], {"object", "verb"}}, {"set_verb_args", "Set the verb's direct object, preposition, and indirect object specifications.", ["object" -> reference, "verb" -> reference, "dobj" -> argument, "prep" -> reference, "iobj" -> argument], {"object", "verb", "dobj", "prep", "iobj"}}, {"add_property", "Add a property with a JSON value (default 0) and flags (default rc).", ["object" -> reference, "property" -> reference, "value" -> value, "permissions" -> permissions], {"object", "property"}}, {"set_property", "Set a property to the supplied JSON value.", ["object" -> reference, "property" -> reference, "value" -> value], {"object", "property", "value"}}, {"delete_property", "Delete a property defined on the specified object.", property, {"object", "property"}}, {"set_property_info", "Update supplied property permissions or owner.", ["object" -> reference, "property" -> reference, "permissions" -> permissions, "owner" -> reference], {"object", "property"}}, {"grant_capability", "Grant building permissions on an area or room to a player.", ["target" -> reference, "category" -> ["type" -> "string", "enum" -> {"area", "room"}], "permissions" -> ["type" -> "array", "items" -> reference, "maxItems" -> 32, "minItems" -> 1], "grantee" -> reference], {"target", "category", "permissions", "grantee"}}};
     let tools = {};
     for definition in (definitions)
       const {name, description, fields, required} = definition;
       let properties = fields;
       properties["rationale"] = text;
-      const schema = ["type" -> "object", "properties" -> properties,
-        "required" -> required, "additionalProperties" -> false];
+      const schema = ["type" -> "object", "properties" -> properties, "required" -> required, "additionalProperties" -> false];
       tools = {@tools, $llm_agent_tool:mk(name, description, schema, this, name, 'mutation)};
     endfor
     return tools;
@@ -54,11 +32,7 @@ object LLM_PROGRAMMING_TOOLS [
 
   method get_eval_tool owner: ARCH_WIZARD
     "Return the visor's opt-in evaluator; ordinary programming catalogs do not expose raw eval.";
-    return $llm_agent_tool:mk("eval", "Execute MOO statements as the requester. Use return for results. Each execution requires its own confirmation.",
-      ["type" -> "object", "properties" -> [
-        "rationale" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 4096],
-        "code" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 32768]],
-        "required" -> {"rationale", "code"}, "additionalProperties" -> false], this, "evaluate", 'mutation);
+    return $llm_agent_tool:mk("eval", "Execute MOO statements as the requester. Use return for results. Each execution requires its own confirmation.", ["type" -> "object", "properties" -> ["rationale" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 4096], "code" -> ["type" -> "string", "minLength" -> 1, "maxLength" -> 32768]], "required" -> {"rationale", "code"}, "additionalProperties" -> false], this, "evaluate", 'mutation);
   endmethod
 
   method evaluate owner: ARCH_WIZARD
@@ -153,8 +127,7 @@ object LLM_PROGRAMMING_TOOLS [
     const target = this:_resolve_object(request["object"], actor);
     valid(target) || raise(E_INVARG, "Object no longer exists.");
     const name = request["verb"];
-    const owner = maphaskey(request, "owner")
-      ? this:_resolve_object(request["owner"], actor) | #-1;
+    const owner = maphaskey(request, "owner") ? this:_resolve_object(request["owner"], actor) | #-1;
     let info = verb_info(target, name);
     let changed = false;
     for entry in ({{"permissions", 2}, {"names", 3}})
@@ -243,8 +216,7 @@ object LLM_PROGRAMMING_TOOLS [
     const target = this:_resolve_object(request["object"], actor);
     valid(target) || raise(E_INVARG, "Object no longer exists.");
     const name = request["property"];
-    const owner = maphaskey(request, "owner")
-      ? this:_resolve_object(request["owner"], actor) | #-1;
+    const owner = maphaskey(request, "owner") ? this:_resolve_object(request["owner"], actor) | #-1;
     let info = property_info(target, name);
     let changed = false;
     if (maphaskey(request, "permissions"))
@@ -273,7 +245,7 @@ object LLM_PROGRAMMING_TOOLS [
     valid(target) && valid(grantee) || raise(E_INVARG);
     actor == target.owner || actor.wizard || raise(E_PERM);
     const category = tosym(request["category"]);
-    const permissions = {tosym(p) for p in (request["permissions"])};
+    const permissions = { tosym(p) for p in (request["permissions"]) };
     const approval = this:_approve(actor, 'grant_capability, target, 'object, "", request);
     typeof(approval) == TYPE_BOOL && approval || return approval;
     $root:grant_capability(target, permissions, grantee, category);
@@ -305,9 +277,7 @@ object LLM_PROGRAMMING_TOOLS [
       this:set_verb_args(["object" -> tostr(owned), "verb" -> "renamed", "dobj" -> "any", "prep" -> "none", "iobj" -> "none"], actor);
       $test_utils:assert_eq(verb_info(owned, "renamed"), {actor, "xd", "renamed alias"}, "Metadata fields retain the actor owner");
       $test_utils:assert_eq(verb_args(owned, "renamed"), {"any", "none", "none"}, "Argument specification is updated");
-      for operation in ({
-        {"set_verb_info", ["object" -> tostr(foreign), "verb" -> "probe", "permissions" -> "rwxd"]},
-        {"set_verb_args", ["object" -> tostr(foreign), "verb" -> "probe", "dobj" -> "any", "prep" -> "none", "iobj" -> "none"]}})
+      for operation in ({{"set_verb_info", ["object" -> tostr(foreign), "verb" -> "probe", "permissions" -> "rwxd"]}, {"set_verb_args", ["object" -> tostr(foreign), "verb" -> "probe", "dobj" -> "any", "prep" -> "none", "iobj" -> "none"]}})
         $test_utils:assert_raises(E_PERM, this, operation[1], {operation[2], actor}, "Foreign metadata requires existing write authority");
       endfor
       $test_utils:assert_eq(verb_info(foreign, "probe"), {$hacker, "rxd", "probe"}, "Denied mutation leaves foreign metadata intact");
@@ -324,22 +294,18 @@ object LLM_PROGRAMMING_TOOLS [
     const actor = $hacker;
     const recipient = $test_player;
     const target = create($room, actor, 2);
-    const request = ["target" -> tostr(target), "category" -> "room",
-      "permissions" -> {"dig_from"}, "grantee" -> tostr(recipient)];
+    const request = ["target" -> tostr(target), "category" -> "room", "permissions" -> {"dig_from"}, "grantee" -> tostr(recipient)];
     try
-      $test_utils:assert_raises(E_PERM, this, "mcp_grant_capability", {request, recipient},
-        "A non-owner cannot issue the grant");
+      $test_utils:assert_raises(E_PERM, this, "mcp_grant_capability", {request, recipient}, "A non-owner cannot issue the grant");
       this:mcp_grant_capability(generate_json(request), actor);
       const capability = recipient:find_capability_for(target, 'room);
       $test_utils:assert_type(capability, TYPE_FLYWEIGHT, "The recipient receives a capability");
       capability:challenge_for('dig_from);
-      $test_utils:assert_raises(E_PERM, capability, "challenge_for", {'dig_into},
-        "The grant does not include other permissions");
+      $test_utils:assert_raises(E_PERM, capability, "challenge_for", {'dig_into}, "The grant does not include other permissions");
     finally
       $root:revoke_capability(target, recipient, 'room);
       $test_utils:destroy_if_valid(target);
     endtry
     return true;
   endmethod
-
 endobject

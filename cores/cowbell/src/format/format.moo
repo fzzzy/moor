@@ -27,9 +27,7 @@ object FORMAT [
     const {offered} = args;
     typeof(offered) == TYPE_LIST || raise(E_TYPE);
     !length(offered) && return 'text_plain;
-    const types = ["text/html" -> 'text_html, "text/djot" -> 'text_djot,
-      "text/plain" -> 'text_plain, "text_html" -> 'text_html,
-      "text_djot" -> 'text_djot, "text_plain" -> 'text_plain];
+    const types = ["text/html" -> 'text_html, "text/djot" -> 'text_djot, "text/plain" -> 'text_plain, "text_html" -> 'text_html, "text_djot" -> 'text_djot, "text_plain" -> 'text_plain];
     for format in ({'text_html, 'text_djot, 'text_plain})
       for spelling in (offered)
         const name = tostr(spelling);
@@ -81,8 +79,7 @@ object FORMAT [
       if (length(line:trim()))
         lines = {@lines, line};
       elseif (length(lines))
-        blocks = {@blocks, $document_node:mk('paragraph,
-          $format:literal_inline($list_proto:join(lines, "\n")))};
+        blocks = {@blocks, $document_node:mk('paragraph, $format:literal_inline($list_proto:join(lines, "\n")))};
         lines = {};
       endif
     endfor
@@ -138,8 +135,7 @@ object FORMAT [
     const {value} = args;
     typeof(value) == TYPE_FLYWEIGHT || raise(E_TYPE, "Expected content flyweight");
     value.delegate == $sub && return 'inline;
-    value.delegate in {$document_node, $document_template}
-      || raise(E_INVARG, "Custom content needs an explicit producer constructor");
+    value.delegate in {$document_node, $document_template} || raise(E_INVARG, "Custom content needs an explicit producer constructor");
     const fields = flyslots(value);
     maphaskey(fields, 'kind) || raise(E_INVARG, "Content kind is missing");
     const kind = fields['kind];
@@ -165,5 +161,4 @@ object FORMAT [
     typeof(producer) in {TYPE_OBJ, TYPE_FLYWEIGHT} || raise(E_TYPE);
     return $document_template:mk('producer_blocks, {}, ['producer -> producer]);
   endmethod
-
 endobject

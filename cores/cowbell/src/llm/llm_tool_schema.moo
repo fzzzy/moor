@@ -28,7 +28,7 @@ object LLM_TOOL_SCHEMA [
     const type_name = kind == TYPE_MAP ? "object" | kind == TYPE_LIST ? "array" | kind == TYPE_STR ? "string" | kind == TYPE_INT ? "integer" | kind == TYPE_BOOL ? "boolean" | kind == TYPE_FLOAT ? "number" | kind == TYPE_OBJ && value == #-1 ? "null" | "unsupported";
     if (maphaskey(schema, "type"))
       const types = typeof(schema["type"]) == TYPE_LIST ? schema["type"] | {schema["type"]};
-      (type_name in types) || (kind == TYPE_INT && "number" in types) || raise(E_INVARG, path + " has the wrong type.");
+      type_name in types || (kind == TYPE_INT && "number" in types) || raise(E_INVARG, path + " has the wrong type.");
     endif
     if (maphaskey(schema, "enum"))
       let matched = false;
@@ -86,16 +86,13 @@ object LLM_TOOL_SCHEMA [
     typeof(schema) == TYPE_MAP || raise(E_TYPE, "Invalid tool schema.");
     depth <= 16 || raise(E_QUOTA, "Tool schema is nested too deeply.");
     for key in (mapkeys(schema))
-      key in {"type", "properties", "required", "additionalProperties", "items", "enum", "description",
-        "title", "default", "minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum"}
-        || raise(E_INVARG, "Unsupported tool schema constraint: " + tostr(key));
+      key in {"type", "properties", "required", "additionalProperties", "items", "enum", "description", "title", "default", "minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum"} || raise(E_INVARG, "Unsupported tool schema constraint: " + tostr(key));
     endfor
     if (maphaskey(schema, "type"))
       const types = typeof(schema["type"]) == TYPE_LIST ? schema["type"] | {schema["type"]};
       length(types) > 0 || raise(E_INVARG, "Empty schema type list.");
       for kind in (types)
-        kind in {"object", "array", "string", "integer", "number", "boolean", "null"}
-          || raise(E_INVARG, "Unsupported schema type.");
+        kind in {"object", "array", "string", "integer", "number", "boolean", "null"} || raise(E_INVARG, "Unsupported schema type.");
       endfor
     endif
     const properties = `schema["properties"] ! E_RANGE => []';
@@ -107,8 +104,7 @@ object LLM_TOOL_SCHEMA [
     const required = `schema["required"] ! E_RANGE => {}';
     typeof(required) == TYPE_LIST || raise(E_TYPE, "Schema required must be a list.");
     for key in (required)
-      typeof(key) == TYPE_STR && $llm_tool_schema:has_key(properties, key)
-        || raise(E_INVARG, "Required field is absent from the schema.");
+      typeof(key) == TYPE_STR && $llm_tool_schema:has_key(properties, key) || raise(E_INVARG, "Required field is absent from the schema.");
     endfor
     for key in ({"items", "additionalProperties"})
       if (maphaskey(schema, key))

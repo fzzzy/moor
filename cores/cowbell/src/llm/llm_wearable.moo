@@ -8,9 +8,9 @@ object LLM_WEARABLE [
   fertile: true
   readable: true
 
+  property agent (owner: HACKER, flags: "r") = #-1;
   property interaction (owner: ARCH_WIZARD, flags: "") = #-1;
   property interaction_timeout (owner: HACKER, flags: "rc") = 300;
-  property agent (owner: HACKER, flags: "r") = #-1;
   property placeholder_text (owner: HACKER, flags: "rc") = "Ask a question...";
   property preferred_model (owner: HACKER, flags: "rc") = "";
   property processing_message (owner: HACKER, flags: "rc") = "Processing request...";
@@ -27,8 +27,7 @@ object LLM_WEARABLE [
     typeof(principal) == TYPE_OBJ && valid(principal) || raise(E_PERM);
     principal == this.owner || principal.wizard || raise(E_PERM);
     if (!is_clear_property(this, "interaction") && valid(this.interaction))
-      this.interaction.interaction_task == task_id() && !valid(this.interaction.agent)
-        || raise(E_INVARG, "Stop the current interaction before configuring.");
+      this.interaction.interaction_task == task_id() && !valid(this.interaction.agent) || raise(E_INVARG, "Stop the current interaction before configuring.");
     endif
     if (!is_clear_property(this, "agent") && valid(this.agent))
       !this.agent.running || raise(E_INVARG, "Agent is still running.");
@@ -118,8 +117,7 @@ object LLM_WEARABLE [
     const {who, @rest} = args;
     const principal = caller_perms();
     $root:check_actor(who, principal);
-    (who == this.owner || principal.wizard)
-      || raise(E_PERM, "That device belongs to someone else.");
+    who == this.owner || principal.wizard || raise(E_PERM, "That device belongs to someone else.");
     set_task_perms(principal);
     return pass(@args);
   endmethod
@@ -129,8 +127,7 @@ object LLM_WEARABLE [
     const principal = caller_perms();
     const {who, @rest} = args;
     $root:check_actor(who, principal);
-    if (!is_clear_property(this, "interaction") && valid(this.interaction)
-        && this.interaction.requester == who)
+    if (!is_clear_property(this, "interaction") && valid(this.interaction) && this.interaction.requester == who)
       this.interaction:close();
     endif
     set_task_perms(principal);
@@ -176,7 +173,7 @@ object LLM_WEARABLE [
     const last_usage = this.agent.last_token_usage;
     if (typeof(last_usage) == TYPE_MAP && maphaskey(last_usage, "total_tokens"))
       last_tokens = last_usage["total_tokens"];
-      usage_msg = "[TOKENS] Last call: " + (tostr(last_tokens)) + " | Total: " + tostr(used) + "/" + tostr(budget) + " (" + tostr(percent_used) + "% used)";
+      usage_msg = "[TOKENS] Last call: " + tostr(last_tokens) + " | Total: " + tostr(used) + "/" + tostr(budget) + " (" + tostr(percent_used) + "% used)";
       tts_msg = "Token usage: Last call used " + tostr(last_tokens) + " tokens. Total " + tostr(used) + " of " + tostr(budget) + ", " + tostr(percent_used) + " percent used.";
     else
       "No API calls yet, just show budget";
@@ -186,7 +183,7 @@ object LLM_WEARABLE [
     if (valid(session))
       session:emit(wearer, $event:mk_info(wearer, usage_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(tts_msg));
     else
-    wearer:inform_current($event:mk_info(wearer, usage_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(tts_msg));
+      wearer:inform_current($event:mk_info(wearer, usage_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(tts_msg));
     endif
     "Show context status";
     const token_limit = this.agent.token_limit;
@@ -199,28 +196,23 @@ object LLM_WEARABLE [
       threshold_percent = prompt_tokens * 100 / threshold_tokens;
       "Describe proximity to the compaction threshold";
       if (threshold_percent >= 100)
-
         status = "COMPACTING";
       elseif (threshold_percent >= 80)
-
         status = "NEAR LIMIT";
       else
-
         status = "OK";
       endif
-      context_msg = "[CONTEXT] Size: " + (tostr(prompt_tokens)) + "/" + tostr(token_limit) + " (" + tostr(context_percent) + "%) | Compaction at " + tostr(threshold_tokens) + " - " + status;
+      context_msg = "[CONTEXT] Size: " + tostr(prompt_tokens) + "/" + tostr(token_limit) + " (" + tostr(context_percent) + "%) | Compaction at " + tostr(threshold_tokens) + " - " + status;
       context_tts = "Context size: " + tostr(prompt_tokens) + " of " + tostr(token_limit) + " tokens, " + tostr(context_percent) + " percent. Status: " + status + ".";
     else
       "No API call yet - show context is fresh, estimate from message count";
       num_messages = length(this.agent:get_context());
       if (num_messages == 0)
         status = "FRESH";
-
         context_msg = "[CONTEXT] " + status + " | Limit: " + tostr(token_limit) + " | Compaction at " + tostr(threshold_tokens);
         context_tts = "Context is fresh. Token limit is " + tostr(token_limit) + ", compaction at " + tostr(threshold_tokens) + ".";
       else
         status = tostr(num_messages) + " messages";
-
         context_msg = "[CONTEXT] " + status + " | Limit: " + tostr(token_limit) + " | Compaction at " + tostr(threshold_tokens);
         context_tts = "Context has " + tostr(num_messages) + " messages. Token limit is " + tostr(token_limit) + ".";
       endif
@@ -228,7 +220,7 @@ object LLM_WEARABLE [
     if (valid(session))
       session:emit(wearer, $event:mk_info(wearer, context_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(context_tts));
     else
-    wearer:inform_current($event:mk_info(wearer, context_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(context_tts));
+      wearer:inform_current($event:mk_info(wearer, context_msg):with_presentation_hint('inset):with_group('llm, this):with_tts(context_tts));
     endif
   endmethod
 
@@ -252,8 +244,7 @@ object LLM_WEARABLE [
     "Resolve the command principal without treating ambient player as delegated authority.";
     caller == this && caller_perms().wizard || raise(E_PERM);
     const {principal, source} = args;
-    const actor = principal == #-1 && source == player && valid(player) && is_player(player)
-      ? player | principal;
+    const actor = principal == #-1 && source == player && valid(player) && is_player(player) ? player | principal;
     valid(actor) && (actor == this.owner || actor.wizard) || raise(E_PERM);
     return actor;
   endmethod
@@ -348,5 +339,4 @@ object LLM_WEARABLE [
       agent:add_tool(tool.name, tool);
     endfor
   endmethod
-
 endobject

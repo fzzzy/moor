@@ -8,8 +8,8 @@ object HELP_SOURCE [
   owner: ARCH_WIZARD
   readable: true
 
-  property topic_order (owner: ARCH_WIZARD, flags: "rc") = {};
   property content_kind (owner: ARCH_WIZARD, flags: "rc") = 'literal;
+  property topic_order (owner: ARCH_WIZARD, flags: "rc") = {};
 
   method help_topics owner: ARCH_WIZARD
     "Generic property-backed help topic provider.";

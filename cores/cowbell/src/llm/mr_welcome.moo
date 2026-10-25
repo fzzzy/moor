@@ -29,9 +29,9 @@ object MR_WELCOME [
   };
   override description (owner: HACKER, flags: "rc") = "A cheerful, helpful guide who welcomes visitors and helps them navigate this world.";
   override shut_off_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "reach", .singular_form = "reaches">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "reach", .singular_form = "reaches">,
     " behind ",
     <SUB, .capitalize = false, .type = 'dobj>,
     "'s head, finding a small recessed switch that ",
@@ -53,9 +53,9 @@ object MR_WELCOME [
   override triage_model (owner: HACKER, flags: "rc") = "";
   override triage_prompt (owner: HACKER, flags: "rc") = "You are a triage filter for Mr. Welcome, the hotel concierge. Decide if he should engage.\n\nEXAMPLES:\n\nActivity: Alice says, \"Mr. Welcome, where's the dining room?\"\nAnswer: ENGAGE (directly addressed, asking for directions)\n\nActivity: Bob says, \"I have a commit locally that might help\"\nAnswer: IGNORE (developers discussing code, not hotel business)\n\nActivity: Carol arrives from the revolving door.\nCarol says, \"wow, what is this place?\"\nAnswer: ENGAGE (newcomer confused, needs orientation)\n\nActivity: Dan [to Eve]: \"yeah the websocket handling is tricky\"\nAnswer: IGNORE (technical conversation between others)\n\nActivity: Frank says, \"anyone know where I can get some food?\"\nAnswer: ENGAGE (guest asking about hotel services)\n\nActivity: Grace nods\nActivity: Henry says, \"interesting point about the architecture\"\nAnswer: IGNORE (casual agreement, technical discussion)\n\nActivity: Iris says, \"Welcome! Good to see you\"\nAnswer: IGNORE (\"Welcome\" here is a greeting word, not addressing Mr. Welcome)\n\nActivity: Jack says, \"hey Mr. Welcome\"\nAnswer: ENGAGE (directly addressed by name)\n\nActivity: Kate says, \"I need to check in, is there a front desk?\"\nAnswer: ENGAGE (guest needs hotel assistance)\n\nActivity: Leo says, \"the bug is in the parser somewhere\"\nAnswer: IGNORE (technical debugging discussion)\n\nNOW DECIDE for this activity:\n{events}\n\nAnswer with ONLY one word: ENGAGE or IGNORE";
   override turn_on_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "flip", .singular_form = "flips">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "flip", .singular_form = "flips">,
     " the small switch behind ",
     <SUB, .capitalize = false, .type = 'dobj>,
     "'s head. *click* ",
@@ -88,13 +88,11 @@ object MR_WELCOME [
     "Compose shared guide tools, bounded memory, and the persona prompt for the controller's agent.";
     const {agent} = args;
     $llm_room_observer:check_setup(this, agent, caller_perms());
-    agent.system_prompt = this.observation_mechanics_prompt + " " + this.base_role_prompt
-      + " WORLD CONTEXT: " + this.world_context;
+    agent.system_prompt = this.observation_mechanics_prompt + " " + this.base_role_prompt + " WORLD CONTEXT: " + this.world_context;
     agent:reset_context();
     agent.chat_opts = $llm_chat_opts:mk():with_temperature(0.3);
-    const inspection = {tool for tool in ($llm_inspection_tools:get_tools())
-      if (tool.name in {"area_map", "find_route", "inspect_object", "list_commands"})};
-    const help = {entry for entry in ($llm_help_tools:get_tools()) if (entry.name == "help_lookup")};
+    const inspection = { tool for tool in ($llm_inspection_tools:get_tools()) if tool.name in {"area_map", "find_route", "inspect_object", "list_commands"} };
+    const help = { entry for entry in ($llm_help_tools:get_tools()) if entry.name == "help_lookup" };
     for selected in ($llm_tool_catalog:compose(inspection, help, $llm_social_tools:get_tools()))
       agent:add_tool(selected.name, selected);
     endfor
@@ -113,8 +111,7 @@ object MR_WELCOME [
     const room = this.location;
     set_task_perms(actor);
     if (valid(room))
-      room:announce($event:mk_ask(actor, $sub:thec('actor), " ",
-        $sub:agree('actor, 'name, "ask", "asks"), " ", $sub:reference(this), " about \"", topic, "\"."));
+      room:announce($event:mk_ask(actor, $sub:thec('actor), " ", $sub:agree('actor, 'name, "ask", "asks"), " ", $sub:reference(this), " about \"", topic, "\"."));
     endif
   endverb
 
@@ -123,8 +120,7 @@ object MR_WELCOME [
     const {tool_name, tool_args} = args;
     const context = $llm_social_tools:context(this, caller_perms());
     set_task_perms(this);
-    if (!(tool_name in {"list_players", "player_info", "area_map", "find_route", "list_commands",
-        "inspect_object", "emote", "directed_say", "think", "help_lookup"}))
+    if (!(tool_name in {"list_players", "player_info", "area_map", "find_route", "list_commands", "inspect_object", "emote", "directed_say", "think", "help_lookup"}))
       $llm_social_tools:present(context, 'emote, "thinks...");
     endif
   endmethod
@@ -176,5 +172,4 @@ object MR_WELCOME [
       $llm_social_tools:present(context, 'emote, "scribbles something in his notebook...");
     endif
   endmethod
-
 endobject

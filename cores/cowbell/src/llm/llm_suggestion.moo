@@ -6,18 +6,18 @@ object LLM_SUGGESTION [
   parent: LLM_JOB
   owner: ARCH_WIZARD
 
-  property client (owner: ARCH_WIZARD, flags: "") = #-1;
-  property request (owner: ARCH_WIZARD, flags: "") = [];
-  property input_snapshot (owner: ARCH_WIZARD, flags: "") = [];
+  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
   property actor_owner (owner: ARCH_WIZARD, flags: "") = #-1;
   property actor_programmer (owner: ARCH_WIZARD, flags: "") = false;
-  property actor_builder (owner: ARCH_WIZARD, flags: "") = false;
   property actor_wizard (owner: ARCH_WIZARD, flags: "") = false;
-  property monitor_task (owner: ARCH_WIZARD, flags: "") = 0;
-  property rewrite_id (owner: ARCH_WIZARD, flags: "") = "";
-  property fallback (owner: ARCH_WIZARD, flags: "") = "";
-  property failure (owner: ARCH_WIZARD, flags: "") = "";
+  property client (owner: ARCH_WIZARD, flags: "") = #-1;
   property closed (owner: ARCH_WIZARD, flags: "") = false;
+  property failure (owner: ARCH_WIZARD, flags: "") = "";
+  property fallback (owner: ARCH_WIZARD, flags: "") = "";
+  property input_snapshot (owner: ARCH_WIZARD, flags: "") = [];
+  property monitor_task (owner: ARCH_WIZARD, flags: "") = 0;
+  property request (owner: ARCH_WIZARD, flags: "") = [];
+  property rewrite_id (owner: ARCH_WIZARD, flags: "") = "";
 
   method offer owner: ARCH_WIZARD
     "Start a suggestion or display its quota error on the captured connection; return whether handled.";
@@ -28,8 +28,7 @@ object LLM_SUGGESTION [
     try
       return typeof(this:start(actor, destination, request)) == TYPE_OBJ;
     except error (E_QUOTA)
-      actor:inform_connection(destination,
-        $event:mk_error(actor, error[2]):with_audience('utility));
+      actor:inform_connection(destination, $event:mk_error(actor, error[2]):with_audience('utility));
       return true;
     endtry
   endmethod
@@ -41,8 +40,7 @@ object LLM_SUGGESTION [
     $llm_tool_provider:_require_tool_dispatch(actor, principal);
     this in {$llm_doc_suggestion, $llm_help_suggestion, $llm_command_suggestion} && is_player(actor) || raise(E_INVARG);
     this:validate_request(request, actor);
-    typeof(destination) == TYPE_OBJ && destination in {entry[1] for entry in (connections(actor))}
-      || raise(E_PERM, "Suggestion connection is not attached to the requester.");
+    typeof(destination) == TYPE_OBJ && destination in { entry[1] for entry in (connections(actor)) } || raise(E_PERM, "Suggestion connection is not attached to the requester.");
     const client = $player.suggestions_llm_client;
     typeof(client) == TYPE_OBJ && valid(client) || return false;
     if (is_clear_property(actor, "llm_suggestions"))
@@ -75,10 +73,9 @@ object LLM_SUGGESTION [
     const actor = job.requester;
     $llm_tool_provider:_require_tool_dispatch(actor, caller_perms());
     !is_clear_property(actor, "llm_suggestions") && job in actor.llm_suggestions || raise(E_PERM);
-    actor.owner == job.actor_owner && actor.programmer == job.actor_programmer
-      && actor.wizard == job.actor_wizard && actor.is_builder == job.actor_builder || raise(E_PERM, "Suggestion authority changed.");
+    actor.owner == job.actor_owner && actor.programmer == job.actor_programmer && actor.wizard == job.actor_wizard && actor.is_builder == job.actor_builder || raise(E_PERM, "Suggestion authority changed.");
     valid(job.client) && $player.suggestions_llm_client == job.client || raise(E_PERM, "Suggestion client changed.");
-    job.reply_connection in {entry[1] for entry in (connections(actor))} || raise(E_PERM, "Suggestion connection detached.");
+    job.reply_connection in { entry[1] for entry in (connections(actor)) } || raise(E_PERM, "Suggestion connection detached.");
     time() < job.deadline || raise(E_QUOTA, "Suggestion timed out.");
     return true;
   endmethod
@@ -146,8 +143,7 @@ object LLM_SUGGESTION [
         const response = this:_query();
         $llm_suggestion:check(this);
         const current = this:_as_requester("collect_context", {});
-        current == this.input_snapshot && strcmp(toliteral(current), toliteral(this.input_snapshot)) == 0
-          || raise(E_PERM, "LLM suggestion context changed.");
+        current == this.input_snapshot && strcmp(toliteral(current), toliteral(this.input_snapshot)) == 0 || raise(E_PERM, "LLM suggestion context changed.");
         typeof(response) == TYPE_STR && value_bytes(response) <= 8192 || raise(E_INVARG, "Invalid suggestion response.");
         const content = this:_as_requester("render_response", {response});
         this:_show(content, false);
@@ -224,7 +220,7 @@ object LLM_SUGGESTION [
 
   method close owner: ARCH_WIZARD
     "Finish once, kill owned tasks, and release request, client, connection, and actor references.";
-    (caller == this || caller == $llm_suggestion || caller == this.host) && caller_perms().wizard || raise(E_PERM);
+    caller == this || caller == $llm_suggestion || caller == this.host && caller_perms().wizard || raise(E_PERM);
     this.closed && return false;
     const {state} = args;
     state in {'complete, 'failed, 'cancelled, 'timed_out} || raise(E_INVARG);
@@ -246,7 +242,6 @@ object LLM_SUGGESTION [
     this.rewrite_id = "";
     this.fallback = "";
     this:release();
-    // Finished workers return normally so their pending output can commit.
     worker == task_id() && state in {'cancelled, 'timed_out} && this:_end_caller(worker);
     return true;
   endmethod

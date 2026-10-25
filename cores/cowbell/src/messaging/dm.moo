@@ -101,10 +101,7 @@ object DM [
     const {recipient} = args;
     const group = tosym("dm_" + $url_utils:to_curie_str(this.from));
     const {body, spoken} = this:_display_parts(recipient);
-    return $event:mk_dm(recipient, body)
-      :with_presentation_hint('inset):with_group(group):with_tts(spoken)
-      :with_metadata('dm_from, this.from):with_metadata('dm_location, this.location)
-      :with_metadata('dm_content, this.text):with_metadata('dm_timestamp, this.sent);
+    return $event:mk_dm(recipient, body):with_presentation_hint('inset):with_group(group):with_tts(spoken):with_metadata('dm_from, this.from):with_metadata('dm_location, this.location):with_metadata('dm_content, this.text):with_metadata('dm_timestamp, this.sent);
   endmethod
 
   method sender_echo_event owner: ARCH_WIZARD
@@ -117,14 +114,11 @@ object DM [
     const target = valid(recipient) ? $format.annotation:object(recipient, recipient_name) | recipient_name;
     const location_name = valid(loc) ? loc:noun_phrase('definite, sender) | "";
     const place = valid(loc) ? {" (in ", $format.annotation:object(loc, location_name), ")"} | {};
-    const header = $format.paragraph:mk("You", @place, " → ", target, ":");
+    const header = $format.paragraph:mk("You", @place, " \u2192 ", target, ":");
     const spoken_place = valid(loc) ? " in " + location_name | "";
     const spoken_name = valid(recipient) ? recipient:noun_phrase('definite, sender) | recipient_name;
     const spoken = "Message sent to " + spoken_name + spoken_place + ": " + this.text;
     const group = tosym("dm_" + $url_utils:to_curie_str(recipient));
-    return $event:mk_dm(sender, $format.block:mk(header, this.text))
-      :with_audience('utility):with_presentation_hint('inset):with_group(group):with_tts(spoken)
-      :with_metadata('dm_to, recipient):with_metadata('dm_location, loc)
-      :with_metadata('dm_content, this.text):with_metadata('dm_timestamp, this.sent);
+    return $event:mk_dm(sender, $format.block:mk(header, this.text)):with_audience('utility):with_presentation_hint('inset):with_group(group):with_tts(spoken):with_metadata('dm_to, recipient):with_metadata('dm_location, loc):with_metadata('dm_content, this.text):with_metadata('dm_timestamp, this.sent);
   endmethod
 endobject

@@ -12,46 +12,46 @@ object DRINK [
   property consume_amounts (owner: ARCH_WIZARD, flags: "rc") = ["drink" -> 2, "gulp" -> 3, "quaff" -> 5, "sip" -> 1];
   property contents_name (owner: ARCH_WIZARD, flags: "rc") = "liquid";
   property drink_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "drink", .singular_form = "drinks">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "drink", .singular_form = "drinks">,
     " from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property empty_name (owner: ARCH_WIZARD, flags: "rc") = "";
   property fill_time (owner: ARCH_WIZARD, flags: "rc") = 0;
   property gulp_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "gulp", .singular_form = "gulps">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "gulp", .singular_form = "gulps">,
     " from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property quaff_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "quaff", .singular_form = "quaffs">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "quaff", .singular_form = "quaffs">,
     " deeply from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property refill_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "refill", .singular_form = "refills">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "refill", .singular_form = "refills">,
     " ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property refillable (owner: ARCH_WIZARD, flags: "rc") = true;
   property sip_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "take", .singular_form = "takes">,
     " a small sip from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   property temp_descriptions (owner: ARCH_WIZARD, flags: "rc") = [
@@ -64,20 +64,20 @@ object DRINK [
   property temperature (owner: ARCH_WIZARD, flags: "rc") = "room";
 
   override consume_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "drink", .singular_form = "drinks">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "drink", .singular_form = "drinks">,
     " from ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   override description (owner: ARCH_WIZARD, flags: "rc") = "Prototype for drinkable beverages in vessels. Supports sip, drink, gulp, quaff and refill.";
   override finish_msg (owner: ARCH_WIZARD, flags: "rc") = {
-    <SUB, .capitalize = true, .type = 'article_the, .binding_name = 'actor>,
+    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
     " ",
-    <SUB, .type = 'agree, .binding_name = 'actor, .subject_form = 'name, .plural_form = "drain", .singular_form = "drains">,
+    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "drain", .singular_form = "drains">,
     " the last of ",
-    <SUB, .capitalize = false, .type = 'article_the, .binding_name = 'd, .capitalize_binding = false>,
+    <SUB, .capitalize = false, .binding_name = 'd, .type = 'article_the, .capitalize_binding = false>,
     "."
   };
   override max_portions (owner: ARCH_WIZARD, flags: "rc") = 10;
@@ -236,8 +236,7 @@ object DRINK [
     const {property} = args;
     if (tostr(property) in {"drink_msg", "gulp_msg", "quaff_msg", "refill_msg", "sip_msg"})
       let bindings = $sub_utils:standard_bindings("The person drinking or refilling.");
-      bindings['dobj] = ['kind -> 'object, 'description -> "The drink.",
-        'example -> 'host];
+      bindings['dobj] = ['kind -> 'object, 'description -> "The drink.", 'example -> 'host];
       return bindings;
     endif
     return pass(@args);
