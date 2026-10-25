@@ -49,34 +49,3 @@ object HEADLESS_MATCHING_SCENARIOS [
   endmethod
 
 endobject
-
-object #90113
-  name: "matching probe"
-  parent: THING
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
-  override aliases = {"first probe", "probe"};
-endobject
-
-object #90114
-  name: "matching probe"
-  parent: THING
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
-  override aliases = {"second probe", "probe", "special probe"};
-  verb "runtime-match-probe" (this none none) owner: RUNTIME_WIZARD flags: "rd"
-    "Expose the real object selected by command dispatch.";
-    player:inform_current($event:mk_note(player, "MATCHING DISPATCH " + tostr(this)):with_audience('utility));
-  endverb
-endobject
-
-object #000001-ABCDEF1234
-  name: "UUID matching probe"
-  parent: THING
-  owner: RUNTIME_WIZARD
-  location: RUNTIME_ROOM
-  verb "runtime-match-probe" (this none none) owner: RUNTIME_WIZARD flags: "rd"
-    "Expose dispatch through an actual UUID object reference.";
-    player:inform_current($event:mk_note(player, "MATCHING DISPATCH " + tostr(this)):with_audience('utility));
-  endverb
-endobject
