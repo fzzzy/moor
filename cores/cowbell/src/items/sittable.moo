@@ -11,39 +11,39 @@ object SITTABLE [
 
   property already_sitting_msg (owner: HACKER, flags: "rc") = {
     "You're already sitting on ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property cant_reach_msg (owner: HACKER, flags: "rc") = {
     "You can't reach ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     " from here."
   };
   property dumped_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " dumped off ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property no_room_msg (owner: HACKER, flags: "rc") = {
     "There's no room on ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property not_sitting_msg (owner: HACKER, flags: "rc") = {
     "You aren't sitting on ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property seats (owner: HACKER, flags: "rc") = 2;
   property sit_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "sit", .singular_form = "sits">,
+    <SUB, .binding_name = 'actor, .plural_form = "sit", .type = 'agree, .subject_form = 'name, .singular_form = "sits">,
     " on ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property sitting (owner: HACKER, flags: "r") = {};
@@ -51,19 +51,19 @@ object SITTABLE [
   property sitting_verb (owner: HACKER, flags: "rc") = "sitting";
   property squeeze (owner: HACKER, flags: "rc") = 0;
   property squeezed_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'dobj, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+    <SUB, .binding_name = 'dobj, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
     " squeezed off ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
   property stand_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "stand", .singular_form = "stands">,
+    <SUB, .binding_name = 'actor, .plural_form = "stand", .type = 'agree, .subject_form = 'name, .singular_form = "stands">,
     " up from ",
-    <SUB, .capitalize = false, .binding_name = 'This, .type = 'article_the>,
+    <SUB, .binding_name = 'This, .type = 'article_the, .capitalize = false>,
     "."
   };
 

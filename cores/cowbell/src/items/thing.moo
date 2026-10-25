@@ -11,24 +11,24 @@ object THING [
 
   property drop_denied_msg (owner: HACKER, flags: "rc") = {"You can't drop that."};
   property drop_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " dropped ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property drop_rule (owner: HACKER, flags: "rc") = 0;
   property get_denied_msg (owner: HACKER, flags: "rc") = {"You can't pick that up."};
   property get_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " picked up ",
-    <SUB, .capitalize = false, .binding_name = 'dobj, .type = 'article_the>,
+    <SUB, .binding_name = 'dobj, .type = 'article_the, .capitalize = false>,
     "."
   };
   property get_rule (owner: HACKER, flags: "rc") = 0;
   property integrated_description (owner: HACKER, flags: "rc") = "";
   property listing_form (owner: HACKER, flags: "rc") = 'indefinite;
   property portable (owner: HACKER, flags: "rc") = true;
-  property pronouns (owner: HACKER, flags: "rc") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "it/its", .ps = "it", .po = "it", .pp = "its", .pq = "its", .pr = "itself">;
+  property pronouns (owner: HACKER, flags: "rc") = <PRONOUNS, .po = "it", .display = "it/its", .verb_be = "is", .ps = "it", .pr = "itself", .pq = "its", .pp = "its", .is_plural = false, .verb_have = "has">;
   property unlocks (owner: HACKER, flags: "rc") = #-1;
 
   override description (owner: HACKER, flags: "rc") = "Generic thing prototype that is the basis for most items in the world.";

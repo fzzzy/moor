@@ -9,8 +9,8 @@ object LLM_ROOM_OBSERVER [
   readable: true
 
   property agent (owner: HACKER, flags: "rc") = #-1;
-  property already_off_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'dobj>, " is already switched off."};
-  property already_on_msg (owner: HACKER, flags: "rc") = {<SUB, .capitalize = true, .type = 'dobj>, " is already active."};
+  property already_off_msg (owner: HACKER, flags: "rc") = {<SUB, .type = 'dobj, .capitalize = true>, " is already switched off."};
+  property already_on_msg (owner: HACKER, flags: "rc") = {<SUB, .type = 'dobj, .capitalize = true>, " is already active."};
   property enabled (owner: HACKER, flags: "rc") = true;
   property intake_failures (owner: ARCH_WIZARD, flags: "") = 0;
   property last_intake_error (owner: ARCH_WIZARD, flags: "") = [];
@@ -22,15 +22,15 @@ object LLM_ROOM_OBSERVER [
   property role_prompt (owner: HACKER, flags: "rc") = "When asked, provide witty or insightful commentary based on what you've seen.";
   property runtime (owner: ARCH_WIZARD, flags: "") = #-1;
   property shut_off_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "reach", .singular_form = "reaches">,
+    <SUB, .binding_name = 'actor, .plural_form = "reach", .type = 'agree, .subject_form = 'name, .singular_form = "reaches">,
     " behind ",
-    <SUB, .capitalize = false, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = false>,
     "'s head and ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "flip", .singular_form = "flips">,
+    <SUB, .binding_name = 'actor, .plural_form = "flip", .type = 'agree, .subject_form = 'name, .singular_form = "flips">,
     " a small switch. ",
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     " freezes mid-motion, eyes going vacant."
   };
   property significant_events (owner: HACKER, flags: "rc") = {
@@ -56,15 +56,15 @@ object LLM_ROOM_OBSERVER [
   property triage_model (owner: HACKER, flags: "rc") = "";
   property triage_prompt (owner: HACKER, flags: "rc") = "You are a triage filter for an NPC named {name}. Decide if {name} should engage with the recent activity.\n\nEXAMPLES:\n\nActivity: Alice says, \"Hey {name}, can you help me find the restaurant?\"\nAnswer: ENGAGE (directly addressed by name, asking for help)\n\nActivity: Bob arrives from the north.\nAnswer: IGNORE (just someone arriving, wait to see if they need help)\n\nActivity: Carol says, \"I have a commit that might help with that bug\"\nAnswer: IGNORE (technical discussion between others, \"help\" not directed at {name})\n\nActivity: Dan says, \"where am I? how do I check in?\"\nAnswer: ENGAGE (newcomer seems confused and needs orientation)\n\nActivity: Eve [to Frank]: \"did you see the game last night?\"\nAnswer: IGNORE (conversation between two other people)\n\nActivity: Grace says, \"this websocket code is tricky\"\nAnswer: IGNORE (technical discussion, not asking {name} for anything)\n\nActivity: Henry says, \"{name}?\"\nAnswer: ENGAGE (directly addressed by name)\n\nActivity: Iris nods\nActivity: Jack waves to everyone\nAnswer: IGNORE (social gestures not requiring response)\n\nActivity: Kate says, \"excuse me, is there someone who works here?\"\nAnswer: ENGAGE (looking for staff assistance)\n\nNOW DECIDE for this activity:\n{events}\n\nAnswer with ONLY one word: ENGAGE or IGNORE";
   property turn_on_msg (owner: HACKER, flags: "rc") = {
-    <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+    <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
     " ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "reach", .singular_form = "reaches">,
+    <SUB, .binding_name = 'actor, .plural_form = "reach", .type = 'agree, .subject_form = 'name, .singular_form = "reaches">,
     " behind ",
-    <SUB, .capitalize = false, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = false>,
     "'s head and ",
-    <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "flip", .singular_form = "flips">,
+    <SUB, .binding_name = 'actor, .plural_form = "flip", .type = 'agree, .subject_form = 'name, .singular_form = "flips">,
     " the switch back. ",
-    <SUB, .capitalize = true, .type = 'dobj>,
+    <SUB, .type = 'dobj, .capitalize = true>,
     " blinks and looks around, reorienting."
   };
 

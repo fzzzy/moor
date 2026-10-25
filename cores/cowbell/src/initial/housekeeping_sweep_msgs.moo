@@ -9,31 +9,31 @@ object HOUSEKEEPING_SWEEP_MSGS [
   override entries (owner: ARCH_WIZARD, flags: "rc") = {
     {
       "A member of housekeeping gently guides ",
-      <SUB, .capitalize = false, .binding_name = 'actor, .type = 'article_the>,
+      <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = false>,
       " back to bed."
     },
     {
       "Housekeeping escorts ",
-      <SUB, .capitalize = false, .binding_name = 'actor, .type = 'article_the>,
+      <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = false>,
       " away to ",
-      <SUB, .capitalize = false, .type = 'pos_adj>,
+      <SUB, .type = 'pos_adj, .capitalize = false>,
       " room."
     },
     {
-      <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+      <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
       " ",
-      <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+      <SUB, .binding_name = 'actor, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
       " quietly led away by a tired-looking porter."
     },
     {
       "A woman with a broom nudges ",
-      <SUB, .capitalize = false, .binding_name = 'actor, .type = 'article_the>,
+      <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = false>,
       " awake and points toward the back stairs."
     },
     {
-      <SUB, .capitalize = true, .binding_name = 'actor, .type = 'article_the>,
+      <SUB, .binding_name = 'actor, .type = 'article_the, .capitalize = true>,
       " ",
-      <SUB, .binding_name = 'actor, .type = 'agree, .subject_form = 'name, .plural_form = "are", .singular_form = "is">,
+      <SUB, .binding_name = 'actor, .plural_form = "are", .type = 'agree, .subject_form = 'name, .singular_form = "is">,
       " gently but firmly ushered toward the dormitory."
     }
   };

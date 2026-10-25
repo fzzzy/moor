@@ -7,11 +7,11 @@ object PRONOUNS [
   owner: HACKER
   readable: true
 
-  property he_him (owner: HACKER, flags: "r") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "he/him", .ps = "he", .po = "him", .pp = "his", .pq = "his", .pr = "himself">;
-  property it_its (owner: HACKER, flags: "r") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "it/its", .ps = "it", .po = "it", .pp = "its", .pq = "its", .pr = "itself">;
-  property she_her (owner: HACKER, flags: "r") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "she/her", .ps = "she", .po = "her", .pp = "her", .pq = "hers", .pr = "herself">;
-  property spivak (owner: HACKER, flags: "r") = <PRONOUNS, .verb_be = "is", .verb_have = "has", .is_plural = false, .display = "e/em", .ps = "e", .po = "em", .pp = "eir", .pq = "eirs", .pr = "emself">;
-  property they_them (owner: HACKER, flags: "r") = <PRONOUNS, .verb_be = "are", .verb_have = "have", .is_plural = true, .display = "they/them", .ps = "they", .po = "them", .pp = "their", .pq = "theirs", .pr = "themselves">;
+  property he_him (owner: HACKER, flags: "r") = <PRONOUNS, .po = "him", .display = "he/him", .verb_be = "is", .ps = "he", .pr = "himself", .pq = "his", .pp = "his", .is_plural = false, .verb_have = "has">;
+  property it_its (owner: HACKER, flags: "r") = <PRONOUNS, .po = "it", .display = "it/its", .verb_be = "is", .ps = "it", .pr = "itself", .pq = "its", .pp = "its", .is_plural = false, .verb_have = "has">;
+  property she_her (owner: HACKER, flags: "r") = <PRONOUNS, .po = "her", .display = "she/her", .verb_be = "is", .ps = "she", .pr = "herself", .pq = "hers", .pp = "her", .is_plural = false, .verb_have = "has">;
+  property spivak (owner: HACKER, flags: "r") = <PRONOUNS, .po = "em", .display = "e/em", .verb_be = "is", .ps = "e", .pr = "emself", .pq = "eirs", .pp = "eir", .is_plural = false, .verb_have = "has">;
+  property they_them (owner: HACKER, flags: "r") = <PRONOUNS, .po = "them", .display = "they/them", .verb_be = "are", .ps = "they", .pr = "themselves", .pq = "theirs", .pp = "their", .is_plural = true, .verb_have = "have">;
 
   override description (owner: HACKER, flags: "rc") = "Pronoun system providing preset and custom pronoun sets for objects and players.";
 

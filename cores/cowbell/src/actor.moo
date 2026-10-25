@@ -10,7 +10,7 @@ object ACTOR [
 
   property listing_form (owner: HACKER, flags: "rc") = 'indefinite;
   property performing (owner: ARCH_WIZARD, flags: "rc") = "{}";
-  property pronouns (owner: ARCH_WIZARD, flags: "rc") = <PRONOUNS, .verb_be = "are", .verb_have = "have", .is_plural = true, .display = "they/them", .ps = "they", .po = "them", .pp = "their", .pq = "theirs", .pr = "themselves">;
+  property pronouns (owner: ARCH_WIZARD, flags: "rc") = <PRONOUNS, .po = "them", .display = "they/them", .verb_be = "are", .ps = "they", .pr = "themselves", .pq = "theirs", .pp = "their", .is_plural = true, .verb_have = "have">;
   property wearing (owner: ARCH_WIZARD, flags: "rc") = {};
 
   override description (owner: ARCH_WIZARD, flags: "rc") = "Generic actor prototype providing core behavior for NPCs and players including item transfer, communication, and movement.";
