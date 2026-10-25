@@ -464,7 +464,8 @@ object SYSOBJ [
       seen[proto] = 1;
       proto_name = proto.name;
       for prop in (properties(this))
-        value = this.(prop);
+        "Some #0 properties are private; skip those rather than fail.";
+        value = `this.(prop) ! E_PERM => 0';
         if (typeof(value) == TYPE_OBJ && value == proto)
           proto_name = "$" + tostr(prop);
           break;
