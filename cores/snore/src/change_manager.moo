@@ -565,7 +565,7 @@ object CHANGE_MANAGER [
     for code in (codes)
       typeof(code) == TYPE_STR || raise(E_INVARG);
     endfor
-    const all = {item for item in (record["report"]["diagnostics"]) if (!codes || item["code"] in codes)};
+    const all = { item for item in (record["report"]["diagnostics"]) if !codes || item["code"] in codes };
     const names = this:_command_names();
     let page = {};
     for diagnostic in (all[offset..min(offset + 49, length(all))])
@@ -593,7 +593,7 @@ object CHANGE_MANAGER [
     request["details"] = selected ? {selected} | {};
     const report = preview_objdef_changes(record["sources"], request);
     !expected || expected == report["revision"] || this:_error("stale_inspection", "Local contents changed. Reload the review.");
-    const all = {row for row in (report["rows"]) if ((!classification || row["classification"] == classification) && (!selected || row["id"] == selected))};
+    const all = { row for row in (report["rows"]) if !classification || row["classification"] == classification && (!selected || row["id"] == selected) };
     const names = this:_command_names();
     let page = {};
     for row in (all[offset..min(offset + 49, length(all))])
@@ -841,19 +841,19 @@ object CHANGE_MANAGER [
     return label;
   endmethod
 
-
   method _command_item owner: #2
     "Return the display label for a review object or verb.";
     caller == this || raise(E_PERM);
     return this:_command_label(@args);
   endmethod
+
   method _command_table owner: #2
     "Render a small review table for text clients.";
     caller == this || raise(E_PERM);
     const {headers, rows} = args;
     let lines = {$string_utils:from_list(headers, " | ")};
     for row in (rows)
-      lines = {@lines, $string_utils:from_list({tostr(cell) for cell in (row)}, " | ")};
+      lines = {@lines, $string_utils:from_list({ tostr(cell) for cell in (row) }, " | ")};
     endfor
     return $string_utils:from_list(lines, "\n");
   endmethod
@@ -948,7 +948,7 @@ object CHANGE_MANAGER [
       endif
       let decision = decisions[kind];
       if (!row["eligible"])
-        decision = $string_utils:from_list({`reasons[reason] ! E_RANGE => reason' for reason in (row["blockers"])}, "; ");
+        decision = $string_utils:from_list({ `reasons[reason] ! E_RANGE => reason' for reason in (row["blockers"]) }, "; ");
       elseif (invalid)
         decision = "Edited program has errors";
       elseif (kind == "incoming" && (record["request"]["operation"] == "adopt" || row["classification"] in {"unchanged", "converged"}))
@@ -1030,7 +1030,7 @@ object CHANGE_MANAGER [
     const reasons = ["adoption_required" -> "Adopt a baseline first", "untrusted_target_authority" -> "Ownership or permissions block upgrades", "object_identity_mismatch" -> "Object identity doesn’t match"];
     for row in (record["report"]["rows"])
       if (!row["eligible"])
-        const explanation = $string_utils:from_list({`reasons[reason] ! E_RANGE => reason' for reason in (row["blockers"])}, "; ");
+        const explanation = $string_utils:from_list({ `reasons[reason] ! E_RANGE => reason' for reason in (row["blockers"]) }, "; ");
         checks = {@checks, {this:_command_item(row["object"], names, row["names"][1]), tostr(explanation, row["classification"] == "unchanged" ? " (program unchanged)" | "")}};
       endif
     endfor
@@ -1093,7 +1093,7 @@ object CHANGE_MANAGER [
       for name in (mapkeys(this.packages))
         const package = this.packages[name];
         const upstream = package["upstream"];
-        const source = typeof(upstream) == TYPE_STR ? (upstream ? upstream | "Not configured") | tostr(upstream["repository"], " · ", `upstream["revision"]["ref"] ! E_RANGE => upstream["revision"]["commit"]');
+        const source = typeof(upstream) == TYPE_STR ? upstream ? upstream | "Not configured" | tostr(upstream["repository"], " · ", `upstream["revision"]["ref"] ! E_RANGE => upstream["revision"]["commit"]');
         const review = package["active"] ? tostr("@changes diff ", package["active"]) | "None";
         rows = {@rows, {name, length(package["objects"]), source, review}};
       endfor
