@@ -2,13 +2,13 @@ object HEADLESS_AUTHORING_SCENARIOS [
   import_export_id -> "headless_authoring_scenarios"
 ]
   name: "Headless Nonprogrammer Authoring Scenarios"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  parent: cowbell::ROOT
+  owner: cowbell::ARCH_WIZARD
   readable: true
 
-  property preview_calls (owner: ARCH_WIZARD, flags: "") = 0;
+  property preview_calls (owner: cowbell::ARCH_WIZARD, flags: "") = 0;
 
-  method _author owner: ARCH_WIZARD
+  method _author owner: cowbell::ARCH_WIZARD
     "Exercise the public shared service with the ordinary builder's permissions.";
     caller == this || raise(E_PERM);
     const {command, text} = args;
@@ -16,7 +16,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return $builder_features:author(command, text, #90102);
   endmethod
 
-  method test_settings_selection_and_preview owner: ARCH_WIZARD
+  method test_settings_selection_and_preview owner: cowbell::ARCH_WIZARD
     "Select two distinct participants, count each once, and preview without changing state.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -75,7 +75,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_preview_rejects_extension_code owner: ARCH_WIZARD
+  method test_preview_rejects_extension_code owner: cowbell::ARCH_WIZARD
     "A preview rejects an executable extension without calling it, even when the definition is valid.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -102,13 +102,13 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method _unsafe_query owner: ARCH_WIZARD
+  method _unsafe_query owner: cowbell::ARCH_WIZARD
     "Expose a side effect if a preview mistakenly calls an extension provider.";
     this.preview_calls = this.preview_calls + 1;
     return ['rows -> {[]}, 'complete -> true];
   endmethod
 
-  method test_author_timer_removal_and_failed_edit owner: ARCH_WIZARD
+  method test_author_timer_removal_and_failed_edit owner: cowbell::ARCH_WIZARD
     "A failed edit preserves the signed reaction and timer; removing it cancels the timer immediately.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -141,7 +141,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_named_fact_authoring_and_effects owner: ARCH_WIZARD
+  method test_named_fact_authoring_and_effects owner: cowbell::ARCH_WIZARD
     "Builders define typed facts, reuse them in policies, and record unique rows through reaction steps.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -177,7 +177,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_trace_reports_denial_and_stops_steps owner: ARCH_WIZARD
+  method test_trace_reports_denial_and_stops_steps owner: cowbell::ARCH_WIZARD
     "An owner can inspect the attempted action and denial; a failed action does not run later steps.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -211,7 +211,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_timer_report_rechecks_current_state owner: ARCH_WIZARD
+  method test_timer_report_rechecks_current_state owner: cowbell::ARCH_WIZARD
     "A delayed step reports why it skipped after a state edit invalidates its condition.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -239,7 +239,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_relation_settings_copy_sharing_and_retargeting owner: ARCH_WIZARD
+  method test_relation_settings_copy_sharing_and_retargeting owner: cowbell::ARCH_WIZARD
     "Copies share explicit storage until retargeted; field order does not affect named facts.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -294,7 +294,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_relation_retarget_errors_and_repair owner: ARCH_WIZARD
+  method test_relation_retarget_errors_and_repair owner: cowbell::ARCH_WIZARD
     "Invalid retargets preserve installed definitions; deleted references can be repaired through settings.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;
@@ -374,7 +374,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     return true;
   endmethod
 
-  method test_custom_events_are_local_to_the_receiver owner: ARCH_WIZARD
+  method test_custom_events_are_local_to_the_receiver owner: cowbell::ARCH_WIZARD
     "Builders can author custom events without a global registration or cross-object dispatch.";
     const old_builder = #90102.is_builder;
     #90102.is_builder = true;

@@ -2,13 +2,13 @@ object HEADLESS_RELATION_SCENARIOS [
   import_export_id -> "headless_relation_scenarios"
 ]
   name: "Headless Relation Runtime Scenarios"
-  parent: ROOT
-  owner: HACKER
+  parent: cowbell::ROOT
+  owner: cowbell::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for relation queries over runtime-created fixtures.";
+  override description (owner: cowbell::HACKER, flags: "rc") = "Headless runtime scenarios for relation queries over runtime-created fixtures.";
 
-  method test_headless_relation_graph_query owner: ARCH_WIZARD
+  method test_headless_relation_graph_query owner: cowbell::ARCH_WIZARD
     "Runtime scenario: anonymous relations support indexed query and reachability over object fixtures.";
     rel = $relation:create(true);
     graph = $relation:create(true);
@@ -37,7 +37,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_relation_retract_updates_indexes owner: ARCH_WIZARD
+  method test_headless_relation_retract_updates_indexes owner: cowbell::ARCH_WIZARD
     "Runtime scenario: retracting fixture tuples updates membership and indexed query results.";
     rel = $relation:create(true);
     actor = $thing:create(true);
@@ -57,7 +57,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_relation_repeated_scalar_index owner: ARCH_WIZARD
+  method test_headless_relation_repeated_scalar_index owner: cowbell::ARCH_WIZARD
     "Repeated values in one tuple produce one result per asserted tuple.";
     const relation = create($relation, $hacker, 2);
     try
@@ -74,7 +74,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_relation_private_reads_denied owner: ARCH_WIZARD
+  method test_headless_relation_private_reads_denied owner: cowbell::ARCH_WIZARD
     "Read APIs cannot use their verb owner to bypass private tuple and index permissions.";
     const relation = create($relation, $hacker, 2);
     try
@@ -101,7 +101,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_legacy_relation_repair_and_exact_values owner: ARCH_WIZARD
+  method test_legacy_relation_repair_and_exact_values owner: cowbell::ARCH_WIZARD
     "Legacy duplicates collapse without losing case-distinct facts or tuple identities.";
     const relation = create($relation, $hacker, 2);
     try
@@ -128,7 +128,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_relation_query_completeness owner: ARCH_WIZARD
+  method test_relation_query_completeness owner: cowbell::ARCH_WIZARD
     "A result limit reports incompleteness, while complete-list callers receive an error.";
     const relation = create($relation, $hacker, 2);
     try
@@ -163,7 +163,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_relation_world_and_reaction_queries_agree owner: ARCH_WIZARD
+  method test_relation_world_and_reaction_queries_agree owner: cowbell::ARCH_WIZARD
     "World selectors and named relation facts share bindings, types, and read authority.";
     const relation = create($relation, $hacker, 2);
     const room = create($room, $hacker, 2);
@@ -207,7 +207,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return true;
   endmethod
 
-  method test_relation_owner_authoring_permissions owner: ARCH_WIZARD
+  method test_relation_owner_authoring_permissions owner: cowbell::ARCH_WIZARD
     "A non-programmer can expose an owned relation but cannot change a foreign relation.";
     const owned = create($relation, #90102, 2);
     const other_owner = create($relation, #90101, 2);
@@ -267,7 +267,7 @@ object HEADLESS_RELATION_SCENARIOS [
     return $rule_engine:evaluate(rule, ['Location -> room]);
   endmethod
 
-  method _relation_call_as_player owner: PLAYER
+  method _relation_call_as_player owner: cowbell::PLAYER
     "Invoke only private-read regression operations under the player principal.";
     caller == this && this == #90003 || raise(E_PERM);
     const {relation, operation} = args;
@@ -280,7 +280,7 @@ object HEADLESS_RELATION_SCENARIOS [
     raise(E_PERM);
   endmethod
 
-  method test_relation_directions_joins_and_absence owner: ARCH_WIZARD
+  method test_relation_directions_joins_and_absence owner: cowbell::ARCH_WIZARD
     "One field definition supports either query direction, joins, and correlated absence checks.";
     const relation = create($relation, $hacker);
     try

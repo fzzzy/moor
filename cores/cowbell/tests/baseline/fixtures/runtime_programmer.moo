@@ -13,7 +13,7 @@ object RUNTIME_PROGRAMMER [
   import_export_id -> "runtime_programmer"
 ]
   name: "RUNTIME_PROGRAMMER"
-  parent: PLAYER
+  parent: cowbell::PLAYER
   location: RUNTIME_ROOM
   owner: RUNTIME_PROGRAMMER
   player: true

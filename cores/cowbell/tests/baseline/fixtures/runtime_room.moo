@@ -13,7 +13,7 @@ object RUNTIME_ROOM [
   import_export_id -> "runtime_room"
 ]
   name: "Runtime Test Chamber"
-  parent: ROOM
+  parent: cowbell::ROOM
   owner: RUNTIME_WIZARD
   readable: true
 

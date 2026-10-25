@@ -4,7 +4,7 @@ object HEADLESS_MATCHING_PROBE_TWO [
   import_export_id -> "headless_matching_probe_two"
 ]
   name: "matching probe"
-  parent: THING
+  parent: cowbell::THING
   location: fixtures::RUNTIME_ROOM
   owner: fixtures::RUNTIME_WIZARD
 

@@ -4,7 +4,7 @@ object HEADLESS_MATCHING_SCENARIOS [
   import_export_id -> "headless_matching_scenarios"
 ]
   name: "Matching Boundary Scenarios"
-  parent: ROOT
+  parent: cowbell::ROOT
   owner: fixtures::RUNTIME_WIZARD
 
   method test_integer_fuzzy_threshold owner: fixtures::RUNTIME_WIZARD

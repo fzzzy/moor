@@ -4,7 +4,7 @@ object HEADLESS_AUTHORITY_RECEIVER [
   import_export_id -> "headless_authority_receiver"
 ]
   name: "Authority Delivery Probe"
-  parent: EVENT_RECEIVER
+  parent: cowbell::EVENT_RECEIVER
   owner: fixtures::RUNTIME_PROGRAMMER
   readable: true
 

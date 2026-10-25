@@ -2,13 +2,13 @@ object HEADLESS_SCHEDULER_SCENARIOS [
   import_export_id -> "headless_scheduler_scenarios"
 ]
   name: "Headless Native Schedule Scenarios"
-  parent: ROOT
-  owner: HACKER
+  parent: cowbell::ROOT
+  owner: cowbell::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Native schedule lifecycle scenarios for housekeeping.";
+  override description (owner: cowbell::HACKER, flags: "rc") = "Native schedule lifecycle scenarios for housekeeping.";
 
-  method test_headless_housekeeping_native_lifecycle owner: ARCH_WIZARD
+  method test_headless_housekeeping_native_lifecycle owner: cowbell::ARCH_WIZARD
     "Housekeeping starts once, remains recurring after empty sweeps, and cancels future firings.";
     const housekeeping = create($housekeeping, $arch_wizard, 2);
     try
@@ -44,7 +44,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_housekeeping_stale_id owner: ARCH_WIZARD
+  method test_headless_housekeeping_stale_id owner: cowbell::ARCH_WIZARD
     "An objdef-style stale ID does not prevent a new native housekeeping schedule.";
     const housekeeping = create($housekeeping, $arch_wizard, 2);
     try
@@ -61,7 +61,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_native_app_controls owner: ARCH_WIZARD
+  method test_headless_native_app_controls owner: cowbell::ARCH_WIZARD
     "Untrusted callers cannot start or stop housekeeping.";
     const housekeeping = create($housekeeping, $arch_wizard, 2);
     const recording_player = this:_recording_player();
@@ -84,7 +84,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method _native_app_call_as_player owner: PLAYER
+  method _native_app_call_as_player owner: cowbell::PLAYER
     "Call only application control regression methods as the player principal.";
     caller == this && this == #90001 || raise(E_PERM);
     const {housekeeping, operation} = args;
@@ -93,7 +93,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     raise(E_PERM);
   endmethod
 
-  method _recording_player owner: ARCH_WIZARD
+  method _recording_player owner: cowbell::ARCH_WIZARD
     "Create a test-only player that records current output without a network connection.";
     caller == this && this == #90001 || raise(E_PERM);
     const recipient = create($player, $arch_wizard, 2);
@@ -103,7 +103,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return recipient;
   endmethod
 
-  method test_headless_housekeeping_grouped_sweep owner: ARCH_WIZARD
+  method test_headless_housekeeping_grouped_sweep owner: cowbell::ARCH_WIZARD
     "Two disconnected players from one room produce two moves and one grouped announcement.";
     const housekeeping = create($housekeeping, $arch_wizard, 2);
     const room = create($room, $arch_wizard, 2);
@@ -142,7 +142,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method _record_command_player owner: ARCH_WIZARD
+  method _record_command_player owner: cowbell::ARCH_WIZARD
     "Record output on the actual task player used by dispatch_command_verb().";
     caller == this && this == #90001 && player == #90100 || raise(E_PERM);
     const roles = {player.wizard, player.programmer};
@@ -154,7 +154,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return {player, roles};
   endmethod
 
-  method _restore_command_player owner: ARCH_WIZARD
+  method _restore_command_player owner: cowbell::ARCH_WIZARD
     "Restore the fixture player's roles and inherited notification method.";
     caller == this && this == #90001 || raise(E_PERM);
     const {actor, roles} = args;
@@ -165,7 +165,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     delete_property(actor, "recorded_events");
   endmethod
 
-  method _schedule_command owner: ARCH_WIZARD
+  method _schedule_command owner: cowbell::ARCH_WIZARD
     "Dispatch a schedule command as a fixture actor and return its rendered output.";
     caller == this && this == #90001 || raise(E_PERM);
     const {actor, name, ?text = ""} = args;
@@ -176,7 +176,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return toliteral($document:render(actor.recorded_events[$]:resolve(actor), 'text_plain)['body]);
   endmethod
 
-  method _schedule_rows_as owner: ARCH_WIZARD
+  method _schedule_rows_as owner: cowbell::ARCH_WIZARD
     "Read schedule rows with the fixture actor's permissions, regardless of the task player.";
     caller == this && this == #90001 || raise(E_PERM);
     const {actor} = args;
@@ -184,7 +184,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return $prog_features:_schedule_rows();
   endmethod
 
-  method _create_command_schedule owner: ARCH_WIZARD
+  method _create_command_schedule owner: cowbell::ARCH_WIZARD
     "Create a long-lived fixture schedule owned by the selected principal.";
     caller == this && this == #90001 || raise(E_PERM);
     const {actor, ?kind = "every", ?interval = 3600.0} = args;
@@ -196,14 +196,14 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return schedule_every(this, "_schedule_command_firing", interval, {}, options);
   endmethod
 
-  method _schedule_command_firing owner: ARCH_WIZARD
+  method _schedule_command_firing owner: cowbell::ARCH_WIZARD
     "Retain a test firing until its task is explicitly killed.";
     "The suspension commits startup so another task can inspect the running firing.";
     suspend(300);
     return 3600.0;
   endmethod
 
-  method test_headless_schedule_command_listing owner: ARCH_WIZARD
+  method test_headless_schedule_command_listing owner: cowbell::ARCH_WIZARD
     "List one-shot, recurring, and adaptive schedules with owner filtering in both commands.";
     const {owner, roles} = this:_record_command_player();
     const other = this:_recording_player();
@@ -244,7 +244,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_schedule_command_management owner: ARCH_WIZARD
+  method test_headless_schedule_command_management owner: cowbell::ARCH_WIZARD
     "Inspect and stop schedules with owner checks, wizard access, and clear invalid-ID results.";
     const {owner, roles} = this:_record_command_player();
     const other = this:_recording_player();
@@ -295,7 +295,7 @@ object HEADLESS_SCHEDULER_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_schedule_stop_preserves_firing owner: ARCH_WIZARD
+  method test_headless_schedule_stop_preserves_firing owner: cowbell::ARCH_WIZARD
     "Stopping recurrence leaves its current task visible and available to @kill.";
     const {actor, roles} = this:_record_command_player();
     actor.programmer = true;

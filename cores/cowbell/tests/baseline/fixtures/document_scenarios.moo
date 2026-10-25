@@ -2,27 +2,27 @@ object DOCUMENT_SCENARIOS [
   import_export_id -> "document_scenarios"
 ]
   name: "Document Contract Scenarios"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  parent: cowbell::ROOT
+  owner: cowbell::ARCH_WIZARD
   readable: true
 
-  method _text owner: ARCH_WIZARD
+  method _text owner: cowbell::ARCH_WIZARD
     "Construct literal text for these scenarios.";
     return $document_node:mk('text, {}, ['text -> args[1]]);
   endmethod
 
-  method _paragraph owner: ARCH_WIZARD
+  method _paragraph owner: cowbell::ARCH_WIZARD
     "Construct a paragraph from explicit inline nodes.";
     return $document_node:mk('paragraph, args[1]);
   endmethod
 
-  method _reference owner: ARCH_WIZARD
+  method _reference owner: cowbell::ARCH_WIZARD
     "Use an opaque, deliberately nonexistent identity without reading an object.";
     const {label} = args;
     return $document_node:mk('reference, {this:_text(label)}, ['descriptor -> ['kind -> 'object, 'ref -> "oid:987654321"]]);
   endmethod
 
-  method _invalid owner: ARCH_WIZARD
+  method _invalid owner: cowbell::ARCH_WIZARD
     "Require a structural or resource error identifying the expected path or rule.";
     const {document, fragment, ?code = E_INVARG} = args;
     try
@@ -35,7 +35,7 @@ object DOCUMENT_SCENARIOS [
     raise(E_ASSERT, "Expected invalid document: " + fragment);
   endmethod
 
-  method test_empty_and_roundtrip owner: ARCH_WIZARD
+  method test_empty_and_roundtrip owner: cowbell::ARCH_WIZARD
     "Empty documents have one uniform render shape and an inert versioned encoding.";
     const document = $document:mk({});
     const encoded = $document:encode(document);
@@ -47,7 +47,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_literal_paragraphs owner: ARCH_WIZARD
+  method test_literal_paragraphs owner: cowbell::ARCH_WIZARD
     "Literal punctuation stays literal, and paragraph boundaries survive every serializer.";
     const document = $document:mk({this:_paragraph({this:_text("A *literal* <&> sign.")}), this:_paragraph({this:_text("Next.")})});
     $test_utils:assert_eq($document:render(document, 'text_html)['body], "<p>A *literal* &lt;&amp;&gt; sign.</p>\n<p>Next.</p>", "HTML escaping and block boundaries");
@@ -56,7 +56,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_repeated_references owner: ARCH_WIZARD
+  method test_repeated_references owner: cowbell::ARCH_WIZARD
     "References are inert identities. Each visible occurrence gets a deterministic local anchor.";
     const reference = this:_reference("A <key> *literal*");
     const document = $document:mk({this:_paragraph({reference, this:_text(" and "), reference})});
@@ -74,7 +74,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_code_source_and_gutters owner: ARCH_WIZARD
+  method test_code_source_and_gutters owner: cowbell::ARCH_WIZARD
     "Code retains spaces and delimiters. Display numbering does not change encoded source.";
     const text = " before\n```\nafter  ";
     const code = $document_node:mk('code_block, {}, ['text -> text, 'language -> "moo", 'first_line -> 40]);
@@ -93,7 +93,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_invalid_tree_paths owner: ARCH_WIZARD
+  method test_invalid_tree_paths owner: cowbell::ARCH_WIZARD
     "Reject foreign shapes and inherited defaults before rendering or serialization.";
     this:_invalid($document:mk({this:_text("root inline")}), "document.blocks[0]");
     this:_invalid($document:mk({this:_paragraph({this:_paragraph({})})}), "document.blocks[0].children[0]");
@@ -111,7 +111,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_descriptor_finalization owner: ARCH_WIZARD
+  method test_descriptor_finalization owner: cowbell::ARCH_WIZARD
     "Finalization removes invalid interaction data while retaining formatted labels in every format.";
     const label = $document_node:mk('strong, {this:_text("Keep this label")});
     const invalid = $document_node:mk('reference, {label}, ['descriptor -> ['kind -> 'object, 'ref -> #2]]);
@@ -128,7 +128,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method _table owner: ARCH_WIZARD
+  method _table owner: cowbell::ARCH_WIZARD
     "Construct a two-column table with caller-supplied block cells and headers.";
     const {cells, ?header = false, ?caption = {}} = args;
     let fields = ['columns -> {['align -> 'start], ['align -> 'end]}, 'caption -> caption];
@@ -136,7 +136,7 @@ object DOCUMENT_SCENARIOS [
     return $document_node:mk('table, {['cells -> {['blocks -> cells[1]], ['blocks -> cells[2]]}]}, fields);
   endmethod
 
-  method test_lists_definitions_and_inline_nodes owner: ARCH_WIZARD
+  method test_lists_definitions_and_inline_nodes owner: cowbell::ARCH_WIZARD
     "All prose nodes retain their text and nesting, including task states and numbered lists.";
     const terms = $document_node:mk('definition_list, {['term -> {this:_text("Key")}, 'definition -> {this:_paragraph({this:_text("First definition paragraph.")}), this:_paragraph({this:_text("Second definition paragraph.")})}]});
     const nested = $document_node:mk('list, {['checked -> false, 'blocks -> {this:_paragraph({this:_text("Waiting")})}], ['checked -> true, 'blocks -> {this:_paragraph({this:_text("Done")})}]}, ['style -> 'bullet]);
@@ -159,7 +159,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_simple_and_complex_tables owner: ARCH_WIZARD
+  method test_simple_and_complex_tables owner: cowbell::ARCH_WIZARD
     "Tables preserve rectangular data, alignment, multiple blocks, and reference occurrences.";
     const header = {{this:_reference("Item")}, {this:_text("Details")}};
     const simple = this:_table({{this:_paragraph({this:_reference("brass | key")})}, {this:_paragraph({this:_text("42")})}}, header, {this:_reference("Inventory")});
@@ -186,7 +186,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_all_descriptor_kinds owner: ARCH_WIZARD
+  method test_all_descriptor_kinds owner: cowbell::ARCH_WIZARD
     "Every supported interaction survives inert encoding, including command templates and UUIDs.";
     const descriptors = {['kind -> 'object, 'ref -> "uuid:abcdef-0123456789", 'object_kind -> 'person], ['kind -> 'help, 'provider -> "oid:91", 'topic -> "@changes"], ['kind -> 'verb, 'receiver -> "oid:73", 'name -> "look", 'definer -> "oid:1"], ['kind -> 'property, 'object -> "oid:73", 'name -> "description"], ['kind -> 'change, 'provider -> "oid:2000", 'review -> 1, 'generation -> 2, 'row -> "r1"], ['kind -> 'command, 'command -> "north", 'action -> ['label -> "Go north", 'icon -> "north"], 'exit -> ['source -> "oid:1", 'destination -> "oid:2", 'passage -> "north"]], ['kind -> 'command, 'template -> "give {dobj} to {iobj}", 'arguments -> ['dobj -> ['label -> "item", 'expected_kind -> 'object, 'required -> true, 'suggestions -> ['provider -> "oid:73", 'source -> "nearby"], 'bound -> ['value -> "oid:74", 'label -> "key"]], 'iobj -> ['label -> "recipient", 'expected_kind -> 'text, 'required -> false]]]};
     const nodes = { $document_node:mk('reference, {this:_text("label")}, ['descriptor -> descriptor]) for descriptor in (descriptors) };
@@ -199,7 +199,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_resource_limits owner: ARCH_WIZARD
+  method test_resource_limits owner: cowbell::ARCH_WIZARD
     "Depth, record count, metadata bytes, and rendered bytes fail before returning oversized output.";
     let inline = this:_text("deep");
     for depth_index in [1..30]
@@ -224,7 +224,7 @@ object DOCUMENT_SCENARIOS [
     raise(E_ASSERT, "Escaped output must respect the rendered-byte limit");
   endmethod
 
-  method test_reference_budget owner: ARCH_WIZARD
+  method test_reference_budget owner: cowbell::ARCH_WIZARD
     "Start one reference below the limit to check the boundary without building 513 references.";
     const reference = this:_reference("x");
     const document = $document:mk({this:_paragraph({reference, reference})});
@@ -244,7 +244,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_metadata_validation_and_options owner: ARCH_WIZARD
+  method test_metadata_validation_and_options owner: cowbell::ARCH_WIZARD
     "External metadata rejects case aliases, unknown fields, wrong types, and unsupported versions.";
     const document = $document:mk({this:_paragraph({this:_text("safe")})});
     const encoded = $document:encode(document);
@@ -264,7 +264,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_empty_cells_and_unicode_layout owner: ARCH_WIZARD
+  method test_empty_cells_and_unicode_layout owner: cowbell::ARCH_WIZARD
     "Empty values remain empty; complex and Unicode cells keep complete content in narrow output.";
     const table = this:_table({{}, {this:_paragraph({this:_text("雪")})}});
     const document = $document:mk({table});
@@ -281,7 +281,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_descriptor_unicode_size owner: ARCH_WIZARD
+  method test_descriptor_unicode_size owner: cowbell::ARCH_WIZARD
     "Descriptor size follows JSON UTF-16 units, not MOO character count or literal syntax.";
     const command = $document_renderer:_repeat("💡", 513);
     const reference = $document_node:mk('reference, {this:_text("Unicode label")}, ['descriptor -> ['kind -> 'command, 'command -> command]]);
@@ -295,7 +295,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_numbered_list_starts owner: ARCH_WIZARD
+  method test_numbered_list_starts owner: cowbell::ARCH_WIZARD
     "Numbered lists default to one and retain explicit zero or negative starting values.";
     const items = {['blocks -> {this:_paragraph({this:_text("First")})}], ['blocks -> {this:_paragraph({this:_text("Second")})}]};
     const default_list = $document_node:mk('list, items, ['style -> 'numbered]);
@@ -310,7 +310,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_record_budget_across_branches owner: ARCH_WIZARD
+  method test_record_budget_across_branches owner: cowbell::ARCH_WIZARD
     "Start four records below the limit to check counting across table branches and empty cells.";
     const columns = {['align -> 'start]};
     const cells = {['blocks -> {}]};
@@ -329,7 +329,7 @@ object DOCUMENT_SCENARIOS [
     raise(E_ASSERT, "The 8193rd record must exceed the budget");
   endmethod
 
-  method test_terminal_code_controls owner: ARCH_WIZARD
+  method test_terminal_code_controls owner: cowbell::ARCH_WIZARD
     "ANSI bytes in code become visible terminal text while encoded source remains exact.";
     const source = binary_to_str(b"Gw==") + "[31mred";
     const inline = $document_node:mk('inline_code, {}, ['text -> source]);
@@ -344,7 +344,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_terminal_styles_in_text owner: ARCH_WIZARD
+  method test_terminal_styles_in_text owner: cowbell::ARCH_WIZARD
     "Text keeps ANSI style sequences, closes them before a line ends, and shows every other escape.";
     const esc = binary_to_str(b"Gw==");
     const reset = esc + "[0m";
@@ -364,7 +364,7 @@ object DOCUMENT_SCENARIOS [
     return true;
   endmethod
 
-  method test_table_link_delimiters owner: ARCH_WIZARD
+  method test_table_link_delimiters owner: cowbell::ARCH_WIZARD
     "Pipes in link destinations and titles do not introduce extra Djot table columns.";
     const link = $document_node:mk('link, {this:_text("link")}, ['url -> "https://example.org/a|b", 'title -> "left|right"]);
     const table = this:_table({{this:_paragraph({link})}, {this:_paragraph({this:_text("second")})}});

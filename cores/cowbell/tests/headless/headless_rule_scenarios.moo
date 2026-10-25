@@ -2,13 +2,13 @@ object HEADLESS_RULE_SCENARIOS [
   import_export_id -> "headless_rule_scenarios"
 ]
   name: "Headless Rule Runtime Scenarios"
-  parent: ROOT
-  owner: HACKER
+  parent: cowbell::ROOT
+  owner: cowbell::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Rules select and join facts from runtime-created objects.";
+  override description (owner: cowbell::HACKER, flags: "rc") = "Rules select and join facts from runtime-created objects.";
 
-  method query_parents owner: ARCH_WIZARD
+  method query_parents owner: cowbell::ARCH_WIZARD
     "Read the test object's parents with the invoking principal's permissions.";
     set_task_perms(caller_perms());
     const {name, inputs, limit} = args;
@@ -16,7 +16,7 @@ object HEADLESS_RULE_SCENARIOS [
     return ['rows -> {['parent -> child.father], ['parent -> child.mother]}, 'complete -> true];
   endmethod
 
-  method test_headless_rule_engine_with_fixture owner: ARCH_WIZARD
+  method test_headless_rule_engine_with_fixture owner: cowbell::ARCH_WIZARD
     "Select parents, join a second generation, and reject a nonmatching parent.";
     const child = create($root, $hacker, 2);
     const parent = create($root, $hacker, 2);
