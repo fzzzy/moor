@@ -690,6 +690,10 @@ impl ExportLayout {
             );
             return Self { targets };
         }
+        // A world that is exactly one package is written into the output directory itself, as a
+        // single package directory is read: exporting Cowbell gives back a directory like src/.
+        let only_package =
+            packages.len() == 1 && identities.iter().all(|identity| identity.package.is_some());
         for package in packages {
             let declaration = declared
                 .iter()
@@ -714,7 +718,11 @@ impl ExportLayout {
             targets.insert(
                 Some(package.clone()),
                 ExportTarget {
-                    directory: directory_path.join(&package),
+                    directory: if only_package {
+                        directory_path.to_path_buf()
+                    } else {
+                        directory_path.join(&package)
+                    },
                     declaration: Some(declaration),
                     index_names: names,
                     constants,
@@ -1085,6 +1093,34 @@ mod tests {
         )
         .unwrap();
         assert_eq!(files, read_directory_tree(second.path()));
+    }
+
+    #[test]
+    fn a_lone_package_exports_into_the_output_directory() {
+        // As a package directory is read, so a world of exactly one package is written: export
+        // gives back a directory like the source, not one nested inside the output.
+        let source = tempfile::tempdir().unwrap();
+        std::fs::write(
+            source.path().join("package.moo"),
+            "package \"core\" [\n  objdef_version -> 2\n];\n\ndefine SYSOBJ = #0;\n",
+        )
+        .unwrap();
+        std::fs::write(
+            source.path().join("sysobj.moo"),
+            "object SYSOBJ [\n  import_export_id -> \"sysobj\"\n]\n  name: \"sysobj\"\n  owner: #-1\n  readable: true\nendobject\n",
+        )
+        .unwrap();
+        let db = import_directories(&[source.path().to_path_buf()]);
+        let out = tempfile::tempdir().unwrap();
+        dump_snapshot_object_definitions(db.create_snapshot().unwrap().as_ref(), out.path())
+            .unwrap();
+        let files = read_directory_tree(out.path());
+        let paths = files
+            .keys()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(paths, ["package.moo", "sysobj.moo"]);
+        assert_eq!(files, read_directory_tree(source.path()));
     }
 
     #[test]
