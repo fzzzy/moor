@@ -66,6 +66,67 @@ define ERROR_HANDLER = E_INVARG;
 - **Lists**: `{1, 2, 3}`, `{"a", "b", "c"}`
 - **Maps**: `["key" -> "value", "count" -> 42]`
 
+## Packages
+
+A directory can declare itself a package by holding a `package.moo` in place of `constants.moo`. A
+package's constants live in its own namespace, and several packages can be imported together as one
+world. A directory without `package.moo` is read exactly as before, and its constants are global.
+
+### The package file
+
+`package.moo` opens with a package declaration, followed by the package's constants:
+
+```moo
+package "minecraft" [
+  objdef_version -> 2,
+  depends -> {"core"}
+];
+
+define WORLD = #6000;
+define REGION = #6006;
+```
+
+- The package name is letters, digits and `_`, not starting with a digit.
+- `objdef_version` is required. Version 2 is the first with packages; a newer version than the
+  reader understands is refused.
+- `depends` lists the packages whose constants this one uses. Import reads them first, and refuses a
+  missing package or a cycle.
+- Other entries are kept with the package and written back on export.
+
+A directory may not have both `package.moo` and `constants.moo`.
+
+### Namespaced constants
+
+Inside a package, its own constants are written bare: `WORLD`. Other packages write them qualified
+by the package name, `minecraft::WORLD`:
+
+```moo
+object HALL
+  name: "Great Hall"
+  parent: minecraft::REGION
+  owner: core::ARCH_WIZARD
+endobject
+```
+
+A bare name resolves to the package's own constant first, then to a global constant from a directory
+without a package.
+
+### Worlds of several packages
+
+A directory that holds packages side by side, and has no `package.moo` or `constants.moo` of its
+own, is read as a world made of them:
+
+```
+world/
+  core/        package.moo  ...
+  minecraft/   package.moo  ...
+```
+
+Each subdirectory with a `package.moo` is a package, and each with a `constants.moo` is a plain
+directory read first. Import records which package each object came from, and export writes such a
+world back in the same shape: one directory per package, plus an `unpackaged` directory for objects
+that came from no package.
+
 ## Object Definitions
 
 Each object definition describes a complete MOO object.

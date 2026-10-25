@@ -15,7 +15,8 @@ use std::{cell::OnceCell, path::PathBuf};
 
 use crate::{
     CompileOptions, ObjDefParseError, ObjFileContext, ObjPropDef, ObjPropOverride, ObjVerbDef,
-    ObjectDefinition, Program, compile, objdef::offset_compile_error,
+    ObjectDefinition, Program, compile,
+    objdef::{NAMESPACE_SEPARATOR, PackageDeclaration, offset_compile_error},
 };
 use base64::Engine;
 use moor_common::{
@@ -53,6 +54,19 @@ pub(crate) fn parse_literal_value(
         return Err(parser.parse_error("unexpected trailing input"));
     }
     Ok(value)
+}
+
+pub(crate) fn parse_package_declaration(
+    source: &str,
+) -> Result<Option<PackageDeclaration>, ObjDefParseError> {
+    let mut context = ObjFileContext::new();
+    let mut parser = LiteralParser::new(source, &mut context);
+    parser.skip_trivia();
+    if !parser.eat_keyword("package") {
+        return Ok(None);
+    }
+    parser.parse_package_declaration()?;
+    Ok(context.declaration().cloned())
 }
 
 pub(crate) fn compile_object_definitions(
@@ -672,8 +686,7 @@ impl<'a> LiteralParser<'a> {
             if token.kind != crate::SyntaxKind::Ident {
                 continue;
             }
-            let symbol = Symbol::mk(&source[token.span.clone()]);
-            let Some(value) = self.context.constants().get(&symbol) else {
+            let Some(value) = self.context.lookup_constant(&source[token.span.clone()]) else {
                 continue;
             };
 
@@ -1004,9 +1017,52 @@ impl<'a> LiteralParser<'a> {
         Ok(PropPerms::new(owner, flags))
     }
 
+    /// `package "name" [key -> value, ...];` names the package the following files belong to.
+    fn parse_package_declaration(&mut self) -> Result<(), ObjDefParseError> {
+        self.skip_trivia();
+        let name = self.parse_string_value()?;
+        if !crate::objdef::is_package_name(&name) {
+            return Err(ObjDefParseError::InvalidPackageDeclaration(format!(
+                "package name {name:?} must be letters, digits and '_', not starting with a digit"
+            )));
+        }
+        if self.context.declaration().is_some() {
+            return Err(ObjDefParseError::InvalidPackageDeclaration(
+                "a package is declared only once".to_string(),
+            ));
+        }
+        if let Some(namespace) = self.context.namespace()
+            && namespace != name
+        {
+            return Err(ObjDefParseError::InvalidPackageDeclaration(format!(
+                "declares {name:?} in the files of package {namespace:?}"
+            )));
+        }
+        self.skip_trivia();
+        let attributes = self.parse_optional_metadata_map()?;
+        self.skip_trivia();
+        let _ = self.eat_char(';');
+        self.context.set_namespace(Some(&name));
+        self.context
+            .set_declaration(PackageDeclaration { name, attributes });
+        Ok(())
+    }
+
+    /// A constant reference: a bare name, or one qualified by its package, `minecraft::WORLD`.
+    fn parse_constant_name(&mut self) -> Result<String, ObjDefParseError> {
+        let mut name = self.parse_ident()?.to_string();
+        if self.remaining().starts_with(NAMESPACE_SEPARATOR) {
+            self.pos += NAMESPACE_SEPARATOR.len();
+            name.push_str(NAMESPACE_SEPARATOR);
+            name.push_str(self.parse_ident()?);
+        }
+        Ok(name)
+    }
+
     fn parse_top_level_constant_decl(&mut self) -> Result<(), ObjDefParseError> {
         self.skip_trivia();
-        let name = Symbol::mk(self.parse_ident()?);
+        let bare = self.parse_ident()?;
+        let name = self.context.qualified(bare);
         self.skip_trivia();
         self.expect_char('=', "expected '=' after constant name")?;
         self.skip_trivia();
@@ -1508,8 +1564,16 @@ impl<'a> LiteralParser<'a> {
     ) -> Result<Vec<ObjectDefinition>, ObjDefParseError> {
         let mut objects = Vec::new();
         self.skip_trivia();
+        let mut first = true;
         while !self.is_eof() {
-            if self.eat_keyword("define") {
+            if self.eat_keyword("package") {
+                if !first {
+                    return Err(ObjDefParseError::InvalidPackageDeclaration(
+                        "the package declaration must come first".to_string(),
+                    ));
+                }
+                self.parse_package_declaration()?;
+            } else if self.eat_keyword("define") {
                 self.skip_trivia();
                 self.parse_top_level_constant_decl()?;
             } else if self.eat_keyword("object") {
@@ -1518,6 +1582,7 @@ impl<'a> LiteralParser<'a> {
             } else {
                 return Err(self.parse_error("expected object or define declaration"));
             }
+            first = false;
             self.skip_trivia();
         }
         Ok(objects)
@@ -1578,14 +1643,15 @@ impl<'a> LiteralParser<'a> {
                 }
 
                 let start = self.pos;
-                let ident = self.parse_ident()?;
-                if let Some(value) = self.parse_keyword_literal(ident, start)? {
+                let name = self.parse_constant_name()?;
+                if !name.contains(NAMESPACE_SEPARATOR)
+                    && let Some(value) = self.parse_keyword_literal(&name, start)?
+                {
                     return Ok(value);
                 }
 
-                let sym = Symbol::mk(ident);
-                let Some(value) = self.context.constants().get(&sym) else {
-                    return Err(ObjDefParseError::ConstantNotFound(sym.to_string()));
+                let Some(value) = self.context.lookup_constant(&name) else {
+                    return Err(ObjDefParseError::ConstantNotFound(name));
                 };
                 Ok(value.clone())
             }
