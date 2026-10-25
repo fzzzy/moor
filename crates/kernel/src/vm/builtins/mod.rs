@@ -72,6 +72,7 @@ mod bf_algorithms;
 mod bf_connection;
 mod bf_task;
 mod hash;
+mod noise;
 #[cfg(test)]
 #[path = "test_function_help.rs"]
 mod test_function_help;

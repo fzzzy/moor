@@ -174,6 +174,9 @@ open an issue on the [mooR GitHub issue tracker](https://github.com/timbran-proj
 | [`term_unify`](algorithms.md#term_unify)           | &check;  | mooR extension. Structural unification   |
 | [`term_substitute`](algorithms.md#term_substitute) | &check;  | mooR extension. Structural substitution  |
 | [`term_query`](algorithms.md#term_query)           | &check;  | mooR extension. Bounded structural query |
+| [`noise_2d`](algorithms.md#noise_2d)               | &check;  | mooR extension. Seeded simplex noise     |
+| [`noise_grid`](algorithms.md#noise_grid)           | &check;  | mooR extension. Noise over a grid        |
+| [`random_at`](algorithms.md#random_at)             | &check;  | mooR extension. Repeatable random number |
 
 ### Server
 
@@ -339,6 +342,9 @@ Functions not part of the original LambdaMOO, but added in moor
 | [`term_unify`](algorithms.md#term_unify)           | Unify one pattern and value               |       |
 | [`term_substitute`](algorithms.md#term_substitute) | Substitute term variables using a binding |       |
 | [`term_query`](algorithms.md#term_query)           | Query supplied facts and positive rules   |       |
+| [`noise_2d`](algorithms.md#noise_2d)               | Smooth seeded noise at one point          |       |
+| [`noise_grid`](algorithms.md#noise_grid)           | Smooth seeded noise over a grid           |       |
+| [`random_at`](algorithms.md#random_at)             | A random number fixed by its inputs       |       |
 
 ### Admin
 

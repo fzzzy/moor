@@ -1412,6 +1412,34 @@ fn mk_builtin_table() -> Vec<Builtin> {
             vec![Typed(TYPE_LIST), Typed(TYPE_MAP)],
             true,
         ),
+        mk_builtin(
+            "noise_2d",
+            Q(3),
+            Q(4),
+            vec![AnyNum, AnyNum, Typed(TYPE_INT), Typed(TYPE_MAP)],
+            true,
+        ),
+        mk_builtin(
+            "noise_grid",
+            Q(5),
+            Q(6),
+            vec![
+                AnyNum,
+                AnyNum,
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+                Typed(TYPE_MAP),
+            ],
+            true,
+        ),
+        mk_builtin(
+            "random_at",
+            Q(2),
+            Q(3),
+            vec![Typed(TYPE_INT), Typed(TYPE_LIST), Typed(TYPE_INT)],
+            true,
+        ),
     ]);
     // IMPORTANT: ALWAYS APPEND NEW BUILTINS ABOVE THIS LINE
     pad_group(&mut builtins, start, "algorithms");
