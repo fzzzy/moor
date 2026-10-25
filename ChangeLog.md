@@ -18,7 +18,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `objdef_version` and the packages it depends on, replaces `constants.moo`; the package's constants
   are then written bare inside it and as `package::NAME` from other packages. A directory holding
   several packages imports as one world, and export writes such a world back one directory per
-  package. Directories without `package.moo` import and export exactly as before.
+  package. Directories without `package.moo` import and export exactly as before. A running world
+  can put objects into a package by setting their `objdef_package` metadata; its next export writes
+  them as that package.
 - `noise_2d(x, y, seed [, options])` returns smooth seeded 2D simplex noise, `noise_grid()` samples
   it over a grid in one call, and `random_at(seed, coordinates [, max])` returns a random number
   fixed by its inputs. They are for generating terrain, maps and other content that must come out

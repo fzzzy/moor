@@ -30,7 +30,7 @@ use moor_compiler::{
 };
 use moor_var::{Obj, Symbol, Var, v_map, v_str};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
@@ -139,12 +139,14 @@ impl ObjDefSet {
         if let Some(members) = crate::package::world_members(directory)? {
             return Self::read_directories(compile_options, &members);
         }
-        Self::read_directory_with_constants(compile_options, directory, None)
+        Self::read_directory_with_constants(compile_options, directory, None, false)
     }
 
     /// Read several source directories as one world. Directories without a package come first,
-    /// in the order given, then packages, each after those it depends on. Each directory sees
-    /// the constants of those read before it, and an object defined twice is refused.
+    /// in the order given, then packages, each after those it depends on. Every directory's
+    /// constants are read before any objects, so an object in one directory can name an object in
+    /// any other, as a world exported from a database whose objects were put into packages
+    /// does. An object defined twice is refused.
     pub fn read_directories(
         compile_options: &CompileOptions,
         directories: &[PathBuf],
@@ -161,24 +163,45 @@ impl ObjDefSet {
                 })
             })
             .collect::<Result<Vec<_>, ObjdefLoaderError>>()?;
+        let ordered = crate::package::order(sources)?;
+
+        // First every directory's constants, noting which are its own.
+        let mut all: HashMap<Symbol, Var> = HashMap::new();
+        let mut own = Vec::with_capacity(ordered.len());
+        for source in &ordered {
+            let set = Self::read_directory_with_constants(
+                compile_options,
+                &source.path,
+                Some(&constants_value(&all, |_| true)),
+                true,
+            )?;
+            own.push(
+                set.constants
+                    .keys()
+                    .filter(|name| !all.contains_key(*name))
+                    .copied()
+                    .collect::<HashSet<_>>(),
+            );
+            all = set.constants;
+        }
+
+        // Then each directory's objects, with every other directory's constants in scope; its
+        // own it defines again as it reads them.
         let mut merged: Option<Self> = None;
         let mut plain_directories = Vec::new();
-        for source in crate::package::order(sources)? {
+        for (source, own) in ordered.iter().zip(own) {
             if source.declaration.is_none()
                 && let Some(name) = source.path.file_name()
             {
                 plain_directories.push(name.to_string_lossy().into_owned());
             }
-            let seen = merged.as_ref().map(|set| {
-                let entries = set
-                    .constants
-                    .iter()
-                    .map(|(name, value)| (v_str(&name.as_arc_str()), value.clone()))
-                    .collect::<Vec<_>>();
-                Constants::Map(v_map(&entries).as_map().unwrap().clone())
-            });
-            let set =
-                Self::read_directory_with_constants(compile_options, &source.path, seen.as_ref())?;
+            let others = constants_value(&all, |name| !own.contains(name));
+            let set = Self::read_directory_with_constants(
+                compile_options,
+                &source.path,
+                Some(&others),
+                false,
+            )?;
             merged = Some(match merged {
                 None => set,
                 Some(earlier) => earlier.merge(set)?,
@@ -211,10 +234,13 @@ impl ObjDefSet {
         Ok(self)
     }
 
+    /// Read one directory, with `constants` already defined. With `constants_only`, only its
+    /// `package.moo` or `constants.moo` is read.
     fn read_directory_with_constants(
         compile_options: &CompileOptions,
         directory: &Path,
         constants: Option<&Constants>,
+        constants_only: bool,
     ) -> Result<Self, ObjdefLoaderError> {
         fn collect(path: &Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
             for entry in std::fs::read_dir(path)? {
@@ -245,7 +271,7 @@ impl ObjDefSet {
             CONSTANTS_FILE
         };
         let first = directory.join(first);
-        files.retain(|path| *path != first);
+        files.retain(|path| !constants_only && *path != first);
         if first.is_file() {
             files.insert(0, first);
         }
@@ -651,6 +677,16 @@ fn derive_identities(
         }
     }
     identities
+}
+
+/// Constants for reading a directory: those of `constants` whose names pass `keep`.
+fn constants_value(constants: &HashMap<Symbol, Var>, keep: impl Fn(&Symbol) -> bool) -> Constants {
+    let entries = constants
+        .iter()
+        .filter(|(name, _)| keep(name))
+        .map(|(name, value)| (v_str(&name.as_arc_str()), value.clone()))
+        .collect::<Vec<_>>();
+    Constants::Map(v_map(&entries).as_map().unwrap().clone())
 }
 
 #[cfg(test)]

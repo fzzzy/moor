@@ -1096,6 +1096,57 @@ mod tests {
     }
 
     #[test]
+    fn objects_put_into_a_package_in_the_database_export_and_round_trip() {
+        // A world imported without packages, then some of its objects put into one by their
+        // metadata, as a running world would. References run both ways: the package's objects
+        // descend from unpackaged ROOT, and unpackaged FOUNTAIN descends from the package's SQUARE.
+        let source = tempfile::tempdir().unwrap();
+        let object = |constant: &str, id: &str, parent: &str| {
+            format!(
+                "object {constant} [\n  import_export_id -> \"{id}\"\n]\n  name: \"{id}\"\n  parent: {parent}\n  owner: #-1\n  readable: true\nendobject\n"
+            )
+        };
+        let write =
+            |name: &str, text: &str| std::fs::write(source.path().join(name), text).unwrap();
+        write(
+            "constants.moo",
+            "define SYSOBJ = #0;\ndefine ROOT = #1;\ndefine SQUARE = #2;\ndefine FOUNTAIN = #3;\n",
+        );
+        write("sysobj.moo", &object("SYSOBJ", "sysobj", "ROOT"));
+        write("root.moo", &object("ROOT", "root", "#-1"));
+        write("square.moo", &object("SQUARE", "square", "ROOT"));
+        write("fountain.moo", &object("FOUNTAIN", "fountain", "SQUARE"));
+        let db = import_directories(&[source.path().to_path_buf()]);
+        {
+            let mut loader = db.loader_client().unwrap();
+            loader
+                .set_object_metadata(
+                    &Obj::mk_id(2),
+                    crate::package::package_key(),
+                    v_str("village"),
+                )
+                .unwrap();
+            assert!(matches!(loader.commit(), Ok(CommitResult::Success { .. })));
+        }
+
+        let out = tempfile::tempdir().unwrap();
+        dump_snapshot_object_definitions(db.create_snapshot().unwrap().as_ref(), out.path())
+            .unwrap();
+        let files = read_directory_tree(out.path());
+        let text = |path: &str| String::from_utf8(files[Path::new(path)].clone()).unwrap();
+        assert!(text("village/package.moo").starts_with("package \"village\" ["));
+        assert!(text("village/package.moo").contains("define SQUARE = #2;"));
+        assert!(text("village/square.moo").contains("parent: ROOT"));
+        assert!(text("unpackaged/fountain.moo").contains("parent: village::SQUARE"));
+
+        let again = import_directories(&[out.path().to_path_buf()]);
+        let second = tempfile::tempdir().unwrap();
+        dump_snapshot_object_definitions(again.create_snapshot().unwrap().as_ref(), second.path())
+            .unwrap();
+        assert_eq!(read_directory_tree(second.path()), files);
+    }
+
+    #[test]
     fn a_lone_package_exports_into_the_output_directory() {
         // As a package directory is read, so a world of exactly one package is written: export
         // gives back a directory like the source, not one nested inside the output.
