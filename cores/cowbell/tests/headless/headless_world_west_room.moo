@@ -5,6 +5,6 @@ object HEADLESS_WORLD_WEST_ROOM [
 ]
   name: "Runtime World West Room"
   parent: ROOM
-  owner: fixtures::RUNTIME_WIZARD
   location: HEADLESS_WORLD_AREA
+  owner: fixtures::RUNTIME_WIZARD
 endobject

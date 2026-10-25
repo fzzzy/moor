@@ -32,8 +32,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
   method resolve_blocks owner: ARCH_WIZARD
     "A block producer returns block templates that contain nested inline producers.";
     const {context} = args;
-    return {$format.title:mk("Report", 2),
-      $format.paragraph:mk($format:producer_inline(<#90122, .mode = 'count>))};
+    return {$format.title:mk("Report", 2), $format.paragraph:mk($format:producer_inline(<#90122, .mode = 'count>))};
   endmethod
 
   method _resolve_as owner: ARCH_WIZARD
@@ -55,10 +54,8 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     const document = event:resolve(#90102);
     const encoded = $document:encode(document);
     $test_utils:assert_eq(length(encoded["blocks"]), 2, "Blank lines separate paragraphs");
-    $test_utils:assert_eq(encoded["blocks"][1]["children"][2]["kind"], "hard_break",
-      "Other newlines are explicit hard breaks");
-    const bound = $event:mk_info(#90102, $sub:binding('message))
-      :with_text_binding('message, "*not emphasis* <tag>");
+    $test_utils:assert_eq(encoded["blocks"][1]["children"][2]["kind"], "hard_break", "Other newlines are explicit hard breaks");
+    const bound = $event:mk_info(#90102, $sub:binding('message)):with_text_binding('message, "*not emphasis* <tag>");
     const html = $document:render(bound:resolve(#90102), 'text_html)['body];
     $test_utils:assert_eq(html, "<p>*not emphasis* &lt;tag&gt;</p>", "Literal text binding");
     return true;
@@ -76,26 +73,20 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
       actor.name = "alice";
       item.name = "brass *key*";
       move(actor, room);
-      const event = $event:mk_take(actor, $sub:nc(), " ", $sub:self_alt("take", "takes"),
-        " ", $sub:the('d), " in ", $sub:l(), "."):with_dobj(item);
+      const event = $event:mk_take(actor, $sub:nc(), " ", $sub:self_alt("take", "takes"), " ", $sub:the('d), " in ", $sub:l(), "."):with_dobj(item);
       move(actor, elsewhere);
       const own = event:resolve(actor);
       const observed = event:resolve(#90102);
       $test_utils:assert_eq(this:_plain(own), "You take the brass *key* in old room.", "Actor view");
       $test_utils:assert_eq(this:_plain(observed), "Alice takes the brass *key* in old room.", "Observer view");
-      const passage = $passage:mk(room, "east", {}, "", false,
-        elsewhere, "west", {}, "", false);
+      const passage = $passage:mk(room, "east", {}, "", false, elsewhere, "west", {}, "", false);
       const template = $sub_utils:compile("{nc} {step|steps} {direction} from {from_room} to {to_room}.");
       const departure = passage:movement_event(actor, room, elsewhere, "east", "west", template);
       const arrival = passage:movement_event(actor, room, elsewhere, "east", "west", template, true);
-      $test_utils:assert_eq(this:_plain(departure:resolve(actor)),
-        "You step east from old room to new room.", "Custom departure preserves actor perspective");
-      $test_utils:assert_eq(this:_plain(departure:resolve(#90102)),
-        "Alice steps east from old room to new room.", "Custom departure preserves observer perspective");
-      $test_utils:assert_eq(this:_plain(arrival:resolve(#90102)),
-        "Alice steps west from old room to new room.", "Arrival uses the destination direction");
-      $test_utils:assert_eq({departure.location, arrival.location}, {room, elsewhere},
-        "Both action locations are explicit even after the traveler moves");
+      $test_utils:assert_eq(this:_plain(departure:resolve(actor)), "You step east from old room to new room.", "Custom departure preserves actor perspective");
+      $test_utils:assert_eq(this:_plain(departure:resolve(#90102)), "Alice steps east from old room to new room.", "Custom departure preserves observer perspective");
+      $test_utils:assert_eq(this:_plain(arrival:resolve(#90102)), "Alice steps west from old room to new room.", "Arrival uses the destination direction");
+      $test_utils:assert_eq({departure.location, arrival.location}, {room, elsewhere}, "Both action locations are explicit even after the traveler moves");
       actor.name = "renamed actor";
       room.name = "renamed room";
       item.name = "renamed item";
@@ -103,8 +94,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
         const result = $document:render(observed, format);
         $test_utils:assert_true(!index(result['body], "renamed"), "Renderers use resolved labels");
       endfor
-      $test_utils:assert_eq(length($document:render(observed, 'text_html)['annotations]), 3,
-        "Actor, object, and location retain semantic references");
+      $test_utils:assert_eq(length($document:render(observed, 'text_html)['annotations]), 3, "Actor, object, and location retain semantic references");
     finally
       recycle(actor);
       recycle(item);
@@ -117,16 +107,12 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
   method test_selected_branch_and_typed_bindings owner: ARCH_WIZARD
     "Only the selected alternative runs. Text and structured bindings have separate operations.";
     const bomb = $format:producer_inline(<#90122, .mode = 'fail>);
-    const event = $event:mk_info(#90102,
-      $sub:self_altc($format.paragraph:inline("safe ", $format.code:inline("branch")), bomb));
+    const event = $event:mk_info(#90102, $sub:self_altc($format.paragraph:inline("safe ", $format.code:inline("branch")), bomb));
     $test_utils:assert_eq(this:_plain(event:resolve(#90102)), "Safe branch", "Selected branch only");
     const content = $document_template:mk('strong, $format:literal_inline("structured"));
-    const bound = $event:mk_info(#90102, $sub:content_binding('value))
-      :with_content_binding('value, content);
-    $test_utils:assert_eq($document:render(bound:resolve(#90102), 'text_html)['body],
-      "<p><strong>structured</strong></p>", "Explicit content binding");
-    const wrong = $event:mk_info(#90102, $sub:binding('value))
-      :with_content_binding('value, content);
+    const bound = $event:mk_info(#90102, $sub:content_binding('value)):with_content_binding('value, content);
+    $test_utils:assert_eq($document:render(bound:resolve(#90102), 'text_html)['body], "<p><strong>structured</strong></p>", "Explicit content binding");
+    const wrong = $event:mk_info(#90102, $sub:binding('value)):with_content_binding('value, content);
     $test_utils:assert_raises(E_INVARG, wrong, "resolve", {#90102}, "No implicit content coercion");
     return true;
   endmethod
@@ -149,17 +135,12 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
 
   method test_resolution_authority owner: ARCH_WIZARD
     "Hooks see the actual principal. A different viewer does not grant access to private content.";
-    const probe = $event:mk_info(#90102,
-      $format:producer_inline(<#90122, .mode = 'authority>));
+    const probe = $event:mk_info(#90102, $format:producer_inline(<#90122, .mode = 'authority>));
     const document = this:_resolve_as(probe, #90102, #90100);
-    $test_utils:assert_eq(this:_plain(document), tostr(#90102) + ":" + tostr(#90102),
-      "Viewer and authority remain separate");
-    const private = $event:mk_info(#90102,
-      $format:producer_inline(<#90122, .mode = 'private>));
-    $test_utils:assert_raises(E_PERM, this, "_resolve_as", {private, #90102, #90100},
-      "Resolver does not lend its owner privileges");
-    $test_utils:assert_raises(E_ARGS, probe, "resolve", {#90102, ['principal -> #90100]},
-      "An ordinary map cannot set the principal");
+    $test_utils:assert_eq(this:_plain(document), tostr(#90102) + ":" + tostr(#90102), "Viewer and authority remain separate");
+    const private = $event:mk_info(#90102, $format:producer_inline(<#90122, .mode = 'private>));
+    $test_utils:assert_raises(E_PERM, this, "_resolve_as", {private, #90102, #90100}, "Resolver does not lend its owner privileges");
+    $test_utils:assert_raises(E_ARGS, probe, "resolve", {#90102, ['principal -> #90100]}, "An ordinary map cannot set the principal");
     return true;
   endmethod
 
@@ -175,8 +156,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
   method test_invalid_and_recursive_hooks owner: ARCH_WIZARD
     "Invalid hook results and recursive producers fail during resolution with an explicit path.";
     for mode in ({'invalid, 'recursive})
-      const event = $event:mk_info(#90102,
-        $format:producer_inline(<#90122, .mode = mode>));
+      const event = $event:mk_info(#90102, $format:producer_inline(<#90122, .mode = mode>));
       try
         event:resolve(#90102);
       except error (E_INVARG, E_QUOTA)
@@ -191,19 +171,15 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
   method test_structured_factories owner: ARCH_WIZARD
     "Factory output preserves multi-block list items, definitions, table cells, and opaque source.";
     const cell = $format.block:mk($format.paragraph:mk("First."), $format.paragraph:mk("Second."));
-    const event = $event:mk_info(#90102,
-      $format.list:mk({cell}, true, 4), $format.deflist:mk({{"Term", cell}}),
-      $format.table:mk({"Header"}, {{cell}}), $format.code:mk("line\n```", "moo", 21));
+    const event = $event:mk_info(#90102, $format.list:mk({cell}, true, 4), $format.deflist:mk({{"Term", cell}}), $format.table:mk({"Header"}, {{cell}}), $format.code:mk("line\n```", "moo", 21));
     const document = event:resolve(#90102);
     const blocks = $document:encode(document)["blocks"];
     $test_utils:assert_eq(length(blocks[1]["items"][1]["blocks"]), 2, "List item paragraphs");
     $test_utils:assert_eq(length(blocks[2]["items"][1]["definition"]), 2, "Definition paragraphs");
     $test_utils:assert_eq(length(blocks[3]["rows"][1]["cells"][1]["blocks"]), 2, "Table cell paragraphs");
     $test_utils:assert_eq(blocks[4]["first_line"], 21, "Separate source line origin");
-    $test_utils:assert_raises(E_INVARG, $format.table, "mk", {{"A", "B"}, {}, {'start}},
-      "Column alignments must cover every column");
-    $test_utils:assert_raises(E_INVARG, $format.table, "mk", {{"A"}, {}, {'unknown}},
-      "Only document alignments are accepted");
+    $test_utils:assert_raises(E_INVARG, $format.table, "mk", {{"A", "B"}, {}, {'start}}, "Column alignments must cover every column");
+    $test_utils:assert_raises(E_INVARG, $format.table, "mk", {{"A"}, {}, {'unknown}}, "Only document alignments are accepted");
     let headerless = $format.table:mk({}, {{"Cell"}});
     headerless.header = false;
     const encoded = $document:encode($event:mk_info(#90102, headerless):resolve(#90102));
@@ -226,6 +202,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     endfor
     return true;
   endmethod
+
   method test_private_message_documents owner: ARCH_WIZARD
     "DM attribution retains references and body paragraphs without interpreting literal punctuation.";
     const message = $dm:mk(#90102, #90101, "First *literal*.\n\nSecond <literal>.");
@@ -234,15 +211,13 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     for document in ({received, sent})
       const encoded = $document:encode(document);
       $test_utils:assert_eq(length(encoded["blocks"]), 3, "Attribution and both body paragraphs");
-      $test_utils:assert_eq(encoded["blocks"][2]["children"][1]["text"], "First *literal*.",
-        "Message punctuation remains text");
+      $test_utils:assert_eq(encoded["blocks"][2]["children"][1]["text"], "First *literal*.", "Message punctuation remains text");
       for format in ({'text_html, 'text_djot, 'text_plain})
         const rendered = $document:render(document, format);
         $test_utils:assert_false(index(rendered['body], "\\x1b["), "No literal ANSI sequence");
         $test_utils:assert_false(index(rendered['body], binary_to_str(b"Gw==")), "No terminal escape");
         $test_utils:assert_true(index(rendered['body], "Second"), "Complete body in every format");
-        $test_utils:assert_eq(length(rendered['annotations]), format == 'text_plain ? 0 | 2,
-          "Participant and captured location references");
+        $test_utils:assert_eq(length(rendered['annotations]), format == 'text_plain ? 0 | 2, "Participant and captured location references");
       endfor
     endfor
     $test_utils:assert_eq(message:sender_echo_event():audience(), 'utility, "Receipt stays private utility output");
@@ -256,23 +231,19 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     try
       add_property(recipient, "captured_event", false, {player, "r"});
       add_verb(recipient, {player, "rxd", "inform_connection"}, {"this", "none", "this"});
-      $test_utils:assert_false(set_verb_code(recipient, "inform_connection", {"this.captured_event = args[2];"}),
-        "Connection capture compiles");
+      $test_utils:assert_false(set_verb_code(recipient, "inform_connection", {"this.captured_event = args[2];"}), "Connection capture compiles");
       const source = "before\n```\n*opaque*";
       presenter:present_code(["title" -> "Source", "code" -> source, "language" -> "moo"], recipient);
       const code = recipient.captured_event:resolve(#90102);
       const blocks = $document:encode(code)["blocks"];
-      $test_utils:assert_eq({blocks[1]["kind"], blocks[2]["kind"]}, {"heading", "code_block"},
-        "Code presentation uses structural nodes");
+      $test_utils:assert_eq({blocks[1]["kind"], blocks[2]["kind"]}, {"heading", "code_block"}, "Code presentation uses structural nodes");
       $test_utils:assert_eq(blocks[2]["text"], source, "Code delimiters stay inside the source buffer");
-      presenter:present_table(["title" -> "Cells", "headers" -> {"Left |", "Right"},
-        "rows" -> {{"First\nSecond", "<tag>"}}], recipient);
+      presenter:present_table(["title" -> "Cells", "headers" -> {"Left |", "Right"}, "rows" -> {{"First\nSecond", "<tag>"}}], recipient);
       const table = recipient.captured_event:resolve(#90102);
       const encoded = $document:encode(table)["blocks"][2];
       $test_utils:assert_eq(encoded["kind"], "table", "Table presentation uses a table node");
       $test_utils:assert_eq(length(encoded["rows"][1]["cells"]), 2, "Punctuation cannot add a column");
-      $test_utils:assert_eq(encoded["rows"][1]["cells"][1]["blocks"][1]["children"][2]["kind"],
-        "hard_break", "Cell newlines retain their structure");
+      $test_utils:assert_eq(encoded["rows"][1]["cells"][1]["blocks"][1]["children"][2]["kind"], "hard_break", "Cell newlines retain their structure");
       const last_event = recipient.captured_event;
       let rejected = false;
       try
@@ -324,27 +295,23 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     const target = create($thing);
     try
       add_verb(target, {player, "rxd", "listing_probe"}, {"this", "none", "this"});
-      $test_utils:assert_false(set_verb_code(target, "listing_probe",
-        {"\"Source *literal*.\";", "let value = 1;", "value = value + 1;", "return value;"}), "Source compiles");
+      $test_utils:assert_false(set_verb_code(target, "listing_probe", {"\"Source *literal*.\";", "let value = 1;", "value = value + 1;", "return value;"}), "Source compiles");
       const source = verb_code(target, "listing_probe", false, true);
       const range = $llm_verb_source:read(player, target, "listing_probe", 2, 3);
       const document = $event:mk_info(player, range:document()):resolve(player);
       const code = $document:encode(document)["blocks"][2];
       $test_utils:assert_eq(code["first_line"], 2, "Range numbering uses its actual start");
       $test_utils:assert_eq(code["text"], source[2..3]:join("\n"), "Number gutters never enter source text");
-      $test_utils:assert_true(index($document:render(document, 'text_plain)['body], "2 | " + source[2]),
-        "Renderer applies the source origin");
+      $test_utils:assert_true(index($document:render(document, 'text_plain)['body], "2 | " + source[2]), "Renderer applies the source origin");
       const full = $llm_verb_source:read(player, target, "listing_probe");
       const full_code = $document:encode($event:mk_info(player, full:document()):resolve(player))["blocks"][2];
       $test_utils:assert_eq(full_code["text"], source:join("\n"), "Whole listing preserves source");
       const unnumbered = $document:encode($event:mk_info(player, full:document(false)):resolve(player))["blocks"][2];
       $test_utils:assert_false(maphaskey(unnumbered, "first_line"), "Line numbers remain optional");
-      const content = $help_utils:format_documentation_display(
-        {"Source ", $format.code:inline("listing_probe")}, $format.code:mk(source, "moo", 1));
+      const content = $help_utils:format_documentation_display({"Source ", $format.code:inline("listing_probe")}, $format.code:mk(source, "moo", 1));
       const documentation = $document:encode($event:mk_info(player, content):resolve(player));
       $test_utils:assert_eq(documentation["blocks"][1]["kind"], "heading", "Documentation title has structure");
-      $test_utils:assert_eq(documentation["blocks"][2]["text"], source:join("\n"),
-        "A flyweight code block is not mistaken for missing documentation");
+      $test_utils:assert_eq(documentation["blocks"][2]["text"], source:join("\n"), "A flyweight code block is not mistaken for missing documentation");
     finally
       recycle(target);
     endtry
@@ -364,14 +331,11 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
       move(item, container);
       container.open = false;
       const closed = $look:narrative(container:look_self():capture(player)):resolve(player);
-      $test_utils:assert_eq(this:_plain(closed),
-        "document box\n\nFirst paragraph.\n\nSecond paragraph.\n\nThe document box is shut.",
-        "Closed view retains the description and resolves its own container binding");
+      $test_utils:assert_eq(this:_plain(closed), "document box\n\nFirst paragraph.\n\nSecond paragraph.\n\nThe document box is shut.", "Closed view retains the description and resolves its own container binding");
       container.open = true;
       const opened = $look:narrative(container:look_self():capture(player)):resolve(player);
       $test_utils:assert_true(index(this:_plain(opened), "Contents: a hidden *token*."), "Visible contents are literal");
-      $test_utils:assert_eq(length($document:render(opened, 'text_html)['annotations]), 2,
-        "Container and visible contents retain references");
+      $test_utils:assert_eq(length($document:render(opened, 'text_html)['annotations]), 2, "Container and visible contents retain references");
     finally
       recycle(item);
       recycle(container);
@@ -385,11 +349,9 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     const event = $event:mk_info(player, $format.block:mk(@topic:render_prose()));
     const document = event:resolve(player);
     const rendered = $document:render(document, 'text_html);
-    $test_utils:assert_true(index(rendered['body], "<code>@doc &lt;object|builtin&gt;</code>"),
-      "Usage retains its code label");
+    $test_utils:assert_true(index(rendered['body], "<code>@doc &lt;object|builtin&gt;</code>"), "Usage retains its code label");
     $test_utils:assert_true(length(rendered['annotations]) > 0, "Usage retains its command reference");
-    $test_utils:assert_eq(this:_plain(document),
-      "Display developer documentation.\n\nUsage: @doc <object|builtin>", "Plain usage has no backtick delimiters");
+    $test_utils:assert_eq(this:_plain(document), "Display developer documentation.\n\nUsage: @doc <object|builtin>", "Plain usage has no backtick delimiters");
     return true;
   endmethod
 endobject

@@ -5,7 +5,8 @@ object HEADLESS_MATCHING_PROBE_ONE [
 ]
   name: "matching probe"
   parent: THING
-  owner: fixtures::RUNTIME_WIZARD
   location: fixtures::RUNTIME_ROOM
-  override aliases = {"first probe", "probe"};
+  owner: fixtures::RUNTIME_WIZARD
+
+  override aliases (owner: fixtures::RUNTIME_WIZARD, flags: "rc") = {"first probe", "probe"};
 endobject

@@ -6,10 +6,9 @@ object HEADLESS_RELATION_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Headless runtime scenarios for relation queries over runtime-created fixtures.";
-  override import_export_id = "headless_relation_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for relation queries over runtime-created fixtures.";
 
-  verb test_headless_relation_graph_query (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_relation_graph_query owner: ARCH_WIZARD
     "Runtime scenario: anonymous relations support indexed query and reachability over object fixtures.";
     rel = $relation:create(true);
     graph = $relation:create(true);
@@ -36,9 +35,9 @@ object HEADLESS_RELATION_SCENARIOS [
     $test_utils:assert_eq(rel:count(), 0, "clear should remove all relation tuples");
     $test_utils:assert_eq(graph:count(), 0, "clear should remove all graph tuples");
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_relation_retract_updates_indexes (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_relation_retract_updates_indexes owner: ARCH_WIZARD
     "Runtime scenario: retracting fixture tuples updates membership and indexed query results.";
     rel = $relation:create(true);
     actor = $thing:create(true);
@@ -56,7 +55,8 @@ object HEADLESS_RELATION_SCENARIOS [
     $test_utils:assert_true(['target -> target_b, 'label -> "wears"] in remaining, "query should retain indexed second tuple");
     $test_utils:assert_false(rel:retract({actor, target_a, "holds"}), "retracting a missing tuple should return false");
     return true;
-  endverb
+  endmethod
+
   method test_headless_relation_repeated_scalar_index owner: ARCH_WIZARD
     "Repeated values in one tuple produce one result per asserted tuple.";
     const relation = create($relation, $hacker, 2);
@@ -121,8 +121,7 @@ object HEADLESS_RELATION_SCENARIOS [
       const zero = relation:assert({0.0});
       $test_utils:assert_eq(relation:assert({-0.0}), zero, "Floating-point zero signs have one identity");
       relation:assert({{'var, 'literal}});
-      $test_utils:assert_eq(relation:query({{'var, 'Value}}, ['Value -> {'var, 'literal}]),
-        {['Value -> {'var, 'literal}]}, "Stored variable-shaped data remains data");
+      $test_utils:assert_eq(relation:query({{'var, 'Value}}, ['Value -> {'var, 'literal}]), {['Value -> {'var, 'literal}]}, "Stored variable-shaped data remains data");
     finally
       relation:destroy();
     endtry
@@ -140,8 +139,7 @@ object HEADLESS_RELATION_SCENARIOS [
       const result = relation:query_result(pattern, [], ['max_solutions -> 1]);
       $test_utils:assert_eq(length(result['rows]), 1, "One requested answer");
       $test_utils:assert_false(result['complete], "Another answer exists");
-      $test_utils:assert_raises(E_QUOTA, relation, "query", {pattern, [], ['max_solutions -> 1]},
-        "Complete-list queries must not return an unchecked prefix");
+      $test_utils:assert_raises(E_QUOTA, relation, "query", {pattern, [], ['max_solutions -> 1]}, "Complete-list queries must not return an unchecked prefix");
       const all = relation:query_result(pattern, [], ['max_solutions -> 2]);
       $test_utils:assert_true(all['complete], "Exactly the limit can still be complete");
       $test_utils:assert_eq(length(all['rows]), 2, "Case-distinct answers remain distinct");
@@ -150,20 +148,15 @@ object HEADLESS_RELATION_SCENARIOS [
       $test_utils:assert_eq(absent['rows], {}, "No matching fact");
       const fields = ['group -> 'integer, 'name -> 'string];
       $relation:define_fields(relation, {'group, 'name}, fields);
-      const rule = $rule_engine:parse_expression(
-        "relation(" + tostr(relation) + ", group: 1) -> (name: Name) AND relation("
-          + tostr(relation) + ", group: 1) -> (name: Name)");
+      const rule = $rule_engine:parse_expression("relation(" + tostr(relation) + ", group: 1) -> (name: Name) AND relation(" + tostr(relation) + ", group: 1) -> (name: Name)");
       const matched = $rule_engine:evaluate(rule);
-      $test_utils:assert_eq(1 + length(matched['alternatives]), 2,
-        "Repeated bindings preserve both exact string values");
+      $test_utils:assert_eq(1 + length(matched['alternatives]), 2, "Repeated bindings preserve both exact string values");
       const incomplete = $relation:query_rows(relation, fields, ['group -> 1], 1);
       $test_utils:assert_false(incomplete['complete], "Named queries retain result completeness");
-      $test_utils:assert_raises(E_INVARG, relation, "assert", {{1, 2}},
-        "Typed relations reject malformed facts at insertion");
+      $test_utils:assert_raises(E_INVARG, relation, "assert", {{1, 2}}, "Typed relations reject malformed facts at insertion");
       add_property(relation, "tuple_bad", {1, 2}, {$hacker, "r"});
       $relation:_index_tuple(relation, "bad", {1, 2});
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {rule},
-        "Malformed typed facts remain errors, rather than missing facts");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {rule}, "Malformed typed facts remain errors, rather than missing facts");
     finally
       relation:destroy();
     endtry
@@ -180,10 +173,8 @@ object HEADLESS_RELATION_SCENARIOS [
       relation:assert({room, visitor});
       relation:assert({room, visitor});
       $relation:define_fields(relation, {'location, 'member}, ['location -> 'object, 'member -> 'object]);
-      const text = "occupants(location: input.Location) -> (object: Visitor)"
-        + " AND relation(" + tostr(relation) + ", location: input.Location) -> (member: Visitor)";
-      const rule = $rule_engine:parse_expression(text, 'members,
-        $rule_engine:scope(['Location -> 'object]));
+      const text = "occupants(location: input.Location) -> (object: Visitor)" + " AND relation(" + tostr(relation) + ", location: input.Location) -> (member: Visitor)";
+      const rule = $rule_engine:parse_expression(text, 'members, $rule_engine:scope(['Location -> 'object]));
       const result = $rule_engine:evaluate(rule, ['Location -> room]);
       $test_utils:assert_eq(result['bindings], ['Visitor -> visitor], "The world and relation agree");
       $test_utils:assert_eq(result['alternatives], {}, "Repeated facts do not repeat the answer");
@@ -202,8 +193,7 @@ object HEADLESS_RELATION_SCENARIOS [
       relation.r = 0;
       let denied = false;
       try
-        const negative = $rule_engine:parse_expression("NOT relation(" + tostr(relation) + ", location: input.Location)",
-          'absence, $rule_engine:scope(['Location -> 'object]));
+        const negative = $rule_engine:parse_expression("NOT relation(" + tostr(relation) + ", location: input.Location)", 'absence, $rule_engine:scope(['Location -> 'object]));
         this:_query_as_player(negative, room);
       except (E_PERM)
         denied = true;
@@ -230,8 +220,7 @@ object HEADLESS_RELATION_SCENARIOS [
       foreign:assert({1});
       this:_define_as_player(owned);
       this:_define_as_programmer(other_owner);
-      $test_utils:assert_eq(owned.fact_schema, other_owner.fact_schema,
-        "Different owners can define identical fields without registering a name");
+      $test_utils:assert_eq(owned.fact_schema, other_owner.fact_schema, "Different owners can define identical fields without registering a name");
       $test_utils:assert_eq(other_owner:tuples(), {{2}}, "Each owner has independent storage");
       $test_utils:assert_eq(owned:tuples(), {{1}}, "The owner's fact was stored");
       for operation in ({"define", "assert"})
@@ -305,40 +294,28 @@ object HEADLESS_RELATION_SCENARIOS [
       $test_utils:assert_eq(1 + length(children['alternatives]), 2, "Both children are selected");
       const parameters = ['family -> relation];
       const scope = $rule_engine:scope([], ['family -> 'object]);
-      const reusable = $rule_engine:parse_expression(
-        "relation(parameter.family, child: 4) -> (parent: Parent)", 'parents, scope, parameters);
-      $test_utils:assert_eq($rule_engine:evaluate(reusable, [], parameters)['bindings], ['Parent -> 2],
-        "Programmers can compile a query through an explicit setting");
-      const restored = $rule_engine:parse_expression($rule_engine:decompile_rule(reusable),
-        'parents, scope, parameters);
-      $test_utils:assert_eq($rule_engine:evaluate(restored, [], parameters)['bindings], ['Parent -> 2],
-        "Printed settings remain references when reparsed");
+      const reusable = $rule_engine:parse_expression("relation(parameter.family, child: 4) -> (parent: Parent)", 'parents, scope, parameters);
+      $test_utils:assert_eq($rule_engine:evaluate(reusable, [], parameters)['bindings], ['Parent -> 2], "Programmers can compile a query through an explicit setting");
+      const restored = $rule_engine:parse_expression($rule_engine:decompile_rule(reusable), 'parents, scope, parameters);
+      $test_utils:assert_eq($rule_engine:evaluate(restored, [], parameters)['bindings], ['Parent -> 2], "Printed settings remain references when reparsed");
       const reverse = $rule_engine:parse_expression(call + ", child: 4) -> (parent: Parent)");
       $test_utils:assert_eq($rule_engine:evaluate(reverse)['bindings], ['Parent -> 2], "Either column can be bound");
-      const join = $rule_engine:parse_expression(call + ", parent: 1) -> (child: Middle) AND "
-        + call + ", parent: binding.Middle) -> (child: End)");
+      const join = $rule_engine:parse_expression(call + ", parent: 1) -> (child: Middle) AND " + call + ", parent: binding.Middle) -> (child: End)");
       const joined = $rule_engine:evaluate(join);
       $test_utils:assert_eq(joined['bindings], ['Middle -> 2, 'End -> 4], "The first query feeds the next");
-      const leaf = $rule_engine:parse_expression(call + ", parent: 1) -> (child: Leaf) AND NOT "
-        + call + ", parent: binding.Leaf)");
+      const leaf = $rule_engine:parse_expression(call + ", parent: 1) -> (child: Leaf) AND NOT " + call + ", parent: binding.Leaf)");
       $test_utils:assert_eq($rule_engine:evaluate(leaf)['bindings], ['Leaf -> 3], "Absence is correlated with each match");
       const printed = $rule_engine:decompile_rule(join);
       const reparsed = $rule_engine:parse_expression(printed);
       $test_utils:assert_eq($rule_engine:evaluate(reparsed), joined, "Printing and parsing preserve relation joins");
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression",
-        {"NOT " + call + ") -> (child: Unbound)"}, "Negation cannot introduce a selected value");
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression",
-        {call + ", missing: 1)"}, "Unknown fields fail at authoring time");
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression",
-        {call + ", parent: \"one\")"}, "Mistyped inputs fail at authoring time");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {"NOT " + call + ") -> (child: Unbound)"}, "Negation cannot introduce a selected value");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {call + ", missing: 1)"}, "Unknown fields fail at authoring time");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {call + ", parent: \"one\")"}, "Mistyped inputs fail at authoring time");
       const saved = relation.fact_schema;
-      $test_utils:assert_raises(E_INVARG, $relation, "define_fields",
-        {relation, {'parent, 'child}, ['parent -> 'string, 'child -> 'integer]},
-        "A field change must validate existing tuples before changing anything");
+      $test_utils:assert_raises(E_INVARG, $relation, "define_fields", {relation, {'parent, 'child}, ['parent -> 'string, 'child -> 'integer]}, "A field change must validate existing tuples before changing anything");
       $test_utils:assert_eq(relation.fact_schema, saved, "A failed field change preserves the definition");
       $relation:define_fields(relation, {'from, 'to}, ['from -> 'integer, 'to -> 'integer]);
-      $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {forward},
-        "Existing conditions detect renamed fields instead of silently changing meaning");
+      $test_utils:assert_raises(E_INVARG, $rule_engine, "evaluate", {forward}, "Existing conditions detect renamed fields instead of silently changing meaning");
     finally
       recycle(relation);
     endtry

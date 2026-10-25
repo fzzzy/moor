@@ -6,10 +6,9 @@ object HEADLESS_BOOT_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Headless runtime scenarios for bootstrapping a running Cowbell core.";
-  override import_export_id = "headless_boot_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for bootstrapping a running Cowbell core.";
 
-  verb _assert_valid_global (this none this) owner: HACKER flags: "rxd"
+  method _assert_valid_global owner: HACKER
     "Assert that a named sysobj global resolves to the expected object.";
     {prop_name, expected} = args;
     actual = $sysobj.(prop_name);
@@ -17,9 +16,9 @@ object HEADLESS_BOOT_SCENARIOS [
     $test_utils:assert_true(valid(actual), "$" + prop_name + " should be valid");
     $test_utils:assert_eq(actual, expected, "$" + prop_name + " should resolve to expected object");
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_boot_smoke (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_boot_smoke owner: ARCH_WIZARD
     "Runtime scenario: the imported core exposes expected globals in a running scheduler-backed MOO.";
     this:_assert_valid_global("sysobj", #0);
     this:_assert_valid_global("root", #1);
@@ -32,23 +31,21 @@ object HEADLESS_BOOT_SCENARIOS [
     this:_assert_valid_global("rule_engine", #62);
     this:_assert_valid_global("test_utils", #127);
     return true;
-  endverb
+  endmethod
+
   method test_restart_preserves_authored_room owner: ARCH_WIZARD
     "A restart preserves a builder's description and reaction edits on the First Room.";
-    #0:server_started();
+    $server_started();
     const description = $first_room.description;
     try
       $first_room.description = "A room customized by its owner.";
       let reaction = $reaction:mk('on_enter, 0, {{'announce, "Welcome."}});
       reaction.enabled = false;
       const installed = $reaction:install($first_room, "boot_probe_reaction", reaction);
-      #0:server_started();
-      $test_utils:assert_eq($first_room.description, "A room customized by its owner.",
-        "Startup preserves the authored description");
-      $test_utils:assert_true(equal($first_room.boot_probe_reaction, installed),
-        "Startup preserves the authored reaction and its disabled state");
-      $test_utils:assert_type(installed.authorization, TYPE_STR,
-        "The authored reaction retains its signed installation");
+      $server_started();
+      $test_utils:assert_eq($first_room.description, "A room customized by its owner.", "Startup preserves the authored description");
+      $test_utils:assert_true(equal($first_room.boot_probe_reaction, installed), "Startup preserves the authored reaction and its disabled state");
+      $test_utils:assert_type(installed.authorization, TYPE_STR, "The authored reaction retains its signed installation");
     finally
       $first_room.description = description;
       $reaction:remove($first_room, "boot_probe_reaction");

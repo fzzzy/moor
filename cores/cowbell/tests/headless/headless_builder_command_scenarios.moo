@@ -7,10 +7,9 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
   owner: ARCH_WIZARD
   readable: true
 
-  override description = "Headless integration scenarios for builder command wrappers.";
-  override import_export_id = "headless_builder_command_scenarios";
+  override description (owner: ARCH_WIZARD, flags: "rc") = "Headless integration scenarios for builder command wrappers.";
 
-  verb test_headless_builder_commands_use_stored_grants (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_builder_commands_use_stored_grants owner: ARCH_WIZARD
     "Runtime scenario: builder command verbs use stored capabilities for room and passage operations.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     test_area = #-1;
@@ -45,11 +44,9 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       dig_result = this:_dispatch_builder_any("@dig", "oneway north to builder target room", {"oneway north"}, "to", "builder target room");
       $test_utils:assert_type(dig_result, TYPE_FLYWEIGHT, "@dig should return the new passage: " + toliteral(#90102.headless_last_inform));
       $test_utils:assert_eq(test_area:passage_for(room_a, room_b), dig_result, "@dig should register passage through stored grants");
-      const duplicate_result = this:_dispatch_builder_any("@dig",
-        "oneway northeast to builder target room", {"oneway northeast"}, "to", "builder target room");
+      const duplicate_result = this:_dispatch_builder_any("@dig", "oneway northeast to builder target room", {"oneway northeast"}, "to", "builder target room");
       $test_utils:assert_false(duplicate_result, "@dig should reject another passage between the same rooms");
-      $test_utils:assert_eq(test_area:passage_for(room_a, room_b), dig_result,
-        "Rejecting a duplicate should preserve the existing passage");
+      $test_utils:assert_eq(test_area:passage_for(room_a, room_b), dig_result, "Rejecting a duplicate should preserve the existing passage");
       undig_result = this:_dispatch_builder_dobj("@undig", "north");
       $test_utils:assert_true(undig_result, "@undig should report successful removal");
       $test_utils:assert_false(test_area:passage_for(room_a, room_b), "@undig should remove passage through stored grants");
@@ -64,9 +61,9 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       valid(test_area) && test_area:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_builder_commands_missing_grants_deny_cleanly (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_builder_commands_missing_grants_deny_cleanly owner: ARCH_WIZARD
     "Security challenge: builder command wrappers deny missing grants without mutating the world.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     test_area = #-1;
@@ -117,9 +114,9 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       valid(test_area) && test_area:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_builder_commands_wizard_builds_without_grants (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_builder_commands_wizard_builds_without_grants owner: ARCH_WIZARD
     "Runtime scenario: wizard builders can @build in an area without stored capability grants.";
     player == #90100 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90100.");
     test_area = #-1;
@@ -155,9 +152,9 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       valid(test_area) && test_area:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_builder_message_commands_dispatch_as_player (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_builder_message_commands_dispatch_as_player owner: ARCH_WIZARD
     "Runtime scenario: message builder commands run from non-wizard command frames and mutate through scoped helpers.";
     player == #90102 || raise(E_INVARG, "This scenario must run with --test-task-player set to #90102.");
     fixture = #-1;
@@ -170,10 +167,7 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       fixture.name = "headless message command fixture";
       add_property(fixture, "headless_msg", "", {#90102, "rc"});
       add_verb(fixture, {#90102, "rxd", "message_bindings"}, {"this", "none", "this"});
-      const binding_errors = set_verb_code(fixture, "message_bindings", {
-        "\"Declare the participant supplied to the fixture's messages.\";",
-        "args[1] == \"headless_msgs\" && return $sub_utils:standard_bindings(\"The test participant.\");",
-        "return pass(@args);"});
+      const binding_errors = set_verb_code(fixture, "message_bindings", {"\"Declare the participant supplied to the fixture's messages.\";", "args[1] == \"headless_msgs\" && return $sub_utils:standard_bindings(\"The test participant.\");", "return pass(@args);"});
       $test_utils:assert_false(binding_errors, "fixture binding declaration should compile");
       #90102.is_builder = true;
       add_property(#90102, "headless_last_inform", false, {$arch_wizard, "r"});
@@ -199,43 +193,23 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       valid(fixture) && fixture:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb _dispatch_builder_any (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _dispatch_builder_any owner: ARCH_WIZARD
     "Dispatch a builder command declared as any/any/any.";
     {verb_name, arg_string, command_args, ?prep_string = "", ?iobj_string = ""} = args;
-    pc = [
-      'verb -> verb_name,
-      'argstr -> arg_string,
-      'args -> command_args,
-      'dobj -> player,
-      'dobjstr -> command_args ? command_args[1] | arg_string,
-      'prep -> -2,
-      'prepstr -> prep_string,
-      'iobj -> player,
-      'iobjstr -> iobj_string
-    ];
+    pc = ['verb -> verb_name, 'argstr -> arg_string, 'args -> command_args, 'dobj -> player, 'dobjstr -> command_args ? command_args[1] | arg_string, 'prep -> -2, 'prepstr -> prep_string, 'iobj -> player, 'iobjstr -> iobj_string];
     return dispatch_command_verb($builder_features, verb_name, pc);
-  endverb
+  endmethod
 
-  verb _dispatch_builder_dobj (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _dispatch_builder_dobj owner: ARCH_WIZARD
     "Dispatch a builder command declared as any/none/none.";
     {verb_name, dobj_string} = args;
-    pc = [
-      'verb -> verb_name,
-      'argstr -> dobj_string,
-      'args -> {dobj_string},
-      'dobj -> player,
-      'dobjstr -> dobj_string,
-      'prep -> -1,
-      'prepstr -> "",
-      'iobj -> #-1,
-      'iobjstr -> ""
-    ];
+    pc = ['verb -> verb_name, 'argstr -> dobj_string, 'args -> {dobj_string}, 'dobj -> player, 'dobjstr -> dobj_string, 'prep -> -1, 'prepstr -> "", 'iobj -> #-1, 'iobjstr -> ""];
     return dispatch_command_verb($builder_features, verb_name, pc);
-  endverb
+  endmethod
 
-  verb _find_room_named_in_area (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _find_room_named_in_area owner: ARCH_WIZARD
     "Return the first room in area with the given name.";
     {area, room_name} = args;
     for candidate in (area:contents())
@@ -244,5 +218,5 @@ object HEADLESS_BUILDER_COMMAND_SCENARIOS [
       endif
     endfor
     return #-1;
-  endverb
+  endmethod
 endobject

@@ -8,8 +8,7 @@ object HEADLESS_EVENT_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Headless runtime scenarios for pure event and substitution rendering.";
-  override import_export_id = "headless_event_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for pure event and substitution rendering.";
 
   method _descriptor owner: ARCH_WIZARD
     "Read a reference through its public document and render contracts.";
@@ -18,7 +17,7 @@ object HEADLESS_EVENT_SCENARIOS [
     return mapvalues(result['annotations])[1];
   endmethod
 
-  verb _fixtures (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _fixtures owner: ARCH_WIZARD
     "Create actor, observer, room, and item fixtures for rendering scenarios.";
     room = create($room);
     actor = create($thing);
@@ -32,9 +31,9 @@ object HEADLESS_EVENT_SCENARIOS [
     observer:moveto(room);
     item:moveto(room);
     return {actor, observer, room, item};
-  endverb
+  endmethod
 
-  verb _destroy_fixtures (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method _destroy_fixtures owner: ARCH_WIZARD
     "Destroy valid persistent fixtures in reverse containment order.";
     {actor, observer, room, item} = args;
     valid(item) && item:destroy();
@@ -42,11 +41,11 @@ object HEADLESS_EVENT_SCENARIOS [
     valid(actor) && actor:destroy();
     valid(room) && room:destroy();
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_event_perspective_rendering (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_event_perspective_rendering owner: ARCH_WIZARD
     "Runtime scenario: event substitution renders actor and observer perspectives without delivery.";
-    actor = observer = room = item = #-1;
+    actor = observer = (room = (item = #-1));
     try
       {actor, observer, room, item} = this:_fixtures();
       event = $event:mk_info(actor, $sub:nc(), " ", $sub:self_alt("take", "takes"), " ", $sub:the('d), " in ", $sub:l(), "."):with_dobj(item);
@@ -57,11 +56,11 @@ object HEADLESS_EVENT_SCENARIOS [
       this:_destroy_fixtures(actor, observer, room, item);
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_event_message_bag_template_rendering (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_event_message_bag_template_rendering owner: ARCH_WIZARD
     "Runtime scenario: message bag entries can be compiled, picked, and rendered through events.";
-    actor = observer = room = item = #-1;
+    actor = observer = (room = (item = #-1));
     try
       {actor, observer, room, item} = this:_fixtures();
       template = "{nc} {have} {the d}.";
@@ -77,11 +76,11 @@ object HEADLESS_EVENT_SCENARIOS [
       this:_destroy_fixtures(actor, observer, room, item);
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_event_message_bag_mutation (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_event_message_bag_mutation owner: ARCH_WIZARD
     "Runtime scenario: message bag flyweight mutation preserves compiled template rendering.";
-    actor = observer = room = item = #-1;
+    actor = observer = (room = (item = #-1));
     try
       {actor, observer, room, item} = this:_fixtures();
       bag = $msg_bag:mk($sub_utils:compile("{nc} {look} at {the d}."));
@@ -98,8 +97,9 @@ object HEADLESS_EVENT_SCENARIOS [
       this:_destroy_fixtures(actor, observer, room, item);
     endtry
     return true;
-  endverb
-  verb test_semantic_annotation_composition (this none this) owner: ARCH_WIZARD flags: "rxd"
+  endmethod
+
+  method test_semantic_annotation_composition owner: ARCH_WIZARD
     const label = "A [brass] key <&> | *bright*";
     const object = $format.annotation:object(player, label);
     const paragraph = $format.paragraph:mk({object, " and ", object});
@@ -122,9 +122,9 @@ object HEADLESS_EVENT_SCENARIOS [
       $test_utils:assert_eq(html['annotations][id], descriptor, "reference identities are stable across formats");
     endfor
     return true;
-  endverb
+  endmethod
 
-  verb test_semantic_annotation_cells (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_semantic_annotation_cells owner: ARCH_WIZARD
     const object = $format.annotation:object(player, "player");
     const table = $format.table:mk({object}, {{object}});
     const definitions = $format.deflist:mk({{object, object}});
@@ -135,15 +135,15 @@ object HEADLESS_EVENT_SCENARIOS [
       $test_utils:assert_eq(length(result['annotations]), format == 'text_plain ? 0 | 5, "nested cells preserve annotations");
     endfor
     return true;
-  endverb
-  verb test_annotation_delivery_bundle (this none this) owner: ARCH_WIZARD flags: "rxd"
+  endmethod
+
+  method test_annotation_delivery_bundle owner: ARCH_WIZARD
     const receiver = create($event_receiver, player, 2);
     try
       add_verb(receiver, {player, "rxd", "render_test"}, {"this", "none", "this"});
       set_verb_code(receiver, "render_test", {"return this:_event_render({{#-1, \"test\", 0, {tosym(\"text/html\")}}, {#-2, \"test\", 0, {\"text/plain\"}}, {#-3, \"test\", 0, {'text_html}}}, args[1]);"});
       #90122.calls = 0;
-      const event = $event:mk_info(player, $sub:nc(), " picked up ", $sub:d(), ". ",
-        $format:producer_inline(<#90122, .mode = 'count>)):with_dobj(receiver);
+      const event = $event:mk_info(player, $sub:nc(), " picked up ", $sub:d(), ". ", $format:producer_inline(<#90122, .mode = 'count>)):with_dobj(receiver);
       const batch = receiver:render_test(event);
       const outputs = batch['connections];
       $test_utils:assert_eq(batch['document]["version"], 1, "all connections share the document envelope");
@@ -158,8 +158,9 @@ object HEADLESS_EVENT_SCENARIOS [
       recycle(receiver);
     endtry
     return true;
-  endverb
-  verb test_help_verb_annotations (this none this) owner: ARCH_WIZARD flags: "rxd"
+  endmethod
+
+  method test_help_verb_annotations owner: ARCH_WIZARD
     "Help resolves real verbs, preserves code examples, and has plain text fallback.";
     const prose = $help_utils:annotate_prose($format.djot:blocks("Use `look` or `say <message>`. Keep `no_such_verb_123` and `` `look` `` intact."), $test_player);
     const event = $event:mk_info(player, prose);
@@ -187,28 +188,22 @@ object HEADLESS_EVENT_SCENARIOS [
     const djot = $document:render(list_event:resolve(player), 'text_djot);
     $test_utils:assert_eq(length(djot['annotations]), 1, "topic lists retain help references");
     $test_utils:assert_eq($document:render(list_event:resolve(player), 'text_plain)['body], "- look\n\n- inventory", "plain lists stay readable");
-    const topics = {$format.annotation:help($help_topics, "look"),
-      $format.annotation:help($help_topics, "inventory")};
+    const topics = {$format.annotation:help($help_topics, "look"), $format.annotation:help($help_topics, "inventory")};
     const topic_document = $event:mk_info(player, $format.list:mk(topics)):resolve(player);
     for format in ({'text_html, 'text_djot})
       const rendered = $document:render(topic_document, format);
-      $test_utils:assert_true(index(rendered['body], "reference-columns"),
-        "The renderer gives topic references a compact layout");
+      $test_utils:assert_true(index(rendered['body], "reference-columns"), "The renderer gives topic references a compact layout");
       $test_utils:assert_eq(length(rendered['annotations]), 2, "Columns retain both topic actions");
-      for ordinary in ({list, $format.list:mk(topics, true),
-          $format.list:mk({$format.block:mk(topics[1], "Explanation."), topics[2]}),
-          $format.list:mk({$format.paragraph:inline(topics[1], " with an explanation"), topics[2]}),
-          $format.list:mk({" "})})
+      for ordinary in ({list, $format.list:mk(topics, true), $format.list:mk({$format.block:mk(topics[1], "Explanation."), topics[2]}), $format.list:mk({$format.paragraph:inline(topics[1], " with an explanation"), topics[2]}), $format.list:mk({" "})})
         const document = $event:mk_info(player, ordinary):resolve(player);
-        $test_utils:assert_false(index($document:render(document, format)['body], "reference-columns"),
-          "Prose, numbered lists, and multi-block items retain their normal layout");
+        $test_utils:assert_false(index($document:render(document, format)['body], "reference-columns"), "Prose, numbered lists, and multi-block items retain their normal layout");
       endfor
     endfor
-    $test_utils:assert_eq($document:render(topic_document, 'text_plain)['body],
-      "- look\n\n- inventory", "Plain references retain their order without layout markup");
+    $test_utils:assert_eq($document:render(topic_document, 'text_plain)['body], "- look\n\n- inventory", "Plain references retain their order without layout markup");
     return true;
-  endverb
-  verb test_command_entries (this none this) owner: ARCH_WIZARD flags: "rxd"
+  endmethod
+
+  method test_command_entries owner: ARCH_WIZARD
     "Command listings bind the receiver and reuse authored completion scope without executing anything.";
     const usage = this:_descriptor($help_utils:command_usage("get <thing>", player, {"this", "none", "none"}));
     $test_utils:assert_eq(usage["template"], "get {dobj}", "authored usage does not bind whichever object defines get nearby");
@@ -216,13 +211,7 @@ object HEADLESS_EVENT_SCENARIOS [
     const target = create($container, player);
     target.open = true;
     const actions = target:inspection_commands(player);
-    const cases = {
-      {{"get take", $thing, "this", "none", "none"}, "get " + tostr(target), "", ""},
-      {{"lock", $container, "this", "with", "any"}, "lock " + tostr(target) + " with {iobj}", "iobj", "nearby"},
-      {{"get take steal grab", $container, "any", "from", "this"}, "get {dobj} from " + tostr(target), "dobj", "contents"},
-      {{"put", $container, "any", "any", "this"}, "put {dobj} in " + tostr(target), "dobj", "inventory"},
-      {{"give", $player, "any", "at", "any"}, "give {dobj} at {iobj}", "dobj", "nearby"}
-    };
+    const cases = {{{"get take", $thing, "this", "none", "none"}, "get " + tostr(target), "", ""}, {{"lock", $container, "this", "with", "any"}, "lock " + tostr(target) + " with {iobj}", "iobj", "nearby"}, {{"get take steal grab", $container, "any", "from", "this"}, "get {dobj} from " + tostr(target), "dobj", "contents"}, {{"put", $container, "any", "any", "this"}, "put {dobj} in " + tostr(target), "dobj", "inventory"}, {{"give", $player, "any", "at", "any"}, "give {dobj} at {iobj}", "dobj", "nearby"}};
     try
       for example in (cases)
         const {spec, command, slot, scope} = example;
@@ -244,8 +233,7 @@ object HEADLESS_EVENT_SCENARIOS [
         for command_entry in ({entry, ordinary})
           const document = $event:mk_info(player, $format.list:mk({command_entry})):resolve(player);
           for format in ({'text_html, 'text_djot})
-            $test_utils:assert_true(index($document:render(document, format)['body], "reference-columns"),
-              "Command lists use columns with or without programmer source links");
+            $test_utils:assert_true(index($document:render(document, format)['body], "reference-columns"), "Command lists use columns with or without programmer source links");
           endfor
         endfor
       endfor
@@ -253,21 +241,11 @@ object HEADLESS_EVENT_SCENARIOS [
       recycle(target);
     endtry
     return true;
-  endverb
+  endmethod
+
   method test_argument_free_command_entries owner: ARCH_WIZARD
     "Actual command signatures must not invent argument fields for ignored input.";
-    const cases = {
-      {$sittable, "sit", "none", "this", "sit on " + tostr($sittable)},
-      {$sittable, "stand", "none", "this", "stand from " + tostr($sittable)},
-      {$player, "inventory", "none", "none", "inventory"},
-      {$player, "dms", "none", "none", "dms"},
-      {$player, "listgag", "none", "none", "@listgag"},
-      {$prog_features, "@ps", "none", "none", "@ps"},
-      {$builder_features, "@schedules", "none", "none", "@schedules"},
-      {$prog_features, "@codepaste", "none", "none", "@codepaste"},
-      {$social_features, "frown", "none", "none", "frown"},
-      {$social_features, "applaud", "none", "none", "applaud"}
-    };
+    const cases = {{$sittable, "sit", "none", "this", "sit on " + tostr($sittable)}, {$sittable, "stand", "none", "this", "stand from " + tostr($sittable)}, {$player, "inventory", "none", "none", "inventory"}, {$player, "dms", "none", "none", "dms"}, {$player, "listgag", "none", "none", "@listgag"}, {$prog_features, "@ps", "none", "none", "@ps"}, {$builder_features, "@schedules", "none", "none", "@schedules"}, {$prog_features, "@codepaste", "none", "none", "@codepaste"}, {$social_features, "frown", "none", "none", "frown"}, {$social_features, "applaud", "none", "none", "applaud"}};
     for example in (cases)
       const {target, name, direct, indirect, command} = example;
       const {dobj_spec, prep, iobj_spec} = verb_args(target, name);
@@ -281,6 +259,7 @@ object HEADLESS_EVENT_SCENARIOS [
     endfor
     return true;
   endmethod
+
   method test_action_semantics owner: ARCH_WIZARD
     "Aliases share authored meanings; unknown commands do not acquire an icon by guesswork.";
     const give = $actor:command_action("hand", "Mr. Welcome");

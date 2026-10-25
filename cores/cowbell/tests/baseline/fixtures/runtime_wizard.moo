@@ -14,20 +14,22 @@ object RUNTIME_WIZARD [
 ]
   name: "RUNTIME_WIZARD"
   parent: PLAYER
-  owner: RUNTIME_WIZARD
   location: RUNTIME_ROOM
+  owner: RUNTIME_WIZARD
   player: true
   wizard: true
   programmer: true
   readable: true
-  override import_export_id = "runtime_wizard";
-  override home = RUNTIME_ROOM;
+
   property runtime_probe (owner: RUNTIME_WIZARD, flags: "r") = 0;
-  verb permission_probe (this none this) owner: RUNTIME_WIZARD flags: "rxd"
+
+  override home (owner: RUNTIME_WIZARD, flags: "rc") = RUNTIME_ROOM;
+
+  method permission_probe owner: RUNTIME_WIZARD
     "Prove own writes succeed and report a protected foreign write.";
     this.runtime_probe = 1;
     const own_result = this.runtime_probe;
-    const foreign_result = `(#90100.runtime_probe = 2) ! E_PERM => E_PERM';
+    const foreign_result = `#90100.runtime_probe = 2 ! E_PERM => E_PERM';
     return {own_result, foreign_result};
-  endverb
+  endmethod
 endobject

@@ -7,7 +7,6 @@ object HEADLESS_AUTHORING_SCENARIOS [
   readable: true
 
   property preview_calls (owner: ARCH_WIZARD, flags: "") = 0;
-  override import_export_id = "headless_authoring_scenarios";
 
   method _author owner: ARCH_WIZARD
     "Exercise the public shared service with the ordinary builder's permissions.";
@@ -83,8 +82,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     const host = create($container, #90102);
     try
       this.preview_calls = 0;
-      $rule_engine:register_predicate('author_preview_probe,
-        ['description -> "Test extension with a visible side effect.", 'inputs -> [], 'outputs -> []], this, "_unsafe_query");
+      $rule_engine:register_predicate('author_preview_probe, ['description -> "Test extension with a visible side effect.", 'inputs -> [], 'outputs -> []], this, "_unsafe_query");
       const ref = tostr(host);
       this:_author('reaction, ref + " probe after open");
       this:_author('reaction, ref + " probe if fact author_preview_probe");
@@ -142,6 +140,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_named_fact_authoring_and_effects owner: ARCH_WIZARD
     "Builders define typed facts, reuse them in policies, and record unique rows through reaction steps.";
     const old_builder = #90102.is_builder;
@@ -168,8 +167,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
       host:fire_trigger('on_open, ['Actor -> #90102]);
       $test_utils:assert_eq($relation:tuples(visits), {{#90102, host}}, "Reaction writes retain relation set semantics");
       this:_author('facts, tostr(members) + " remove person=me group=visitors");
-      $test_utils:assert_false($rule_engine:evaluate(host.open_rule,
-        ['This -> host, 'Accessor -> #90102])['success], "Removing membership revokes access");
+      $test_utils:assert_false($rule_engine:evaluate(host.open_rule, ['This -> host, 'Accessor -> #90102])['success], "Removing membership revokes access");
     finally
       recycle(host);
       recycle(members);
@@ -212,6 +210,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_timer_report_rechecks_current_state owner: ARCH_WIZARD
     "A delayed step reports why it skipped after a state edit invalidates its condition.";
     const old_builder = #90102.is_builder;
@@ -239,6 +238,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_relation_settings_copy_sharing_and_retargeting owner: ARCH_WIZARD
     "Copies share explicit storage until retargeted; field order does not affect named facts.";
     const old_builder = #90102.is_builder;
@@ -259,8 +259,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
       this:_author('reaction, ref + " then record in visitors person=actor group=readers");
       this:_author('reaction, ref + " then add visits 1");
       this:_author('reaction, ref + " copy to " + tostr(copy));
-      $test_utils:assert_eq(copy.remember_reaction.parameters['visitors], first,
-        "Copy keeps the explicit relation setting and does not copy its data");
+      $test_utils:assert_eq(copy.remember_reaction.parameters['visitors], first, "Copy keeps the explicit relation setting and does not copy its data");
       const preview = this:_author('reaction, ref + " preview"):join("\n");
       $test_utils:assert_true(index(preview, tostr(first)) > 0, "Preview identifies the actual write destination");
       $test_utils:assert_eq(first:count(), 0, "Preview cannot record a fact");
@@ -374,6 +373,7 @@ object HEADLESS_AUTHORING_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_custom_events_are_local_to_the_receiver owner: ARCH_WIZARD
     "Builders can author custom events without a global registration or cross-object dispatch.";
     const old_builder = #90102.is_builder;
@@ -389,10 +389,8 @@ object HEADLESS_AUTHORING_SCENARIOS [
         this:_author('reaction, ref + " notice enable");
       endfor
       first:fire_trigger('on_dinner_ready, ['Actor -> #90102]);
-      $test_utils:assert_eq({first.visits, second.visits}, {1, 0},
-        "The same event name on another object does not receive the notification");
-      const invalid = `this:_author('reaction, tostr(first) + " bad after dinner-ready")
-        ! E_INVARG => E_INVARG';
+      $test_utils:assert_eq({first.visits, second.visits}, {1, 0}, "The same event name on another object does not receive the notification");
+      const invalid = `this:_author('reaction, tostr(first) + " bad after dinner-ready") ! E_INVARG => E_INVARG';
       $test_utils:assert_eq(invalid, E_INVARG, "Custom event names must be identifiers");
     finally
       recycle(first);

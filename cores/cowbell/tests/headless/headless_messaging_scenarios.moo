@@ -7,7 +7,6 @@ object HEADLESS_MESSAGING_SCENARIOS [
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-  override import_export_id = "headless_messaging_scenarios";
 
   method call_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Invoke a messaging entry point with a non-wizard principal.";
@@ -91,6 +90,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     const result = `this:call_as_programmer($dm, "mk", #90102, #90100, 17) ! E_TYPE => E_TYPE';
     $test_utils:assert_eq(result, E_TYPE, "non-string text rejected");
   endmethod
+
   method test_dm_receipt_does_not_dispatch_untrusted_delegate owner: ARCH_WIZARD
     "Normalize caller-supplied DM values before callbacks or persistent storage.";
     const previous = #90102.direct_messages;
@@ -120,8 +120,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
       $test_utils:assert_eq(this:call_as_programmer(note, "text"), {"public body"}, "public getter succeeds");
       const public_look = this:call_as_programmer(note, "look_self");
       const public_document = $event:mk_info(#90101, public_look.description):resolve(#90101);
-      $test_utils:assert_true(index($document:render(public_document, 'text_plain)['body], "writing") > 0,
-        "public look preserves writing hint");
+      $test_utils:assert_true(index($document:render(public_document, 'text_plain)['body], "writing") > 0, "public look preserves writing hint");
       const raw = `this:property_as_programmer(note, "text") ! E_PERM => E_PERM';
       $test_utils:assert_eq(raw, E_PERM, "raw storage requires owner");
       note.read_rule = $rule_engine:parse_expression("owner_is(object: input.This, owner: input.Accessor)", 'private_note, $rule_engine:policy_scope('read_rule));
@@ -129,8 +128,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
       $test_utils:assert_eq(denied, E_PERM, "restricted getter denied");
       const restricted_look = this:call_as_programmer(note, "look_self");
       const restricted_document = $event:mk_info(#90101, restricted_look.description):resolve(#90101);
-      $test_utils:assert_eq(index($document:render(restricted_document, 'text_plain)['body], "writing"), 0,
-        "restricted look omits writing hint");
+      $test_utils:assert_eq(index($document:render(restricted_document, 'text_plain)['body], "writing"), 0, "restricted look omits writing hint");
       $test_utils:assert_eq(note:text(), {"public body"}, "wizard getter remains available");
     finally
       recycle(note);
@@ -179,5 +177,4 @@ object HEADLESS_MESSAGING_SCENARIOS [
       recycle(receiver);
     endtry
   endmethod
-
 endobject

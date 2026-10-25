@@ -17,8 +17,7 @@ object LOOK_SCENARIOS [
       return $format:literal_blocks(this.secret);
     endif
     #90124.calls = #90124.calls + 1;
-    return {$format.paragraph:mk("Hello ", $sub:n(), "."),
-      $format.paragraph:mk($document_node:mk('strong, $format:literal_inline("brass")), " bell.")};
+    return {$format.paragraph:mk("Hello ", $sub:n(), "."), $format.paragraph:mk($document_node:mk('strong, $format:literal_inline("brass")), " bell.")};
   endmethod
 
   method _capture_as owner: ARCH_WIZARD
@@ -53,13 +52,11 @@ object LOOK_SCENARIOS [
       $test_utils:assert_true(index(before["content"], expected) > 0, "panel uses the captured document");
       const description_blocks = $document:encode(view['description])["blocks"];
       const narrative_blocks = $document:encode(document)["blocks"];
-      $test_utils:assert_eq(narrative_blocks[2..length(description_blocks) + 1], description_blocks,
-        "narrative uses the same captured blocks, independent of serialization anchors");
+      $test_utils:assert_eq(narrative_blocks[2..length(description_blocks) + 1], description_blocks, "narrative uses the same captured blocks, independent of serialization anchors");
       $test_utils:assert_true(index(before["content"], "old key") > 0, "panel has captured item label");
       $test_utils:assert_true(index(original['body], "old key") > 0, "narrative has the same label");
       for descriptor in (mapvalues(before["annotations"]))
-        $test_utils:assert_true(descriptor in mapvalues(original['annotations]) != 0,
-          "layouts share reference descriptors");
+        $test_utils:assert_true(descriptor in mapvalues(original['annotations]) != 0, "layouts share reference descriptors");
       endfor
       room.name = "new room";
       item.name = "new key";
@@ -70,8 +67,7 @@ object LOOK_SCENARIOS [
       recycle(room);
       $test_utils:assert_eq($look:panel(view), before, "panel never rereads recycled objects");
       const replayed = $look:narrative(view):resolve(#90102);
-      $test_utils:assert_eq($document:render(replayed, 'text_html), original,
-        "narrative never rereads recycled objects");
+      $test_utils:assert_eq($document:render(replayed, 'text_html), original, "narrative never rereads recycled objects");
       $test_utils:assert_eq(this.calls, 1, "layout and rendering do not rerun content producers");
     finally
       valid(item) && recycle(item);
@@ -88,24 +84,19 @@ object LOOK_SCENARIOS [
     const actor = create($actor);
     try
       room.name = "Atrium";
-      room.description = {$format.paragraph:mk("First paragraph."),
-        $format.paragraph:mk("Second paragraph.")};
+      room.description = {$format.paragraph:mk("First paragraph."), $format.paragraph:mk("Second paragraph.")};
       item.name = "brass key";
       actor.name = "Henri";
       move(item, room);
       move(actor, room);
       let input = room:look_self();
-      input.exit_options = {['label -> "east", 'caption -> "east", 'descriptor -> [],
-        'state -> 'open, 'destination -> #-1, 'ambient -> false]};
+      input.exit_options = {['label -> "east", 'caption -> "east", 'descriptor -> [], 'state -> 'open, 'destination -> #-1, 'ambient -> false]};
       const view = input:capture(#90102);
       const document = $look:narrative(view):resolve(#90102);
-      const expected = "Atrium\n\nFirst paragraph.\n\nSecond paragraph.\n\n"
-        + "You can go east.\nYou see a brass key here.\nHenri is here.";
-      $test_utils:assert_eq($document:render(document, 'text_plain)['body], expected,
-        "Description paragraphs stay separate; generated room details share a paragraph");
+      const expected = "Atrium\n\nFirst paragraph.\n\nSecond paragraph.\n\n" + "You can go east.\nYou see a brass key here.\nHenri is here.";
+      $test_utils:assert_eq($document:render(document, 'text_plain)['body], expected, "Description paragraphs stay separate; generated room details share a paragraph");
       const html = $document:render(document, 'text_html)['body];
-      $test_utils:assert_true(index(html, "<p>First paragraph.</p>\n<p>Second paragraph.</p>") > 0,
-        "The author's paragraph structure is preserved for web clients too");
+      $test_utils:assert_true(index(html, "<p>First paragraph.</p>\n<p>Second paragraph.</p>") > 0, "The author's paragraph structure is preserved for web clients too");
     finally
       recycle(item);
       recycle(actor);
@@ -131,10 +122,8 @@ object LOOK_SCENARIOS [
       $test_utils:assert_true(index(body, " and 5 others are here."), "remaining actors are counted");
       const panel = $look:panel(view, 'text_plain)["content"];
       $test_utils:assert_true(index(panel, " and 5 others are here."), "the panel counts them too: " + panel);
-      $test_utils:assert_eq(length({guest for guest in (actors) if (index(panel, guest.name + " ") || index(panel, guest.name + ","))}), 5,
-        "the panel names only the first five too: " + panel);
-      $test_utils:assert_eq(length({actor for actor in (actors) if (index(body, actor.name + " ") || index(body, actor.name + ","))}), 5,
-        "only the first five names are shown");
+      $test_utils:assert_eq(length({ guest for guest in (actors) if index(panel, guest.name + " ") || index(panel, guest.name + ",") }), 5, "the panel names only the first five too: " + panel);
+      $test_utils:assert_eq(length({ actor for actor in (actors) if index(body, actor.name + " ") || index(body, actor.name + ",") }), 5, "only the first five names are shown");
       for actor in (actors[1..2])
         recycle(actor);
       endfor
@@ -156,11 +145,9 @@ object LOOK_SCENARIOS [
     try
       room.description = "public prose";
       const public_view = this:_capture_as(room, #90102);
-      $test_utils:assert_eq($document:render(public_view['description], 'text_plain)['body],
-        "public prose", "public capture succeeds with reduced authority");
+      $test_utils:assert_eq($document:render(public_view['description], 'text_plain)['body], "public prose", "public capture succeeds with reduced authority");
       room.description = $format:producer_blocks(<#90124, .mode = 'private>);
-      $test_utils:assert_raises(E_PERM, this, "_capture_as", {room, #90102},
-        "private producer reads use the capturing principal");
+      $test_utils:assert_raises(E_PERM, this, "_capture_as", {room, #90102}, "private producer reads use the capturing principal");
     finally
       recycle(room);
     endtry
@@ -178,8 +165,7 @@ object LOOK_SCENARIOS [
       item.integrated_description = "A bell hangs here";
       move(item, room);
       let input = room:look_self();
-      input.exit_options = {['label -> "east", 'caption -> "east", 'descriptor -> [],
-        'state -> 'open, 'destination -> #-1, 'ambient -> true]};
+      input.exit_options = {['label -> "east", 'caption -> "east", 'descriptor -> [], 'state -> 'open, 'destination -> #-1, 'ambient -> true]};
       input.ambient_passages = {{"an east door", 'fragment, "east"}, {"Light shines.", 'sentence}};
       input.actions = {{"ring bell", "Ring *bell*"}};
       const view = input:capture(#90102);
@@ -193,14 +179,9 @@ object LOOK_SCENARIOS [
       endfor
       $test_utils:assert_eq(length(view['exits]), 1, "ambient exit appears in captured exits");
       $test_utils:assert_false(index(narrative, "You can go "), "Described exits are not listed twice");
-      input.exit_options = {@input.exit_options,
-        ['label -> "out", 'caption -> "out", 'descriptor -> [],
-          'state -> 'open, 'destination -> #-1, 'ambient -> false],
-        ['label -> "examples", 'caption -> "examples", 'descriptor -> [],
-          'state -> 'open, 'destination -> room, 'ambient -> false]};
+      input.exit_options = {@input.exit_options, ['label -> "out", 'caption -> "out", 'descriptor -> [], 'state -> 'open, 'destination -> #-1, 'ambient -> false], ['label -> "examples", 'caption -> "examples", 'descriptor -> [], 'state -> 'open, 'destination -> room, 'ambient -> false]};
       const mixed = $document:render($look:narrative(input:capture(#90102)):resolve(#90102), 'text_plain)['body];
-      $test_utils:assert_true(index(mixed, "You can go out or to hall.") > 0,
-        "Only undescribed exits need a list, with labels rather than direction grammar");
+      $test_utils:assert_true(index(mixed, "You can go out or to hall.") > 0, "Only undescribed exits need a list, with labels rather than direction grammar");
       $test_utils:assert_true(view['things][1]['integrated], "integrated object remains in panel state");
     finally
       recycle(item);
@@ -208,6 +189,7 @@ object LOOK_SCENARIOS [
     endtry
     return true;
   endmethod
+
   method test_player_names_keep_their_case owner: ARCH_WIZARD
     "A listing that starts with a player's name keeps the name as the player wrote it.";
     const room = create($room);
@@ -231,7 +213,7 @@ object LOOK_SCENARIOS [
     const fixture = create($thing);
     try
       fixture.name = "marble fountain";
-      const names = fn(target)
+      const names = fn (target)
         let listed = {};
         for entry in ($obj_utils:collect_targetable_verbs({target}))
           for line in (entry["verbs"])
@@ -259,12 +241,9 @@ object LOOK_SCENARIOS [
     try
       move(room, area);
       move(destination, area);
-      const condition = ['kind -> 'predicate, 'name -> 'is, 'bind -> [],
-        'arguments -> ['left -> ['kind -> 'input, 'name -> 'Key], 'right -> ['kind -> 'literal, 'value -> key]]];
+      const condition = ['kind -> 'predicate, 'name -> 'is, 'bind -> [], 'arguments -> ['left -> ['kind -> 'input, 'name -> 'Key], 'right -> ['kind -> 'literal, 'value -> key]]];
       const rule = $rule:mk('unlock_rule, condition, $rule_engine:passage_scope());
-      area:create_passage(room, destination,
-        $passage:mk(room, "east", {}, "", false, destination, "west", {}, "", false)
-        :with_unlock_rule(rule):with_locked(true));
+      area:create_passage(room, destination, $passage:mk(room, "east", {}, "", false, destination, "west", {}, "", false):with_unlock_rule(rule):with_locked(true));
       $test_utils:assert_eq($room:exit_options(room, #90102)[1]['state], 'locked, "no key: locked");
       move(key, #90102);
       $test_utils:assert_eq($room:exit_options(room, #90102)[1]['state], 'open, "carried key: open");
@@ -286,32 +265,24 @@ object LOOK_SCENARIOS [
       move(room, area);
       move(destination, area);
       destination.name = "Passage Examples";
-      let passage = area:create_passage(room, destination,
-        $passage:mk(room, "examples", {}, "", false, destination, "out", {}, "", false));
+      let passage = area:create_passage(room, destination, $passage:mk(room, "examples", {}, "", false, destination, "out", {}, "", false));
       const view = room:look_self():capture(#90102);
       destination.name = "Renamed Gallery";
       const body = $document:render($look:narrative(view):resolve(#90102), 'text_plain)['body];
-      $test_utils:assert_true(index(body, "You can go to Passage Examples.") > 0,
-        "A named exit uses its destination's captured noun phrase");
-      $test_utils:assert_eq(view['exits][1]['travel]['descriptor]["command"], "go examples",
-        "A descriptive link still runs the original exit command");
-      passage = area:update_passage(room, destination,
-        passage:with_departure_phrase_from(room, "through the blue arch"));
+      $test_utils:assert_true(index(body, "You can go to Passage Examples.") > 0, "A named exit uses its destination's captured noun phrase");
+      $test_utils:assert_eq(view['exits][1]['travel]['descriptor]["command"], "go examples", "A descriptive link still runs the original exit command");
+      passage = area:update_passage(room, destination, passage:with_departure_phrase_from(room, "through the blue arch"));
       let current = room:look_self():capture(#90102);
-      $test_utils:assert_eq(current['exits][1]['travel]['label], "through the blue arch",
-        "Authored travel wording takes precedence over the destination name");
+      $test_utils:assert_eq(current['exits][1]['travel]['label], "through the blue arch", "Authored travel wording takes precedence over the destination name");
       area:update_passage(room, destination, passage:with_open(false));
       current = room:look_self():capture(#90102);
       const closed = $document:render($look:narrative(current):resolve(#90102), 'text_plain)['body];
-      $test_utils:assert_true(index(closed, "The way through the blue arch is closed.") > 0,
-        "A closed way is described without claiming that the player can travel");
+      $test_utils:assert_true(index(closed, "The way through the blue arch is closed.") > 0, "A closed way is described without claiming that the player can travel");
       $test_utils:assert_false(index(closed, "You can go "), "Closed exits are not offered as open ways");
       let input = room:look_self();
-      input.exit_options = {['label -> "misty arch", 'caption -> "misty arch", 'descriptor -> [],
-        'commands -> {"enter misty arch"}, 'state -> 'open, 'destination -> #-1, 'ambient -> false]};
+      input.exit_options = {['label -> "misty arch", 'caption -> "misty arch", 'descriptor -> [], 'commands -> {"enter misty arch"}, 'state -> 'open, 'destination -> #-1, 'ambient -> false]};
       const hidden = $document:render($look:narrative(input:capture(#90102)):resolve(#90102), 'text_plain)['body];
-      $test_utils:assert_true(index(hidden, "You can go by typing \"enter misty arch\".") > 0,
-        "An unknown destination shows its actual command without inventing a destination");
+      $test_utils:assert_true(index(hidden, "You can go by typing \"enter misty arch\".") > 0, "An unknown destination shows its actual command without inventing a destination");
     finally
       recycle(room);
       recycle(destination);
@@ -329,15 +300,8 @@ object LOOK_SCENARIOS [
       move(room, area);
       move(destination, area);
       room.description = "A quiet hall.";
-      let passage = area:create_passage(room, destination,
-        $passage:mk(room, "in", {}, "", true, destination, "out", {}, "", true));
-      const descriptions = {
-        {"inside the hall, a brass door waits.", 'literal, "inside the hall, a brass door waits."},
-        {"A {brass} door waits.", 'literal, "A {brass} door waits."},
-        {"A *brass* door waits.", 'djot_inline, "A brass door waits."},
-        {"An {direction} door waits.", 'template, "An in door waits."},
-        {$sub_utils:compile("An {direction} arch waits."), 'literal, "An in arch waits."}
-      };
+      let passage = area:create_passage(room, destination, $passage:mk(room, "in", {}, "", true, destination, "out", {}, "", true));
+      const descriptions = {{"inside the hall, a brass door waits.", 'literal, "inside the hall, a brass door waits."}, {"A {brass} door waits.", 'literal, "A {brass} door waits."}, {"A *brass* door waits.", 'djot_inline, "A brass door waits."}, {"An {direction} door waits.", 'template, "An in door waits."}, {$sub_utils:compile("An {direction} arch waits."), 'literal, "An in arch waits."}};
       for example in (descriptions)
         const {source, kind, expected} = example;
         passage = area:update_passage(room, destination, passage:with_description_from(room, source, kind));
@@ -349,30 +313,24 @@ object LOOK_SCENARIOS [
         $test_utils:assert_eq(length(links), 1, "The complete description has one exit reference");
         $test_utils:assert_eq(links[1]["exit"]["passage"], passage.connection_id, "The reference identifies the installed connection");
         const narrative = $document:render($look:narrative(view):resolve(#90102), 'text_plain)['body];
-        $test_utils:assert_false(index(narrative, "You can go "),
-          "A linked description replaces the separate narrative exit listing");
+        $test_utils:assert_false(index(narrative, "You can go "), "A linked description replaces the separate narrative exit listing");
         if (kind == 'djot_inline)
           $test_utils:assert_true(index(html['body], "<strong>brass</strong>") > 0, "Djot emphasis survives HTML rendering");
-          $test_utils:assert_true(index($document:render(view['description], 'text_djot)['body], "*brass*") > 0,
-            "The same content retains emphasis in Djot");
+          $test_utils:assert_true(index($document:render(view['description], 'text_djot)['body], "*brass*") > 0, "The same content retains emphasis in Djot");
         endif
       endfor
       const phrase = $format.annotation:exit(room, "in", "brass door");
-      passage = area:update_passage(room, destination,
-        passage:with_description_from(room, {"A ", phrase, " stands beside the fireplace."}, 'literal));
+      passage = area:update_passage(room, destination, passage:with_description_from(room, {"A ", phrase, " stands beside the fireplace."}, 'literal));
       const explicit = room:look_self():capture(#90102);
       const references = mapvalues($document:render(explicit['description], 'text_html)['annotations]);
       $test_utils:assert_eq(length(references), 1, "An authored reference is not wrapped in a second interactive reference");
       const departure = $passage:movement_from(passage, #90102, room, destination):resolve(#90102);
-      $test_utils:assert_eq($document:render(departure, 'text_plain)['body], "You head in.",
-        "Movement wording does not reuse an ambient description or its formatting");
+      $test_utils:assert_eq($document:render(departure, 'text_plain)['body], "You head in.", "Movement wording does not reuse an ambient description or its formatting");
       const phrased = passage:with_departure_phrase_from(room, "through the brass door");
       const movement = $passage:movement_from(phrased, #90102, room, destination):resolve(#90102);
-      $test_utils:assert_eq($document:render(movement, 'text_plain)['body], "You head through the brass door.",
-        "The dedicated departure phrase controls movement and its preview");
+      $test_utils:assert_eq($document:render(movement, 'text_plain)['body], "You head through the brass door.", "The dedicated departure phrase controls movement and its preview");
       const before = passage;
-      $test_utils:assert_raises(E_INVARG, passage, "with_description_from", {room, "# heading", 'djot_inline},
-        "Block syntax is rejected before saving inline exit prose");
+      $test_utils:assert_raises(E_INVARG, passage, "with_description_from", {room, "# heading", 'djot_inline}, "Block syntax is rejected before saving inline exit prose");
       $test_utils:assert_eq(area:passage_for(room, destination), before, "A rejected description preserves installed state");
     finally
       recycle(room);

@@ -6,9 +6,13 @@ object DJOT_SCENARIOS [
   owner: HACKER
   readable: true
 
-  property providers (owner: HACKER, flags: "r") =
-    {HELP_TOPICS, PROG_HELP_TOPICS, BUILDER_HELP_TOPICS, ADMIN_HELP_TOPICS, WIZARD_HELP_TOPICS};
-  override import_export_id = "djot_scenarios";
+  property providers (owner: HACKER, flags: "r") = {
+    HELP_TOPICS,
+    PROG_HELP_TOPICS,
+    BUILDER_HELP_TOPICS,
+    ADMIN_HELP_TOPICS,
+    WIZARD_HELP_TOPICS
+  };
 
   method _parse owner: HACKER
     "Return the encoded blocks for structural assertions.";
@@ -21,31 +25,11 @@ object DJOT_SCENARIOS [
     const nodes = $format.djot:inline("A *brass* key.");
     const document = $document:mk({$document_node:mk('paragraph, nodes)});
     const encoded = $document:encode(document);
-    $test_utils:assert_eq(encoded["blocks"][1]["children"], {
-      ["kind" -> "text", "text" -> "A "],
-      ["kind" -> "strong", "children" -> {["kind" -> "text", "text" -> "brass"]}],
-      ["kind" -> "text", "text" -> " key."]}, "strong is structure, not output syntax");
-    for sample in ({{'text_html, "<p>A <strong>brass</strong> key.</p>"},
-        {'text_djot, "A {*brass*} key\\."}, {'text_plain, "A brass key."}})
-      $test_utils:assert_eq($document:render(document, sample[1])['body], sample[2],
-        "authored prose renders as " + tostr(sample[1]));
+    $test_utils:assert_eq(encoded["blocks"][1]["children"], {["kind" -> "text", "text" -> "A "], ["kind" -> "strong", "children" -> {["kind" -> "text", "text" -> "brass"]}], ["kind" -> "text", "text" -> " key."]}, "strong is structure, not output syntax");
+    for sample in ({{'text_html, "<p>A <strong>brass</strong> key.</p>"}, {'text_djot, "A {*brass*} key\\."}, {'text_plain, "A brass key."}})
+      $test_utils:assert_eq($document:render(document, sample[1])['body], sample[2], "authored prose renders as " + tostr(sample[1]));
     endfor
-    const cases = {
-      {"_soft_ {-old-}", "soft old"},
-      {"{_ spaced _} {* bold *}", " spaced   bold "},
-      {"*outer _inner_*", "outer inner"},
-      {"**nested**", "nested"},
-      {"_first *second_ tail*", "first *second tail*"},
-      {"\\*literal\\*", "*literal*"},
-      {"\\— stays literal", "\\— stays literal"},
-      {"*unmatched < ordinary > punctuation", "*unmatched < ordinary > punctuation"},
-      {"\"Hello,\" she said. Don't.", "“Hello,” she said. Don’t."},
-      {"'twas the 'season'.", "’twas the ‘season’."},
-      {"one--two---three----four...", "one–two—three––four…"},
-      {"one\ntwo\\\nthree", "one two\nthree"},
-      {"`` `key` ``", "`key`"},
-      {"`a * b`", "a * b"},
-      {"`unclosed", "unclosed"}};
+    const cases = {{"_soft_ {-old-}", "soft old"}, {"{_ spaced _} {* bold *}", " spaced   bold "}, {"*outer _inner_*", "outer inner"}, {"**nested**", "nested"}, {"_first *second_ tail*", "first *second tail*"}, {"\\*literal\\*", "*literal*"}, {"\\— stays literal", "\\— stays literal"}, {"*unmatched < ordinary > punctuation", "*unmatched < ordinary > punctuation"}, {"\"Hello,\" she said. Don't.", "“Hello,” she said. Don’t."}, {"'twas the 'season'.", "’twas the ‘season’."}, {"one--two---three----four...", "one–two—three––four…"}, {"one\ntwo\\\nthree", "one two\nthree"}, {"`` `key` ``", "`key`"}, {"`a * b`", "a * b"}, {"`unclosed", "unclosed"}};
     for sample in (cases)
       const value = $document:mk({$document_node:mk('paragraph, $format.djot:inline(sample[1]))});
       $test_utils:assert_eq($document:render(value, 'text_plain)['body], sample[2], sample[1]);
@@ -59,8 +43,7 @@ object DJOT_SCENARIOS [
       $test_utils:assert_eq($format.djot:inline(source), {}, "blank inline content has no nodes");
       for event in ({player:mk_say_event(source), player:mk_emote_event(source)})
         const document = event:resolve(player);
-        $test_utils:assert_true(length($document:render(document, 'text_plain)['body]),
-          "attribution remains renderable without message content");
+        $test_utils:assert_true(length($document:render(document, 'text_plain)['body]), "attribution remains renderable without message content");
       endfor
     endfor
     return true;
@@ -69,9 +52,7 @@ object DJOT_SCENARIOS [
   method test_djot_block_structure owner: HACKER
     "Headings, paragraphs, quotes, fences, nested lists, tasks, and definitions retain structure.";
     const blocks = this:_parse("## Heading\n## continued\n\nFirst.\n\nSecond.\n\n> Quoted.\n>\n> - Item\n\n---\n\n```moo\nreturn `x';\n```\n");
-    $test_utils:assert_eq({block["kind"] for block in (blocks)},
-      {"heading", "paragraph", "paragraph", "block_quote", "thematic_break", "code_block"},
-      "block boundaries survive parsing");
+    $test_utils:assert_eq({ block["kind"] for block in (blocks) }, {"heading", "paragraph", "paragraph", "block_quote", "thematic_break", "code_block"}, "block boundaries survive parsing");
     $test_utils:assert_eq(blocks[1]["level"], 2, "heading level");
     $test_utils:assert_eq(blocks[$]["text"], "return `x';\n", "code preserves its final newline");
     $test_utils:assert_eq(blocks[$]["language"], "moo", "code language");
@@ -85,10 +66,8 @@ object DJOT_SCENARIOS [
     const definition = this:_parse(": bell\n\n  A *brass* instrument.\n\n: key\n\n  Opens a door.")[1];
     $test_utils:assert_eq(definition["kind"], "definition_list", "definition list kind");
     $test_utils:assert_eq(length(definition["items"]), 2, "two terms");
-    $test_utils:assert_eq(definition["items"][1]["definition"][1]["children"][2]["kind"],
-      "strong", "definitions preserve inline structure");
-    $test_utils:assert_eq(length(this:_parse("Prose\n- still prose")), 1,
-      "a list marker cannot interrupt a paragraph");
+    $test_utils:assert_eq(definition["items"][1]["definition"][1]["children"][2]["kind"], "strong", "definitions preserve inline structure");
+    $test_utils:assert_eq(length(this:_parse("Prose\n- still prose")), 1, "a list marker cannot interrupt a paragraph");
     return true;
   endmethod
 
@@ -104,12 +83,10 @@ object DJOT_SCENARIOS [
     $test_utils:assert_eq(distinct[1]["url"], "https://example.org/a", "lowercase reference label");
     $test_utils:assert_eq(distinct[3]["url"], "https://example.org/b", "uppercase reference label");
     const table = this:_parse("| Name | Value |\n|:-----|------:|\n| brass \\| `|` | *two* |\n\n^ A _caption_\n  continued")[1];
-    $test_utils:assert_eq(table["columns"], {["align" -> "start"], ["align" -> "end"]},
-      "table column alignment");
+    $test_utils:assert_eq(table["columns"], {["align" -> "start"], ["align" -> "end"]}, "table column alignment");
     $test_utils:assert_eq(length(table["header"]), 2, "table header cells");
     $test_utils:assert_eq(table["caption"][2]["kind"], "emphasis", "caption inline structure");
-    $test_utils:assert_eq(length(table["rows"][1]["cells"]), 2,
-      "escaped and code pipes do not split cells");
+    $test_utils:assert_eq(length(table["rows"][1]["cells"]), 2, "escaped and code pipes do not split cells");
     return true;
   endmethod
 
@@ -182,8 +159,7 @@ object DJOT_SCENARIOS [
         endtry
         $test_utils:assert_true(denied, "invalid edits fail before mutation");
       endfor
-      $test_utils:assert_eq(actor.description, "A *brass* bell.\n\nThe floor is dusty.",
-        "rejected description edit preserves authored source");
+      $test_utils:assert_eq(actor.description, "A *brass* bell.\n\nThe floor is dusty.", "rejected description edit preserves authored source");
       $test_utils:assert_eq(note.text, {"A *private* note."}, "rejected note edit preserves text");
       actor:set_description("{n} *literal*", 'literal);
       $test_utils:assert_eq(actor:description(), "{n} *literal*", "literal input never guesses syntax");
@@ -205,18 +181,13 @@ object DJOT_SCENARIOS [
     $test_utils:assert_true(index(html['body], "<pre><code>look"), "code block remains code");
     const example = $help_utils:annotate_prose($format.djot:blocks("Use `look`."), player);
     const rendered = $document:render($event:mk_info(player, example):resolve(player), 'text_html);
-    $test_utils:assert_true(index(rendered['body], "<code>look</code>"),
-      "eligible command keeps the original inline-code label");
+    $test_utils:assert_true(index(rendered['body], "<code>look</code>"), "eligible command keeps the original inline-code label");
     return true;
   endmethod
 
   method test_djot_diagnostics_and_limits owner: HACKER
     "Unsupported constructs, bad destinations, block input, and resource excess fail explicitly.";
-    for source in ({"{+new+}", "{+two\nlines+}", "{=bright=}", "x~2~", "x^2^", "$`math`", "[^note]",
-        "[span]{.class}", "`raw`{=html}", "::: box\ntext\n::: ", "a) alphabetic",
-        "```=html\n<b>raw</b>\n```", "[lost][missing]", "[local](#section)",
-        "[unsafe](javascript:alert(1))", "{#anchor}", "####### too deep",
-        "[label][Case]\n\n[case]: https://example.org"})
+    for source in ({"{+new+}", "{+two\nlines+}", "{=bright=}", "x~2~", "x^2^", "$`math`", "[^note]", "[span]{.class}", "`raw`{=html}", "::: box\ntext\n::: ", "a) alphabetic", "```=html\n<b>raw</b>\n```", "[lost][missing]", "[local](#section)", "[unsafe](javascript:alert(1))", "{#anchor}", "####### too deep", "[label][Case]\n\n[case]: https://example.org"})
       let message = "";
       try
         $format.djot:blocks(source);
@@ -242,9 +213,7 @@ object DJOT_SCENARIOS [
     endtry
     $test_utils:assert_true(oversized, "source limit counts UTF-8 bytes");
     const stars = $str_proto:space(40, "*");
-    for source in ({$str_proto:space(80, "> ") + "nested",
-        stars + "nested" + stars,
-        "![" + stars + "nested" + stars + "](https://example.org/a.png)"})
+    for source in ({$str_proto:space(80, "> ") + "nested", stars + "nested" + stars, "![" + stars + "nested" + stars + "](https://example.org/a.png)"})
       let deep = false;
       try
         $format.djot:blocks(source);

@@ -6,10 +6,9 @@ object HEADLESS_OBJECT_SCENARIOS [
   owner: HACKER
   readable: true
 
-  override description = "Headless runtime scenarios for object creation, mutation, movement, and object identity.";
-  override import_export_id = "headless_object_scenarios";
+  override description (owner: HACKER, flags: "rc") = "Headless runtime scenarios for object creation, mutation, movement, and object identity.";
 
-  verb test_headless_object_lifecycle (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_object_lifecycle owner: ARCH_WIZARD
     "Runtime scenario: persistent object creation, mutation, movement, and destruction work without player I/O.";
     room = #-1;
     item = #-1;
@@ -40,9 +39,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(room) && room:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_anonymous_object_identity (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_anonymous_object_identity owner: ARCH_WIZARD
     "Runtime scenario: anonymous fixture creation produces valid anonymous objects while numbered creation does not.";
     anon = $thing:create(true);
     numbered = #-1;
@@ -58,9 +57,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(numbered) && numbered:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_parent_change_invariants (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_parent_change_invariants owner: ARCH_WIZARD
     "Runtime scenario: changing an object's parent updates the prototype chain and child indexes.";
     child = #-1;
     try
@@ -74,9 +73,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(child) && child:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_failed_moveto_preserves_containment (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_failed_moveto_preserves_containment owner: ARCH_WIZARD
     "Runtime scenario: a recursive move fails without changing locations or contents.";
     room = #-1;
     box = #-1;
@@ -99,9 +98,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(room) && room:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_object_permission_boundary (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_object_permission_boundary owner: ARCH_WIZARD
     "Runtime scenario: non-owner task permissions cannot mutate another object's protected metadata.";
     target = #-1;
     try
@@ -119,9 +118,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_set_description_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_set_description_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not set another object's description through the wizard-owned wrapper.";
     target = #-1;
     try
@@ -139,9 +138,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_set_name_aliases_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_set_name_aliases_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not rename another object through the wizard-owned wrapper.";
     target = #-1;
     try
@@ -160,9 +159,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_set_owner_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_set_owner_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not retitle another object through the wizard-owned wrapper.";
     target = #-1;
     try
@@ -180,9 +179,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_moveto_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_moveto_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not move another object through the wizard-owned wrapper.";
     source = #-1;
     old_room = #-1;
@@ -206,9 +205,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(old_room) && old_room:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_destroy_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_destroy_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not destroy another object through the wizard-owned wrapper.";
     target = #-1;
     try
@@ -225,9 +224,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_spoofed_destroy_frame_does_not_authorize_recycle (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_spoofed_destroy_frame_does_not_authorize_recycle owner: ARCH_WIZARD
     "Security challenge: a non-root verb named destroy must not satisfy the recycle interceptor bypass.";
     target = #-1;
     try
@@ -246,9 +245,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && recycle(target);
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_player_set_home_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_player_set_home_denied owner: ARCH_WIZARD
     "Security challenge: a non-owner helper must not set another player's home through the wizard-owned wrapper.";
     target = #-1;
     new_home = #-1;
@@ -269,9 +268,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(new_home) && new_home:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_room_dig_check_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_room_dig_check_denied owner: ARCH_WIZARD
     "Security challenge: room dig permission checks downgrade before delegation and deny non-owner helpers.";
     target = #-1;
     try
@@ -287,9 +286,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(target) && target:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_hostile_make_room_in_denied (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_hostile_make_room_in_denied owner: ARCH_WIZARD
     "Security challenge: area room creation downgrades before delegation and denies non-owner helpers.";
     area = #-1;
     created = #-1;
@@ -307,9 +306,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(area) && area:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_wizard_make_room_in_allowed (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_wizard_make_room_in_allowed owner: ARCH_WIZARD
     "Runtime scenario: wizard task permissions can create rooms in areas without an explicit grant.";
     area = #-1;
     created = #-1;
@@ -323,9 +322,9 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(area) && area:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb test_headless_destroy_cleans_containment (this none this) owner: ARCH_WIZARD flags: "rxd"
+  method test_headless_destroy_cleans_containment owner: ARCH_WIZARD
     "Runtime scenario: destroying a container detaches its contents from the recycled location.";
     room = #-1;
     item = #-1;
@@ -346,66 +345,66 @@ object HEADLESS_OBJECT_SCENARIOS [
       valid(room) && room:destroy();
     endtry
     return true;
-  endverb
+  endmethod
 
-  verb _set_raw_description_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _set_raw_description_as_player owner: PLAYER
     "Attempt protected property mutation under non-owner player task permissions.";
     {target, description} = args;
     target.description = description;
     return true;
-  endverb
+  endmethod
 
-  verb _call_set_description_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_set_description_as_player owner: PLAYER
     "Attempt set_description() through a non-owner player-owned helper.";
     {target, description} = args;
     target:set_description(description);
     return true;
-  endverb
+  endmethod
 
-  verb _call_set_name_aliases_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_set_name_aliases_as_player owner: PLAYER
     "Attempt set_name_aliases() through a non-owner player-owned helper.";
     {target, name, aliases} = args;
     target:set_name_aliases(name, aliases);
     return true;
-  endverb
+  endmethod
 
-  verb _call_set_owner_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_set_owner_as_player owner: PLAYER
     "Attempt set_owner() through a non-owner player-owned helper.";
     {target, new_owner} = args;
     target:set_owner(new_owner);
     return true;
-  endverb
+  endmethod
 
-  verb _call_moveto_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_moveto_as_player owner: PLAYER
     "Attempt moveto() through a non-owner player-owned helper.";
     {target, destination} = args;
     target:moveto(destination);
     return true;
-  endverb
+  endmethod
 
-  verb _call_destroy_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_destroy_as_player owner: PLAYER
     "Attempt destroy() through a non-owner player-owned helper.";
     {target} = args;
     target:destroy();
     return true;
-  endverb
+  endmethod
 
-  verb _call_set_home_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_set_home_as_player owner: PLAYER
     "Attempt set_home() through a non-owner player-owned helper.";
     {target, home} = args;
     target:set_home(home);
     return true;
-  endverb
+  endmethod
 
-  verb _call_check_can_dig_from_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_check_can_dig_from_as_player owner: PLAYER
     "Attempt check_can_dig_from() through a non-owner player-owned helper.";
     {target} = args;
     return target:check_can_dig_from();
-  endverb
+  endmethod
 
-  verb _call_make_room_in_as_player (this none this) owner: PLAYER flags: "rxd"
+  method _call_make_room_in_as_player owner: PLAYER
     "Attempt make_room_in() through a non-owner player-owned helper.";
     {target, room_parent} = args;
     return target:make_room_in(room_parent);
-  endverb
+  endmethod
 endobject

@@ -7,7 +7,7 @@ object HEADLESS_WORLD_SCENARIOS [
   parent: ROOT
   owner: ARCH_WIZARD
   readable: true
-  override import_export_id = "headless_world_scenarios";
+
   method test_view_and_take_policies_are_independent owner: ARCH_WIZARD
     "An item-specific take rule does not break looking, and both take paths emit the same events.";
     const room = create($room, #90100, 2);
@@ -18,8 +18,7 @@ object HEADLESS_WORLD_SCENARIOS [
       move(box, room);
       move(npc, room);
       move(item, box);
-      box.take_rule = $rule_engine:parse_expression("isa(object: input.Dobj, prototype: " + toliteral($thing) + ")",
-        'items_only, $rule_engine:policy_scope('take_rule));
+      box.take_rule = $rule_engine:parse_expression("isa(object: input.Dobj, prototype: " + toliteral($thing) + ")", 'items_only, $rule_engine:policy_scope('take_rule));
       $test_utils:assert_true(box:can_view_contents(npc), "Viewing needs no item input");
       add_property(box, "takes", 0, {#90100, "r"});
       add_property(item, "gets", 0, {#90100, "r"});
@@ -59,8 +58,7 @@ object HEADLESS_WORLD_SCENARIOS [
       move(box, npc);
       move(key, npc);
       box.locked = true;
-      box.unlock_rule = $rule_engine:parse_expression("input.Key == " + toliteral(key),
-        'key_only, $rule_engine:policy_scope('unlock_rule));
+      box.unlock_rule = $rule_engine:parse_expression("input.Key == " + toliteral(key), 'key_only, $rule_engine:policy_scope('unlock_rule));
       const arguments = ['target -> box, 'actor -> npc, 'key -> key];
       const applied = this:_action_as_guest($reaction, "perform_action", 'unlock, arguments);
       $test_utils:assert_eq(applied['status], 'applied, "An owned NPC can use an authorized key");
@@ -69,13 +67,10 @@ object HEADLESS_WORLD_SCENARIOS [
       $test_utils:assert_eq(denied['status], 'denied, "An already completed operation is a normal denial");
       const missing = this:_action_as_guest($reaction, "perform_action", 'unlock, mapdelete(arguments, 'key));
       $test_utils:assert_eq(missing['status], 'error, "A missing required argument is an error");
-      const forged = this:_action_as_guest($reaction, "perform_action", 'unlock,
-        mapmerge(arguments, ['actor -> #90100]));
+      const forged = this:_action_as_guest($reaction, "perform_action", 'unlock, mapmerge(arguments, ['actor -> #90100]));
       $test_utils:assert_eq(forged['error][1], E_PERM, "An event participant cannot grant another person's authority");
       box.locked = true;
-      $reaction:install(npc, "unlock_reaction", $reaction:mk('on_lock, 0,
-        {{'action, 'unlock, ['target -> ['kind -> 'literal, 'value -> box],
-          'actor -> ['kind -> 'input, 'name -> 'This], 'key -> ['kind -> 'input, 'name -> 'Key]]}}));
+      $reaction:install(npc, "unlock_reaction", $reaction:mk('on_lock, 0, {{'action, 'unlock, ['target -> ['kind -> 'literal, 'value -> box], 'actor -> ['kind -> 'input, 'name -> 'This], 'key -> ['kind -> 'input, 'name -> 'Key]]}}));
       this:_action_as_guest(npc, "fire_trigger", 'on_lock, ['Actor -> #90102, 'Key -> key]);
       $test_utils:assert_false(box.locked, "Installed effects preserve the owner principal and pass named arguments");
     finally
@@ -126,13 +121,11 @@ object HEADLESS_WORLD_SCENARIOS [
     try
       let passage = $passage:mk(from, "east", {}, "", true, to, "west", {}, "", true);
       passage = passage:with_locked(true);
-      const side_rule = $rule_engine:parse_expression("input.From == " + toliteral(from),
-        'one_way, $rule_engine:passage_scope());
+      const side_rule = $rule_engine:parse_expression("input.From == " + toliteral(from), 'one_way, $rule_engine:passage_scope());
       passage = passage:with_unlock_rule(side_rule);
       $test_utils:assert_true(passage:check_unlock(npc, from), "A key-independent rule needs no inventory item");
       $test_utils:assert_false(passage:check_unlock(npc, to), "The other endpoint is not silently tried as From");
-      const key_rule = $rule_engine:parse_expression("input.Key == " + toliteral(key),
-        'key_only, $rule_engine:passage_scope());
+      const key_rule = $rule_engine:parse_expression("input.Key == " + toliteral(key), 'key_only, $rule_engine:passage_scope());
       passage = passage:with_unlock_rule(key_rule);
       $test_utils:assert_false(passage:check_unlock(npc, from), "A key-dependent rule needs a key");
       move(key, npc);
@@ -203,6 +196,7 @@ object HEADLESS_WORLD_SCENARIOS [
     endif
     raise(E_INVARG);
   endmethod
+
   method test_owner_area_and_room_lifecycle owner: ARCH_WIZARD
     "Nonwizard owners can initialize an area and recycle an owned room in a foreign area.";
     const owned_area = create($area, #90101, 2);
@@ -210,22 +204,17 @@ object HEADLESS_WORLD_SCENARIOS [
     const room_a = create($room, #90101, 2);
     const room_b = create($room, #90100, 2);
     try
-      $test_utils:assert_false(this:call_as_programmer(owned_area, "passage_for", room_a, room_b),
-        "The owner can query a new area's empty relation");
-      $test_utils:assert_false(this:call_as_programmer(foreign_area, "passage_for", room_a, room_b),
-        "Public connection discovery also works before a room has any passages");
+      $test_utils:assert_false(this:call_as_programmer(owned_area, "passage_for", room_a, room_b), "The owner can query a new area's empty relation");
+      $test_utils:assert_false(this:call_as_programmer(foreign_area, "passage_for", room_a, room_b), "Public connection discovery also works before a room has any passages");
       let passage = <$passage, .side_a_room = room_a, .side_b_room = room_b, .is_open = true>;
-      $test_utils:assert_eq(`this:call_as_programmer(owned_area, "set_passage", room_a, room_b, passage)
-        ! E_PERM => E_PERM', E_PERM, "Area ownership does not grant authority over a foreign endpoint");
+      $test_utils:assert_eq(`this:call_as_programmer(owned_area, "set_passage", room_a, room_b, passage) ! E_PERM => E_PERM', E_PERM, "Area ownership does not grant authority over a foreign endpoint");
       $root:grant_capability(room_b, {'dig_from, 'dig_into}, #90101, 'room);
       passage = this:call_as_programmer(owned_area, "set_passage", room_a, room_b, passage);
       $test_utils:assert_eq(length(owned_area:passages()), 1, "owner can register passage");
-      $test_utils:assert_eq(this:call_as_programmer(owned_area, "passage_for", room_a, room_b), passage,
-        "The owner can query a registered passage");
+      $test_utils:assert_eq(this:call_as_programmer(owned_area, "passage_for", room_a, room_b), passage, "The owner can query a registered passage");
       this:call_as_programmer(owned_area, "on_room_recycle", room_a);
       $test_utils:assert_eq(length(owned_area:passages()), 0, "owner cleanup succeeds");
-      $test_utils:assert_false(this:call_as_programmer(owned_area, "passage_for", room_a, room_b),
-        "The owner sees no passage after its removal");
+      $test_utils:assert_false(this:call_as_programmer(owned_area, "passage_for", room_a, room_b), "The owner sees no passage after its removal");
       passage = foreign_area:set_passage(room_a, room_b, passage);
       move(room_a, foreign_area);
       this:call_as_programmer(room_a, "destroy");
@@ -334,8 +323,7 @@ object HEADLESS_WORLD_SCENARIOS [
     const area = create($area, #90100, 2);
     try
       move(traveler, from_room);
-      const passage = area:create_passage(from_room, to_room,
-        $passage:mk(from_room, "east", {}, "", true, to_room, "west", {}, "", true));
+      const passage = area:create_passage(from_room, to_room, $passage:mk(from_room, "east", {}, "", true, to_room, "west", {}, "", true));
       add_verb(to_room, {#90100, "rxd", "accept"}, {"this", "none", "this"});
       set_verb_code(to_room, "accept", {"return false;"});
       const rejected = `this:call_as_programmer(passage, "travel_from", traveler, from_room, []) ! E_NACC => E_NACC';
@@ -405,7 +393,6 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
-
   method call_as_test_player owner: ARCH_WIZARD
     "Invoke an interaction with the test task player's permissions.";
     caller == this && this == #90014 || raise(E_PERM);
@@ -430,8 +417,7 @@ object HEADLESS_WORLD_SCENARIOS [
       move(item, room);
       const nearby = item:inspection(who);
       $test_utils:assert_eq(nearby["actions"][2]["label"], "Take", "nearby item offers Take");
-      $test_utils:assert_eq(nearby["actions"][2]["command"], "get " + tostr(item),
-        "Take names a stable object through the command parser");
+      $test_utils:assert_eq(nearby["actions"][2]["command"], "get " + tostr(item), "Take names a stable object through the command parser");
       move(item, remote);
       this:call_as_test_player(item, "get");
       $test_utils:assert_eq(item.location, remote, "stale Take cannot fetch a remote item");
@@ -442,14 +428,12 @@ object HEADLESS_WORLD_SCENARIOS [
       $test_utils:assert_eq(item.location, who, "nearby Take succeeds");
       const held = item:inspection(who);
       $test_utils:assert_eq(held["actions"][2]["label"], "Drop", "fresh inspection reflects custody");
-      $test_utils:assert_eq(held["actions"][2]["command"], "drop " + tostr(item),
-        "Drop is an ordinary command");
+      $test_utils:assert_eq(held["actions"][2]["command"], "drop " + tostr(item), "Drop is an ordinary command");
       this:call_as_test_player(item, "drop");
       $test_utils:assert_eq(item.location, room, "held Drop succeeds");
       move(box, room);
       const container_actions = box:inspection(who);
-      $test_utils:assert_eq(container_actions["actions"][2]["command"], "get " + tostr(box),
-        "taking the container is distinct from taking something out of it");
+      $test_utils:assert_eq(container_actions["actions"][2]["command"], "get " + tostr(box), "taking the container is distinct from taking something out of it");
       move(item, box);
       box.open = false;
       this:call_as_test_player(item, "get");
@@ -504,6 +488,7 @@ object HEADLESS_WORLD_SCENARIOS [
       recycle(room);
     endtry
   endmethod
+
   method test_exit_command_annotations owner: ARCH_WIZARD
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -549,20 +534,12 @@ object HEADLESS_WORLD_SCENARIOS [
       passage = area:set_passage(source, destination, passage);
       add_property(source, "test_destination", destination, {#90100, "r"});
       add_verb(source, {#90100, "rxd", "notify_pre_exit"}, {"this", "none", "this"});
-      set_verb_code(source, "notify_pre_exit", {
-        "const area = this.location; const destination = this.test_destination;",
-        "let passage = area:passage_for(this, destination);",
-        "area:update_passage(this, destination, passage:with_open(false)); suspend(0);"
-      });
+      set_verb_code(source, "notify_pre_exit", {"const area = this.location; const destination = this.test_destination;", "let passage = area:passage_for(this, destination);", "area:update_passage(this, destination, passage:with_open(false)); suspend(0);"});
       const closed = this:call_as_test_player(area, "handle_passage_command", ['verb -> "go", 'dobjstr -> "east"]);
       $test_utils:assert_true(closed, "A matched direction is handled even when its passage closes");
       $test_utils:assert_eq(who.location, source, "closing during callback preserves actor location");
       area:update_passage(source, destination, passage);
-      set_verb_code(source, "notify_pre_exit", {
-        "const area = this.location; const destination = this.test_destination;",
-        "let passage = area:passage_for(this, destination);",
-        "area:set_passage(this, destination, passage); suspend(0);"
-      });
+      set_verb_code(source, "notify_pre_exit", {"const area = this.location; const destination = this.test_destination;", "let passage = area:passage_for(this, destination);", "area:set_passage(this, destination, passage); suspend(0);"});
       const replaced = this:call_as_test_player(area, "handle_passage_command", ['verb -> "go", 'dobjstr -> "east"]);
       $test_utils:assert_true(replaced, "A matched direction is handled even when its passage is replaced");
       $test_utils:assert_eq(who.location, source, "replacement during callback preserves actor location");
@@ -604,7 +581,7 @@ object HEADLESS_WORLD_SCENARIOS [
       const quoted = player:command_input_context("fit \"two tok", "ens\" with " + tostr(alpha));
       $test_utils:assert_eq(quoted["query"], "\"two tokens\"", "completion retains quotes");
       const filtered = player:suggestions("inventory", "token", $match:input_context("polish {input}"));
-      $test_utils:assert_eq({row["value"] for row in (filtered["items"])}, {tostr(alpha)}, "argspec matcher excludes objects without the command");
+      $test_utils:assert_eq({ row["value"] for row in (filtered["items"]) }, {tostr(alpha)}, "argspec matcher excludes objects without the command");
       $test_utils:assert_eq(player:suggestions("inventory", "token", $match:input_context("polish {input} with " + tostr(box)))["items"], {}, "preposition mismatch is not suggested");
       $test_utils:assert_eq(player:suggestions("inventory", "COIN")["items"][1]["value"], tostr(alpha), "aliases match without case sensitivity");
       const limited = player:suggestions("inventory", "token", [], 1);
@@ -619,7 +596,7 @@ object HEADLESS_WORLD_SCENARIOS [
       const partial_direct = $match:input_context("fit {dobj} with {iobj}", "dobj");
       const partial_indirect = $match:input_context("fit {dobj} with {iobj}", "iobj");
       $test_utils:assert_eq(length(player:suggestions("inventory", "token", partial_direct)["items"]), 2, "any direct argspec permits either candidate while receiver is unbound");
-      $test_utils:assert_eq({partial_row["value"] for partial_row in (player:suggestions("inventory", "token", partial_indirect)["items"])}, {tostr(alpha)}, "unbound direct argument does not erase the indirect this constraint");
+      $test_utils:assert_eq({ partial_row["value"] for partial_row in (player:suggestions("inventory", "token", partial_indirect)["items"]) }, {tostr(alpha)}, "unbound direct argument does not erase the indirect this constraint");
       const narrowed = $match:input_context("fit {dobj} with {iobj}", "dobj", ["iobj" -> tostr(beta)]);
       $test_utils:assert_eq(player:suggestions("inventory", "", narrowed)["items"], {}, "binding an incompatible receiver invalidates dependent choices");
       const beta_ref = $url_utils:to_curie_str(beta);
@@ -632,7 +609,7 @@ object HEADLESS_WORLD_SCENARIOS [
       box.open = true;
       box.view_rule = $rule_engine:parse_expression("owner_is(object: input.This, owner: input.Accessor)", 'owner_view, $rule_engine:policy_scope('view_rule));
       box.owner = player;
-      $test_utils:assert_eq({owner_row["value"] for owner_row in (box:suggestions("contents", "")["items"])}, {tostr(beta)}, "viewing rules allow the owner to see contents");
+      $test_utils:assert_eq({ owner_row["value"] for owner_row in (box:suggestions("contents", "")["items"]) }, {tostr(beta)}, "viewing rules allow the owner to see contents");
       $test_utils:assert_true(box:suggestion_eligibility("contents", {beta_ref})[beta_ref]["eligible"], "owner-visible contents remain eligible");
       box.owner = player == #90101 ? #90100 | #90101;
       $test_utils:assert_eq(box:suggestions("contents", "")["items"], {}, "viewing rules deny nonowner suggestions");
@@ -654,5 +631,4 @@ object HEADLESS_WORLD_SCENARIOS [
       recycle(room);
     endtry
   endmethod
-
 endobject
