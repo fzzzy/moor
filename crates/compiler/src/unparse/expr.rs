@@ -412,7 +412,12 @@ impl<'a> Unparse<'a> {
                 write!(writer, "fn (")?;
                 self.write_scatter_items(params, writer)?;
                 write!(writer, ") ")?;
-                self.write_lambda_body_inline(std::slice::from_ref(body), writer)?;
+                // A `fn ... endfn` body is one scope; it is the body itself, not a `begin` block.
+                let statements = match &body.node {
+                    ast::StmtNode::Scope { body, .. } => body.as_slice(),
+                    _ => std::slice::from_ref(body.as_ref()),
+                };
+                self.write_lambda_body_inline(statements, writer)?;
                 write!(writer, "endfn")?;
                 Ok(())
             }
