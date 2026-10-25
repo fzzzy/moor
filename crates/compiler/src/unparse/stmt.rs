@@ -51,6 +51,18 @@ impl<'a> Unparse<'a> {
         writer: &mut W,
         indent: usize,
     ) -> Result<(), DecompileError> {
+        let outer = self.statement_indent.replace(indent);
+        let result = self.unparse_stmt_at(stmt, writer, indent);
+        self.statement_indent.set(outer);
+        result
+    }
+
+    fn unparse_stmt_at<W: std::fmt::Write>(
+        &self,
+        stmt: &Stmt,
+        writer: &mut W,
+        indent: usize,
+    ) -> Result<(), DecompileError> {
         match &stmt.node {
             StmtNode::Cond { arms, otherwise } => {
                 self.write_indent(indent, writer)?;

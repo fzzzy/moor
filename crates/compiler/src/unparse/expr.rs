@@ -411,13 +411,26 @@ impl<'a> Unparse<'a> {
 
                 write!(writer, "fn (")?;
                 self.write_scatter_items(params, writer)?;
-                write!(writer, ") ")?;
+                write!(writer, ")")?;
                 // A `fn ... endfn` body is one scope; it is the body itself, not a `begin` block.
                 let statements = match &body.node {
                     ast::StmtNode::Scope { body, .. } => body.as_slice(),
                     _ => std::slice::from_ref(body.as_ref()),
                 };
-                self.write_lambda_body_inline(statements, writer)?;
+                // One short statement stays on the line; anything longer is written as a block,
+                // its statements a level in from the statement the lambda is part of.
+                let indent = self.statement_indent.get();
+                let mut block = String::new();
+                self.unparse_stmts(statements, &mut block, indent + 1)?;
+                self.statement_indent.set(indent);
+                if statements.len() <= 1 && block.trim().lines().count() <= 1 {
+                    write!(writer, " ")?;
+                    self.write_lambda_body_inline(statements, writer)?;
+                } else {
+                    writeln!(writer)?;
+                    write!(writer, "{block}")?;
+                    self.write_indent(indent, writer)?;
+                }
                 write!(writer, "endfn")?;
                 Ok(())
             }

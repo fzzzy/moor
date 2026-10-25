@@ -1995,6 +1995,24 @@ mod tests {
     }
 
     #[test]
+    fn multi_line_lambdas_print_as_indented_blocks() {
+        let source = "if (1)\n  const names = fn (target)\n    let listed = {};\n    for entry in (target)\n      listed = {@listed, entry};\n    endfor\n    return listed;\n  endfn;\n  return names({1});\nendif";
+        let binary = compile(source, CompileOptions::default()).unwrap();
+        let text = unparse(&program_to_tree(&binary).unwrap(), false, true)
+            .unwrap()
+            .join("\n");
+        assert_eq!(text, source);
+
+        // One short statement stays on one line.
+        let source = "const f = fn (x) return x + 1; endfn;\nreturn f(1);";
+        let binary = compile(source, CompileOptions::default()).unwrap();
+        let text = unparse(&program_to_tree(&binary).unwrap(), false, true)
+            .unwrap()
+            .join("\n");
+        assert!(!text.contains('\n') || text.lines().count() == 2, "{text}");
+    }
+
+    #[test]
     fn decompiled_unary_postfix_operands_do_not_get_extra_parens() {
         let program = r#"return !ic:ends_with(".");"#;
         let binary = compile(program, CompileOptions::default()).unwrap();
