@@ -179,6 +179,35 @@ object DISCORD_SCENARIOS [
     return true;
   endmethod
 
+  method test_mentions_in_channel_messages_are_named owner: core::ARCH_WIZARD
+    "A mention in a channel message reads as the linked player's name, or as the name Discord gives for the user.";
+    const saved = this:_setup();
+    const room = create($room);
+    const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
+    const player_ids = #90102.oauth2_identities;
+    const old_name = #90102.name;
+    try
+      #90102.oauth2_identities = {{"discord", "42"}};
+      #90102.name = "Quillon";
+      move(speaker, room);
+      move(this, room);
+      $discord_bridge:add_speaker(speaker);
+      $discord_bridge.cursor = "100";
+      const mentions = {["id" -> "42", "username" -> "q", "global_name" -> "Q"], ["id" -> "77", "username" -> "bea", "global_name" -> "Bea"]};
+      this.channel = {this:_message("101", "43", "alice", "<@42> and <@!77> and <@88> test", ["mentions" -> mentions])};
+      $discord_bridge:_poll();
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): Quillon and @Bea and @someone test"}, "mentions are named");
+    finally
+      #90102.oauth2_identities = player_ids;
+      #90102.name = old_name;
+      this:_teardown(saved);
+      recycle(speaker);
+      recycle(room);
+    endtry
+    return true;
+  endmethod
+
   method test_presence_is_posted_once_per_quiet_period owner: core::ARCH_WIZARD
     "Arrivals and departures post once per quiet period; a new player always posts.";
     const saved = this:_setup();

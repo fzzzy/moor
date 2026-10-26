@@ -28,7 +28,7 @@ Cowbell entries.
   Everything the speaker hears is posted to the channel under the world's name. New players,
   arrivals and departures anywhere in the world are posted too, once per quiet period. Channel
   messages from people are read every few seconds and spoken in the speaker's room, after the
-  speaker's name. Authors whose Discord account is linked to a player appear as that player, and in
+  speaker's name, with mentions of Discord users shown as names. Authors whose Discord account is linked to a player appear as that player, and in
   Discord that player's name becomes a mention of the account once it has posted in the channel.
   Players can `listen to` a speaker for its latest lines. The webhook URL and bot token are stored
   in wizard-only properties, so database exports contain them.
