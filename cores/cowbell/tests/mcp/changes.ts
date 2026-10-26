@@ -54,7 +54,7 @@ async function run(transport: "http" | "git") {
         await connect();
         assert.ok(client);
         const catalog = await client.rpc("tools/list");
-        assert.equal(catalog.tools.filter((tool: Json) => tool.name.startsWith("changes_")).length, 25);
+        assert.equal(catalog.tools.filter((tool: Json) => tool.name.startsWith("changes_")).length, 26);
         if (transport === "http") {
             // Exercise the domain providers moved by the LLM refactor through web MCP.
             const registry = (await assertions.evalExpression(actor, "return #0:external_agent_tools();")).js;

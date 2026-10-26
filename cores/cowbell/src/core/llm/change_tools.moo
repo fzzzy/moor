@@ -711,6 +711,37 @@ object CHANGE_TOOLS [
         "type" -> "object"
       ]
     ],
+    "set_depends" -> [
+      "arguments" -> {
+        ["default" -> "", "kind" -> "package", "name" -> "package"],
+        ["kind" -> "plain", "name" -> "depends"],
+        ["kind" -> "integer", "name" -> "generation"]
+      },
+      "description" -> "Set the packages whose objects this package's source builds on. Their reviewed bindings are added to this package's reviews. This does not change live code.",
+      "method" -> "depends",
+      "schema" -> [
+        "additionalProperties" -> false,
+        "properties" -> [
+          "depends" -> [
+            "description" -> "Names of configured packages, such as [\"cowbell\"]. Use [] for none.",
+            "items" -> ["maxLength" -> 64, "type" -> "string"],
+            "maxItems" -> 32,
+            "type" -> "array"
+          ],
+          "generation" -> [
+            "description" -> "Current package generation returned by packages or the last settings change.",
+            "type" -> {"integer", "string"}
+          ],
+          "package" -> [
+            "description" -> "Package name. Omit to use the configured default.",
+            "maxLength" -> 64,
+            "type" -> "string"
+          ]
+        ],
+        "required" -> {"depends", "generation"},
+        "type" -> "object"
+      ]
+    ],
     "set_group" -> [
       "arguments" -> {
         ["kind" -> "integer", "name" -> "review"],
@@ -982,6 +1013,12 @@ object CHANGE_TOOLS [
     "Create or replace complete package settings with the expected package generation. This does not change live code.";
     const {input, actor} = args;
     return this:_execute("configure_package", input, actor, caller_perms());
+  endmethod
+
+  method changes_set_depends owner: ARCH_WIZARD
+    "Set the packages whose objects this package's source builds on. Their reviewed bindings are added to this package's reviews. This does not change live code.";
+    const {input, actor} = args;
+    return this:_execute("set_depends", input, actor, caller_perms());
   endmethod
 
   method changes_set_upstream owner: ARCH_WIZARD
