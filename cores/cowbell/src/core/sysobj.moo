@@ -169,6 +169,25 @@ object SYSOBJ [
 
   override description (owner: ARCH_WIZARD, flags: "rc") = "System object containing global properties and core server event handlers.";
 
+  method do_client_data owner: ARCH_WIZARD
+    "Daemon entry for structured client data: the installed package named by the namespace handles it, as package:client_data(kind, payload). Data for no package is ignored.";
+    callers() && raise(E_PERM);
+    const {connection, namespace, kind, payload} = args;
+    const package = $package:named(tostr(namespace));
+    valid(package) || return;
+    return package:client_data(kind, payload);
+  endmethod
+
+  method invoke_package_handler owner: ARCH_WIZARD
+    "Daemon entry for a host's own calls, made through the system handler with type \"package\": invoke_package_handler(name, operation, args...) calls the installed package named name, as package:host_call(operation, args...). Never called from MOO code.";
+    callers() && raise(E_PERM);
+    const {name, operation, @arguments} = args;
+    typeof(name) == TYPE_STR && typeof(operation) == TYPE_STR || raise(E_INVARG, "Expected a package name and an operation.");
+    const package = $package:named(name);
+    valid(package) || raise(E_INVARG, tostr("No package named ", toliteral(name), " is installed."));
+    return package:host_call(operation, @arguments);
+  endmethod
+
   method do_oauth_login owner: ARCH_WIZARD
     "Daemon entry for verified OAuth identities; require a root call for an unauthenticated connection.";
     !callers() && `toint(player) ! E_TYPE, E_INVARG => 0' < 0 && caller == player || raise(E_PERM);

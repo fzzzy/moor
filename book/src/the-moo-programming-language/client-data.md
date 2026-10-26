@@ -78,6 +78,10 @@ The task runs as the logged-in player, or, before login, as the connection objec
 object's authority. The host neither waits for it nor reports its result to the client, and a
 missing verb is not an error.
 
+In Cowbell, `#0:do_client_data` hands each namespace to the installed package of the same name, as
+`package:client_data(kind, payload)`. A package that receives client data defines `client_data` on
+its package object; data for a namespace no package claims is ignored.
+
 | Namespace | Sent by                                                        | `kind`                       |
 | --------- | -------------------------------------------------------------- | ---------------------------- |
 | `'gmcp`   | telnet GMCP messages                                           | the package and message name |
