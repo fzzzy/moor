@@ -230,8 +230,10 @@ object ROOM [
     valid(who) || return;
     "Defer expensive room presentation and fanout until after the move commits.";
     fork (0)
+      "The room may be gone by the time this runs.";
+      valid(this) || return;
       if (is_player(who))
-        `who:emit_room_look(this) ! ANY => 0';
+        `this:show_arrival(who) ! ANY => 0';
         for thing in (this.contents)
           suspend_if_needed();
           if (thing != who)
@@ -246,8 +248,25 @@ object ROOM [
         endif
         `viewer:emit_room_snapshot_state(viewer, this) ! ANY => 0';
       endfor
+      `this:on_contents_enter(who) ! ANY => 0';
     endfork
     `pass(@args) ! E_TYPE, E_VERBNF => 0';
+  endmethod
+
+  method show_arrival owner: HACKER
+    "Show the room to a player who has just arrived. Children may show less, or more.";
+    const {who} = args;
+    return who:emit_room_look(this);
+  endmethod
+
+  method on_contents_enter owner: HACKER
+    "Called after the move commits, when something has entered this room. Children may react.";
+    return;
+  endmethod
+
+  method on_contents_exit owner: HACKER
+    "Called after the move commits, when something has left this room, recycling included, so what may no longer be valid. Children may react.";
+    return;
   endmethod
 
   method exitfunc owner: HACKER
@@ -256,6 +275,8 @@ object ROOM [
     this:disengage_actor(who);
     "Defer expensive room fanout until after the move commits.";
     fork (0)
+      "The room may be gone by the time this runs.";
+      valid(this) || return;
       for item in (this.contents)
         suspend_if_needed();
         if (respond_to(item, 'on_location_exit))
@@ -269,6 +290,7 @@ object ROOM [
         endif
         `viewer:emit_room_snapshot_state(viewer, this) ! ANY => 0';
       endfor
+      `this:on_contents_exit(who) ! ANY => 0';
     endfork
     `pass(@args) ! E_TYPE, E_VERBNF => 0';
   endmethod

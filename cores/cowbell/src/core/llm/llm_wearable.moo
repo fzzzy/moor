@@ -312,6 +312,7 @@ object LLM_WEARABLE [
     principal == this.owner || principal.wizard || raise(E_PERM);
     $llm_wearable_session:stop(this, principal);
     this.agent = #-1;
+    pass(@args);
   endmethod
 
   method reconfigure owner: ARCH_WIZARD

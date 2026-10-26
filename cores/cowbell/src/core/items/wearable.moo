@@ -312,9 +312,12 @@ object WEARABLE [
 
   method recycle owner: ARCH_WIZARD
     "Called by runtime before destruction. Remove from wearer's wearing list.";
+    const actor = caller_perms();
+    actor == this.owner || (valid(actor) && actor.wizard) || raise(E_PERM);
     wearer = this:wearer();
     if (valid(wearer))
       wearer.wearing = setremove(wearer.wearing, this);
     endif
+    pass(@args);
   endmethod
 endobject

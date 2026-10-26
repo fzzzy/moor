@@ -161,6 +161,14 @@ object THING [
     return $pronouns:form(this:pronouns(), tosym(verb[9..$]), @args);
   endmethod
 
+  method recycle owner: ARCH_WIZARD
+    "Called by the runtime before destruction. Leave the location first, so it hears of the departure as for any move; its exit handling runs after the recycle commits.";
+    const actor = caller_perms();
+    actor == this.owner || (valid(actor) && actor.wizard) || raise(E_PERM);
+    valid(this.location) && `move(this, #-1) ! ANY';
+    `pass(@args) ! E_VERBNF';
+  endmethod
+
   method can_get owner: ARCH_WIZARD
     "Check the item's get policy with the caller's read permissions.";
     set_task_perms(caller_perms());
