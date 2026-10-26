@@ -16,10 +16,12 @@ object FORMAT_ANNOTATION [
 
   method object owner: ARCH_WIZARD
     "Capture an object reference with its authored label.";
+    "Objects outside $root, such as $package, have neither name() nor reference_kind().";
     set_task_perms(caller_perms());
-    const {target, ?label = target:name()} = args;
+    const {target, ?label = respond_to(target, 'name) ? target:name() | target.name} = args;
     is_anonymous(target) && return $format.paragraph:inline(label);
-    return this:mk(label, ["kind" -> "object", "ref" -> $url_utils:to_curie_str(target), "objectKind" -> target:reference_kind()]);
+    const kind = respond_to(target, 'reference_kind) ? target:reference_kind() | "object";
+    return this:mk(label, ["kind" -> "object", "ref" -> $url_utils:to_curie_str(target), "objectKind" -> kind]);
   endmethod
 
   method command owner: HACKER
@@ -67,5 +69,12 @@ object FORMAT_ANNOTATION [
     const {object, name, ?label = tostr(object) + "." + name} = args;
     is_anonymous(object) && return $format.paragraph:inline(label);
     return this:mk(label, ["kind" -> "property", "object" -> $url_utils:to_curie_str(object), "name" -> name]);
+  endmethod
+
+  method test_object_outside_root owner: ARCH_WIZARD
+    "An object that does not descend from $root still gets a label and a kind.";
+    const expected = this:mk("Generic Package", ["kind" -> "object", "ref" -> $url_utils:to_curie_str($package), "objectKind" -> "object"]);
+    $test_utils:assert_eq(this:object($package), expected, "a $package reference uses its name and the default kind");
+    return true;
   endmethod
 endobject
