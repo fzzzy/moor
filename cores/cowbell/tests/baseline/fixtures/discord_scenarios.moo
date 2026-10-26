@@ -34,7 +34,7 @@ object DISCORD_SCENARIOS [
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
     let saved = ["listeners" -> $presence_listeners, "location" -> this.location];
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "poll_schedule"})
       saved[key] = bridge.(key);
     endfor
     bridge:configure("https://discord.example/api/webhooks/1/token", "bot-token-0123456789abcdef0123456789", "5", "Test World");
@@ -44,6 +44,8 @@ object DISCORD_SCENARIOS [
     bridge.presence = [];
     bridge.inbound = {};
     bridge.channel_members = {};
+    "The scenarios use short ids, which Discord would have made in 2015.";
+    bridge.backlog_seconds = 0;
     bridge.speakers = {};
     this.channel = {};
     this.responses = [];
@@ -60,7 +62,7 @@ object DISCORD_SCENARIOS [
     schedule_stop(bridge.poll_schedule);
     schedule_stop(bridge.flush_schedule);
     bridge.flush_schedule = 0;
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "poll_schedule"})
       bridge.(key) = saved[key];
     endfor
     $presence_listeners = saved["listeners"];
@@ -234,6 +236,41 @@ object DISCORD_SCENARIOS [
       $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): @role"}, "an unknown role reads generically");
       $test_utils:assert_eq(length(this.reads), 5, "and does not refetch within the lookup period");
     finally
+      this:_teardown(saved);
+      recycle(speaker);
+      recycle(room);
+    endtry
+    return true;
+  endmethod
+
+  method test_rate_limited_messages_wait_for_the_next_poll owner: core::ARCH_WIZARD
+    "Messages over the rate limit are spoken by a later poll, and messages older than the backlog are skipped.";
+    const saved = this:_setup();
+    const room = create($room);
+    const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
+    const limit = $discord_bridge.inbound_per_minute;
+    try
+      move(speaker, room);
+      move(this, room);
+      $discord_bridge:add_speaker(speaker);
+      $discord_bridge.backlog_seconds = 300;
+      $discord_bridge.inbound_per_minute = 1;
+      "A Discord id holds the milliseconds since 2015 above its lowest 22 bits.";
+      const now = (time() * 1000 - 1420070400000) * 4194304;
+      const old = (now / 4194304 - 3600000) * 4194304;
+      $discord_bridge.cursor = tostr(old - 1);
+      this.channel = {this:_message(tostr(now + 2), "42", "alice", "third"), this:_message(tostr(now + 1), "42", "alice", "second"), this:_message(tostr(old), "42", "alice", "an hour ago")};
+      $test_utils:assert_eq($discord_bridge:_poll(), 1, "one message fits the limit");
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): second"}, "the old message is skipped");
+      $test_utils:assert_eq($discord_bridge.cursor, tostr(now + 1), "the cursor stops before the refused message");
+      $discord_bridge.inbound = {};
+      this.channel = {this:_message(tostr(now + 2), "42", "alice", "third")};
+      $test_utils:assert_eq($discord_bridge:_poll(), 1, "the next poll speaks it");
+      $test_utils:assert_eq(this.reads[$][1], "https://discord.com/api/v10/channels/5/messages?limit=50&after=" + tostr(now + 1), "reading after the last spoken message");
+      $test_utils:assert_eq($discord_bridge.cursor, tostr(now + 2), "and moves on");
+    finally
+      $discord_bridge.inbound_per_minute = limit;
       this:_teardown(saved);
       recycle(speaker);
       recycle(room);
