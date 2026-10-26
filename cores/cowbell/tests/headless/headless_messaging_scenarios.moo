@@ -4,8 +4,8 @@ object HEADLESS_MESSAGING_SCENARIOS [
   import_export_id -> "headless_messaging_scenarios"
 ]
   name: "Messaging Boundary Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
   method call_as_programmer owner: fixtures::RUNTIME_PROGRAMMER
@@ -20,7 +20,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     return target.(property_name);
   endmethod
 
-  method test_sealed_letter_raw_text_is_private owner: cowbell::ARCH_WIZARD
+  method test_sealed_letter_raw_text_is_private owner: core::ARCH_WIZARD
     "Public property reads must not bypass a sealed letter's reader policy.";
     const letter = create($letter, #90102, 2);
     try
@@ -35,7 +35,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_letter_do_write_denial_does_not_claim_authorship owner: cowbell::ARCH_WIZARD
+  method test_letter_do_write_denial_does_not_claim_authorship owner: core::ARCH_WIZARD
     "A caught helper denial must not leave a forged author on a blank letter.";
     const letter = create($letter, #90102, 2);
     try
@@ -48,7 +48,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_letter_edit_callback_requires_matching_target owner: cowbell::ARCH_WIZARD
+  method test_letter_edit_callback_requires_matching_target owner: core::ARCH_WIZARD
     "An editor session for another target cannot write this letter.";
     const letter = create($letter, #90102, 2);
     const session_id = player:start_edit_session($root, "receive_edit", {#-1});
@@ -68,7 +68,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_letter_edit_without_connection owner: cowbell::ARCH_WIZARD
+  method test_letter_edit_without_connection owner: core::ARCH_WIZARD
     "HTTP editor callbacks save through an authenticated player without a connection view.";
     $test_utils:assert_eq(`connection() ! E_INVARG => E_INVARG', E_INVARG, "callback has no connection");
     const letter = create($letter, player, 2);
@@ -85,13 +85,13 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_dm_factory_validates_text_structure owner: cowbell::ARCH_WIZARD
+  method test_dm_factory_validates_text_structure owner: core::ARCH_WIZARD
     "The value factory validates text structure without claiming message authenticity.";
     const result = `this:call_as_programmer($dm, "mk", #90102, #90100, 17) ! E_TYPE => E_TYPE';
     $test_utils:assert_eq(result, E_TYPE, "non-string text rejected");
   endmethod
 
-  method test_dm_receipt_does_not_dispatch_untrusted_delegate owner: cowbell::ARCH_WIZARD
+  method test_dm_receipt_does_not_dispatch_untrusted_delegate owner: core::ARCH_WIZARD
     "Normalize caller-supplied DM values before callbacks or persistent storage.";
     const previous = #90102.direct_messages;
     const previous_sender = #90102.last_dm_from;
@@ -112,7 +112,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_public_note_accessor_preserves_read_policy owner: cowbell::ARCH_WIZARD
+  method test_public_note_accessor_preserves_read_policy owner: core::ARCH_WIZARD
     "Public notes remain readable through the policy accessor; raw private storage stays closed.";
     const note = create($note, #90102, 2);
     try
@@ -135,7 +135,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_dm_acceptance_and_denial_leave_canonical_history owner: cowbell::ARCH_WIZARD
+  method test_dm_acceptance_and_denial_leave_canonical_history owner: core::ARCH_WIZARD
     "Accept sender-bound messages, reject forged or misaddressed values without history changes.";
     const previous = #90102.direct_messages;
     const previous_sender = #90102.last_dm_from;
@@ -160,7 +160,7 @@ object HEADLESS_MESSAGING_SCENARIOS [
     endtry
   endmethod
 
-  method test_player_message_helpers_require_defining_principal owner: cowbell::ARCH_WIZARD
+  method test_player_message_helpers_require_defining_principal owner: core::ARCH_WIZARD
     "Receiver-owned identity alone cannot grant a foreign verb access to private messages or edit sessions.";
     const receiver = create($player, #90102, 2);
     try

@@ -2,16 +2,16 @@ object CONDITION_SCENARIOS [
   import_export_id -> "condition_scenarios"
 ]
   name: "Condition Runtime Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method _rule owner: cowbell::HACKER
+  method _rule owner: core::HACKER
     "Parse with a boolean input scope used by the expression truth tables.";
     return $rule_engine:parse_expression(args[1], 'condition_test, $rule_engine:scope(['A -> 'boolean, 'B -> 'boolean, 'C -> 'boolean]));
   endmethod
 
-  method test_nested_conditions_and_printing owner: cowbell::ARCH_WIZARD
+  method test_nested_conditions_and_printing owner: core::ARCH_WIZARD
     "Mixed nested groups and NOT preserve meaning through printing and reparsing.";
     const expressions = {"input.A == true AND (input.B == true OR input.C == true)", "NOT (input.A == true AND input.B == true)", "NOT (input.A == true OR (input.B == true AND NOT input.C == true))"};
     for text in (expressions)
@@ -40,7 +40,7 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method test_literal_roundtrip owner: cowbell::ARCH_WIZARD
+  method test_literal_roundtrip owner: core::ARCH_WIZARD
     "Strings remain text, symbols remain literals, and nested collection literals retain value.";
     const examples = {"\"a, (b) \\\"quoted\\\"\" == \"a, (b) \\\"quoted\\\"\"", "'Actor == 'Actor", "#-1 == #-1", "-3.5 < 0.0", "{1, \"two\", {3}} == {1, \"two\", {3}}", "['x -> \"y\"] == ['x -> \"y\"]"};
     for text in (examples)
@@ -54,7 +54,7 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method test_namespaces_and_supplied_negation_inputs owner: cowbell::ARCH_WIZARD
+  method test_namespaces_and_supplied_negation_inputs owner: core::ARCH_WIZARD
     "Declared inputs satisfy negation; identically named parameters and state remain distinct.";
     const scope = $rule_engine:scope(['Actor -> 'object], ['Actor -> 'object], ['count -> 'integer]);
     const rule = $rule_engine:parse_expression("NOT (input.Actor == parameter.Actor) AND state.count >= 4", 'scoped, scope);
@@ -65,17 +65,17 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method _register_pairs owner: cowbell::ARCH_WIZARD
+  method _register_pairs owner: core::ARCH_WIZARD
     "Register a bounded test provider with two declared output fields.";
     $rule_engine:register_predicate('test_pairs, ['description -> "Two-field test records.", 'inputs -> [], 'outputs -> ['left -> 'integer, 'right -> 'integer]], this, "query_pairs");
   endmethod
 
-  method query_pairs owner: cowbell::HACKER
+  method query_pairs owner: core::HACKER
     "Return two distinct records; the evaluator must bind and constrain every selected field.";
     return ['rows -> {['left -> 1, 'right -> 1], ['left -> 1, 'right -> 2]}, 'complete -> true];
   endmethod
 
-  method test_output_modes_and_repeated_bindings owner: cowbell::ARCH_WIZARD
+  method test_output_modes_and_repeated_bindings owner: core::ARCH_WIZARD
     "Multiple outputs bind independently, while a repeated binding enforces equality.";
     this:_register_pairs();
     try
@@ -97,7 +97,7 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method test_parse_rejects_entire_invalid_input owner: cowbell::ARCH_WIZARD
+  method test_parse_rejects_entire_invalid_input owner: core::ARCH_WIZARD
     "Trailing garbage, missing delimiters, unknown names, and extra arguments are errors.";
     for text in ({"TRUE garbage", "TRUE)", "(TRUE", "NOT", "TRUE AND", "input.No == 1", "unknown_predicate()", "isa(object: #1)", "isa(object: #1, object: #2)", "is(left: 1, right: 1, ignored: 2)", "is(left: 1, right: 1,)", "\"unterminated"})
       $test_utils:assert_raises(E_INVARG, $rule_engine, "parse_expression", {text}, text);
@@ -105,7 +105,7 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method test_incomplete_search_and_provider_errors owner: cowbell::ARCH_WIZARD
+  method test_incomplete_search_and_provider_errors owner: core::ARCH_WIZARD
     "Unavailable facts cannot establish absence, and a provider bug remains an error under NOT.";
     const schema = ['description -> "Incomplete or broken provider.", 'inputs -> [], 'outputs -> []];
     $rule_engine:register_predicate('test_partial, schema, this, "query_partial");
@@ -122,7 +122,7 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method test_truncated_conjunction_still_checks_later_conditions owner: cowbell::ARCH_WIZARD
+  method test_truncated_conjunction_still_checks_later_conditions owner: core::ARCH_WIZARD
     "A full intermediate candidate set cannot skip a later condition that rejects every row.";
     const tree = $condition:parse("test_many() -> (value: N) AND FALSE");
     const environment = ['input -> [], 'parameter -> [], 'state -> [], 'binding -> []];
@@ -133,12 +133,12 @@ object CONDITION_SCENARIOS [
     return true;
   endmethod
 
-  method query_partial owner: cowbell::HACKER
+  method query_partial owner: core::HACKER
     "Report an incomplete search without pretending that absence is proven.";
     return ['rows -> {}, 'complete -> false];
   endmethod
 
-  method query_broken owner: cowbell::HACKER
+  method query_broken owner: core::HACKER
     "Propagate a real implementation error from a registered predicate.";
     return this:no_such_query_implementation();
   endmethod

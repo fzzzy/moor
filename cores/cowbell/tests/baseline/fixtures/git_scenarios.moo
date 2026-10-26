@@ -2,7 +2,7 @@ object GIT_SCENARIOS [
   import_export_id -> "git_scenarios"
 ]
   name: "Git Wrapper Scenarios"
-  parent: cowbell::ROOT
+  parent: core::ROOT
   owner: RUNTIME_WIZARD
   readable: true
 
@@ -17,13 +17,13 @@ object GIT_SCENARIOS [
     endtry
   endmethod
 
-  method file_record owner: cowbell::HACKER
+  method file_record owner: core::HACKER
     "Return a small wire-format blob record.";
     const {path, content} = args;
     return ["path" -> path, "kind" -> "file", "oid" -> "sha1:0123456789abcdef0123456789abcdef01234567", "size" -> length(content), "executable" -> false, "content" -> content];
   endmethod
 
-  method snapshot_response owner: cowbell::HACKER
+  method snapshot_response owner: core::HACKER
     "Return a worker envelope with two case-distinct paths.";
     const oid = "sha1:0123456789abcdef0123456789abcdef01234567";
     return ["schema" -> 1, "ok" -> true, "result" -> ["commit" -> oid, "tree" -> oid, "path" -> "src", "entries" -> {this:file_record("Readme", binary_from_str("Upper\r\n")), this:file_record("README", binary_from_str("UPPER\n"))}]];

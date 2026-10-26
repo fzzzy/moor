@@ -103,7 +103,7 @@ test-session: runtime-session
 check-style:
 	@$(TEST_BIN_DIR)/core-style-audit src --baseline tests/style/baseline.tsv > gen.style.log 2>&1 || { cat gen.style.log; exit 1; }
 	@echo "PASS style baseline (details: gen.style.log)"
-	@$(TEST_BIN_DIR)/core-style-audit src --strict $(foreach unit,$(STYLE_CONVERTED_UNITS),--check $(unit)) > gen.style-strict.log 2>&1 || { cat gen.style-strict.log; exit 1; }
+	@$(TEST_BIN_DIR)/core-style-audit src --strict --check package $(foreach unit,$(STYLE_CONVERTED_UNITS),--check $(unit)) > gen.style-strict.log 2>&1 || { cat gen.style-strict.log; exit 1; }
 	@echo "PASS converted source style (details: gen.style-strict.log)"
 	bash tests/style/check-audit.sh $(TEST_BIN_DIR)/core-style-audit
 
@@ -112,7 +112,7 @@ check-style:
 runtime-test-src: FORCE
 	rm -rf $(TEST_SRC_DIRECTORY)
 	mkdir -p $(TEST_SRC_DIRECTORY)
-	rsync -a src/ $(TEST_SRC_DIRECTORY)/cowbell/
+	rsync -a src/ $(TEST_SRC_DIRECTORY)/
 	rsync -a tests/baseline/fixtures/ $(TEST_SRC_DIRECTORY)/fixtures/
 
 $(HEADLESS_SRC_STAMP): runtime-test-src

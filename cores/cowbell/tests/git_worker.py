@@ -31,7 +31,9 @@ def run(bin_dir, core_dir, *, full_core=False):
         root = Path(directory)
         core = root / "src"
         shutil.copytree(core_dir, core)
-        arch = core / "arch_wizard.moo"
+        # Cowbell's core package, beside the base package in the copied world.
+        cowbell = core / "core"
+        arch = cowbell / "arch_wizard.moo"
         source, count = re.subn(
             r"(override password(?:\s*\([^;\n]*\))?\s*=\s*).*?;",
             lambda match: match[1] + "<PASSWORD, {" + json.dumps(PASSWORD_HASH) + "}>;",
@@ -39,13 +41,13 @@ def run(bin_dir, core_dir, *, full_core=False):
         )
         assert count == 1
         arch.write_text(source)
-        (core / "git_probe.moo").write_text(
+        (cowbell / "git_probe.moo").write_text(
             'object #9500 [import_export_id -> "git_probe"]\n'
             'name: "Git Probe"\nparent: #1\nowner: #2\n'
             'property local_state (owner: #2, flags: "r") = 7;\n'
             'method value owner: #2\n"Fixture value.";\nreturn 1;\nendmethod\nendobject\n'
         )
-        (core / "git_actor.moo").write_text(
+        (cowbell / "git_actor.moo").write_text(
             'object #9501\nname: "Git Actor"\nparent: #1\nowner: #9501\n'
             "wizard: true\nprogrammer: true\n"
             'method stage owner: #9501\n"Stage as this wizard.";\n'
@@ -476,7 +478,7 @@ def check_changes(
         return
 
     # Change one real verb while fetching and validating the complete Cowbell subtree.
-    entry = package.parent / "cores/cowbell/src/git/git_entry.moo"
+    entry = package.parent / "cores/cowbell/src/core/git/git_entry.moo"
     original = entry.read_text()
     header = "  method has_content owner: HACKER\n"
     assert original.count(header) == 1

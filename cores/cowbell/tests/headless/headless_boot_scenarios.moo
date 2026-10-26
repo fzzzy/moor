@@ -2,13 +2,13 @@ object HEADLESS_BOOT_SCENARIOS [
   import_export_id -> "headless_boot_scenarios"
 ]
   name: "Headless Boot Runtime Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::HACKER
+  parent: core::ROOT
+  owner: core::HACKER
   readable: true
 
-  override description (owner: cowbell::HACKER, flags: "rc") = "Headless runtime scenarios for bootstrapping a running Cowbell core.";
+  override description (owner: core::HACKER, flags: "rc") = "Headless runtime scenarios for bootstrapping a running Cowbell core.";
 
-  method _assert_valid_global owner: cowbell::HACKER
+  method _assert_valid_global owner: core::HACKER
     "Assert that a named sysobj global resolves to the expected object.";
     {prop_name, expected} = args;
     actual = $sysobj.(prop_name);
@@ -18,7 +18,7 @@ object HEADLESS_BOOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_boot_smoke owner: cowbell::ARCH_WIZARD
+  method test_headless_boot_smoke owner: core::ARCH_WIZARD
     "Runtime scenario: the imported core exposes expected globals in a running scheduler-backed MOO.";
     this:_assert_valid_global("sysobj", #0);
     this:_assert_valid_global("root", #1);
@@ -33,7 +33,7 @@ object HEADLESS_BOOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_restart_preserves_authored_room owner: cowbell::ARCH_WIZARD
+  method test_restart_preserves_authored_room owner: core::ARCH_WIZARD
     "A restart preserves a builder's description and reaction edits on the First Room.";
     $server_started();
     const description = $first_room.description;

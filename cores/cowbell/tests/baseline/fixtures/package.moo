@@ -12,7 +12,7 @@
 
 package "fixtures" [
   objdef_version -> 2,
-  depends -> {"cowbell"}
+  depends -> {"core"}
 ];
 
 define RUNTIME_WIZARD = #90100;

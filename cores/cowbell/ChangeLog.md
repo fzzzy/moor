@@ -8,6 +8,11 @@ Cowbell entries.
 
 ### Added
 
+- `$package`, the class of package objects. A package object is a child of `$package` tagged with
+  its package's `objdef_package` metadata. At startup, and after `@changes` applies an update,
+  `$package:sync()` calls `init()` on each package whose `version` changed and then `refresh()` on
+  all of them, each package after those it `depends` on. Its other hooks, for new players,
+  feature objects, help and agent tools, do nothing yet.
 - `$discord_bridge` links a world to one Discord channel through the curl worker. A wizard runs
   `$discord_bridge:configure(webhook_url, bot_token, channel_id, world_name)`, then places a child
   of `$discord_speaker` in a room and registers it with `$discord_bridge:add_speaker(speaker)`.
@@ -121,12 +126,15 @@ Cowbell entries.
 
 ### Changed
 
+- Cowbell's source is a world of two packages: `core` in `src/core/`, holding all of Cowbell so far,
+  and a small base package in `src/package/` that every package depends on. `cores/cowbell/src` still imports as
+  before.
 - `@changes` sends each package's `package.moo` with the fetched source, so Cowbell's source can
   be split into packages. This needs a server with package-aware objdef review; upgrade the server
   before updating Cowbell past this change.
 - Cowbell's source is an objdef package: `src/package.moo`, declaring `package "cowbell"`, replaces
   `src/constants.moo`. Cowbell's own files are unchanged. Packages built on Cowbell refer to its
-  objects as `cowbell::THING`, `cowbell::ARCH_WIZARD` and so on, as the test fixtures now do.
+  objects as `core::THING`, `core::ARCH_WIZARD` and so on, as the test fixtures now do.
   `@changes` skips `package.moo` in fetched source, as it skips `constants.moo`.
 - LLM agents retain failure counters only for registered tools and cap them at the retry limit.
   Removing a tool releases its counter. Invented tool names no longer grow retained failure state

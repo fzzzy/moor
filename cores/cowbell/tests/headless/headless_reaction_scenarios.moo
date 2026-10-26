@@ -2,13 +2,13 @@ object HEADLESS_REACTION_SCENARIOS [
   import_export_id -> "headless_reaction_scenarios"
 ]
   name: "Headless Reaction Runtime Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::HACKER
+  parent: core::ROOT
+  owner: core::HACKER
   readable: true
 
-  override description (owner: cowbell::HACKER, flags: "rc") = "Headless runtime scenarios for reaction state mutation, thresholds, and trigger chaining.";
+  override description (owner: core::HACKER, flags: "rc") = "Headless runtime scenarios for reaction state mutation, thresholds, and trigger chaining.";
 
-  method test_named_timers_and_declared_state owner: cowbell::ARCH_WIZARD
+  method test_named_timers_and_declared_state owner: core::ARCH_WIZARD
     "An owner can replace or cancel a timer; its condition uses current declared state when it wakes.";
     const host = create($thing, #90102, 2);
     try
@@ -49,7 +49,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_reaction_chain_and_timer_limits owner: cowbell::ARCH_WIZARD
+  method test_reaction_chain_and_timer_limits owner: core::ARCH_WIZARD
     "A recursive trigger stops with a useful limit, and an object cannot accumulate unbounded timers.";
     const host = create($thing, $hacker, 2);
     try
@@ -83,7 +83,7 @@ object HEADLESS_REACTION_SCENARIOS [
     raise(E_INVARG);
   endmethod
 
-  method test_reinstall_cancels_timers_and_movement_changes_scope owner: cowbell::ARCH_WIZARD
+  method test_reinstall_cancels_timers_and_movement_changes_scope owner: core::ARCH_WIZARD
     "Replacing an installation cancels its task immediately; moved hosts cannot execute captured effects.";
     const first = create($thing, #90102, 2);
     const second = create($thing, #90102, 2);
@@ -112,7 +112,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method _fixture owner: cowbell::ARCH_WIZARD
+  method _fixture owner: core::ARCH_WIZARD
     "Create a named thing fixture for reaction state scenarios.";
     {name} = args;
     fixture = create($thing);
@@ -120,7 +120,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return fixture;
   endmethod
 
-  method test_headless_reaction_trigger_mutates_state owner: cowbell::ARCH_WIZARD
+  method test_headless_reaction_trigger_mutates_state owner: core::ARCH_WIZARD
     "Runtime scenario: fire_trigger runs enabled reaction effects and skips disabled ones.";
     target = #-1;
     actor = #-1;
@@ -144,7 +144,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_reaction_threshold_fires_during_mutation owner: cowbell::ARCH_WIZARD
+  method test_headless_reaction_threshold_fires_during_mutation owner: core::ARCH_WIZARD
     "Runtime scenario: mutation effects fire threshold reactions when a property crosses its boundary.";
     target = #-1;
     actor = #-1;
@@ -167,7 +167,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_reaction_trigger_chains_context owner: cowbell::ARCH_WIZARD
+  method test_headless_reaction_trigger_chains_context owner: core::ARCH_WIZARD
     "Runtime scenario: trigger effects chain into another object's reactions while preserving actor context.";
     source = #-1;
     receiver = #-1;
@@ -200,7 +200,7 @@ object HEADLESS_REACTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_item_entry_and_exit_use_surrounding_room owner: cowbell::ARCH_WIZARD
+  method test_item_entry_and_exit_use_surrounding_room owner: core::ARCH_WIZARD
     "Movement events on a character identify that character and its surrounding room.";
     const room = create($room, #90100, 2);
     const host = create($actor, #90101, 2);

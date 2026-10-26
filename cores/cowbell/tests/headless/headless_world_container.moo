@@ -4,7 +4,7 @@ object HEADLESS_WORLD_CONTAINER [
   import_export_id -> "headless_world_container"
 ]
   name: "Runtime World Container"
-  parent: cowbell::CONTAINER
+  parent: core::CONTAINER
   location: fixtures::RUNTIME_ROOM
   owner: fixtures::RUNTIME_WIZARD
 endobject

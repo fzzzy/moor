@@ -2,11 +2,11 @@ object HEADLESS_SITTABLE_SCENARIOS [
   import_export_id -> "headless_sittable_scenarios"
 ]
   name: "Owned Furniture Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method _as owner: cowbell::ARCH_WIZARD
+  method _as owner: core::ARCH_WIZARD
     "Call a furniture operation as the specified fixture principal.";
     caller == this || raise(E_PERM);
     const {principal, target, operation, @values} = args;
@@ -14,7 +14,7 @@ object HEADLESS_SITTABLE_SCENARIOS [
     return target:(operation)(@values);
   endmethod
 
-  method test_owned_seats_and_actor_authority owner: cowbell::ARCH_WIZARD
+  method test_owned_seats_and_actor_authority owner: core::ARCH_WIZARD
     "Ordinary owners can seat NPCs and trigger reactions without controlling other actors.";
     const room = create($room, #90100, 2);
     const seat = create($sittable, #90101, 2);
@@ -48,7 +48,7 @@ object HEADLESS_SITTABLE_SCENARIOS [
     return true;
   endmethod
 
-  method test_seats_survive_rejected_furniture_moves owner: cowbell::ARCH_WIZARD
+  method test_seats_survive_rejected_furniture_moves owner: core::ARCH_WIZARD
     "Rejected moves preserve seats; owner and delegated moves clear them after moving.";
     const room = create($room, #90100, 2);
     const destination = create($room, #90100, 2);

@@ -15,7 +15,7 @@
 use moor_compiler::{
     CompileOptions, SyntaxKind, lex, parse_program_frontend, parse_to_syntax_node,
 };
-use moor_objdef::{ObjDefSet, ObjDefSource};
+use moor_objdef::ObjDefSet;
 use std::{
     collections::BTreeMap,
     error::Error,
@@ -96,31 +96,12 @@ fn run() -> Result<bool, Box<dyn Error>> {
             return Err(format!("selection has no sources: {}", selection.display()).into());
         }
     }
-    // Constants come first: a package's package.moo, or a plain directory's constants.moo.
-    if let Some(index) = files.iter().position(|path| {
-        path.file_name()
-            .is_some_and(|name| name == "package.moo" || name == "constants.moo")
-    }) {
-        let constants = files.remove(index);
-        files.insert(0, constants);
-    }
-    let mut sources = Vec::new();
-    for path in &files {
-        sources.push(ObjDefSource {
-            label: path
-                .strip_prefix(&directory)?
-                .to_string_lossy()
-                .into_owned(),
-            contents: fs::read_to_string(path)?,
-            path: Some(path.clone()),
-            package: None,
-        });
-    }
+    // Read the directory as import does: a package, a world of packages, or a plain directory.
     let options = CompileOptions {
         call_unsupported_builtins: true,
         ..Default::default()
     };
-    let definitions = ObjDefSet::parse_sources(&options, Some(&directory), None, sources)
+    let definitions = ObjDefSet::read_directory(&options, &directory)
         .map_err(|error| format!("objdef compile failed: {error}"))?;
     let expected_verbs: usize = definitions
         .graph()

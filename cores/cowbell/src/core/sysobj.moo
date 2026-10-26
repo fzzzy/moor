@@ -130,6 +130,7 @@ object SYSOBJ [
   property note (owner: HACKER, flags: "r") = NOTE;
   property nothing (owner: HACKER, flags: "r") = #-1;
   property obj_utils (owner: HACKER, flags: "r") = OBJ_UTILS;
+  property package (owner: HACKER, flags: "r") = package::PACKAGE_CLASS;
   property passage (owner: HACKER, flags: "r") = PASSAGE;
   property password (owner: HACKER, flags: "r") = PASSWORD;
   property player (owner: HACKER, flags: "r") = PLAYER;
@@ -517,6 +518,7 @@ object SYSOBJ [
     for object in (this.startup_hooks)
       object:initialize();
     endfor
+    $package:sync();
     "Issue capability for $login to create players";
     player_class = $login.default_player_class;
     $login.player_setup_capability = $player:issue_capability(player_class, {'create_child, 'make_player}, 0, $arch_wizard);

@@ -1,6 +1,6 @@
 package "headless" [
   objdef_version -> 2,
-  depends -> {"cowbell", "fixtures"}
+  depends -> {"core", "fixtures"}
 ];
 
 define HEADLESS_BOOT_SCENARIOS = #90000;

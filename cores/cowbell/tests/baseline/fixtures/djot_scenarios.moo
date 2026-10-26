@@ -2,25 +2,25 @@ object DJOT_SCENARIOS [
   import_export_id -> "djot_scenarios"
 ]
   name: "Djot Authoring Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::HACKER
+  parent: core::ROOT
+  owner: core::HACKER
   readable: true
 
-  property providers (owner: cowbell::HACKER, flags: "r") = {
-    cowbell::HELP_TOPICS,
-    cowbell::PROG_HELP_TOPICS,
-    cowbell::BUILDER_HELP_TOPICS,
-    cowbell::ADMIN_HELP_TOPICS,
-    cowbell::WIZARD_HELP_TOPICS
+  property providers (owner: core::HACKER, flags: "r") = {
+    core::HELP_TOPICS,
+    core::PROG_HELP_TOPICS,
+    core::BUILDER_HELP_TOPICS,
+    core::ADMIN_HELP_TOPICS,
+    core::WIZARD_HELP_TOPICS
   };
 
-  method _parse owner: cowbell::HACKER
+  method _parse owner: core::HACKER
     "Return the encoded blocks for structural assertions.";
     const {source} = args;
     return $document:encode($document:mk($format.djot:blocks(source)))["blocks"];
   endmethod
 
-  method test_djot_inline_and_rendering owner: cowbell::HACKER
+  method test_djot_inline_and_rendering owner: core::HACKER
     "Authored styles become canonical nodes and render consistently across all core formats.";
     const nodes = $format.djot:inline("A *brass* key.");
     const document = $document:mk({$document_node:mk('paragraph, nodes)});
@@ -37,7 +37,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_empty_inline_speech owner: cowbell::HACKER
+  method test_empty_inline_speech owner: core::HACKER
     "Empty inline content is valid for speech, emotes, and other inline producers.";
     for source in ({"", " ", "\t"})
       $test_utils:assert_eq($format.djot:inline(source), {}, "blank inline content has no nodes");
@@ -49,7 +49,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_djot_block_structure owner: cowbell::HACKER
+  method test_djot_block_structure owner: core::HACKER
     "Headings, paragraphs, quotes, fences, nested lists, tasks, and definitions retain structure.";
     const blocks = this:_parse("## Heading\n## continued\n\nFirst.\n\nSecond.\n\n> Quoted.\n>\n> - Item\n\n---\n\n```moo\nreturn `x';\n```\n");
     $test_utils:assert_eq({ block["kind"] for block in (blocks) }, {"heading", "paragraph", "paragraph", "block_quote", "thematic_break", "code_block"}, "block boundaries survive parsing");
@@ -71,7 +71,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_djot_links_images_and_tables owner: cowbell::HACKER
+  method test_djot_links_images_and_tables owner: core::HACKER
     "Resolve destinations before rendering, keeping tables, image alternatives, and labels inert.";
     const blocks = this:_parse("[A *link*][site] ![a bell](https://example.org/bell.png) <a@example.org>\n\n[site]: https://example.org/help");
     const inlines = blocks[1]["children"];
@@ -90,7 +90,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method _check_help_provider owner: cowbell::ARCH_WIZARD
+  method _check_help_provider owner: core::ARCH_WIZARD
     "Parse and resolve every article the provider ships.";
     const {provider} = args;
     const topics = provider:help_topics(player);
@@ -107,32 +107,32 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_shipped_general_help owner: cowbell::ARCH_WIZARD
+  method test_shipped_general_help owner: core::ARCH_WIZARD
     "Check every general help article.";
     return this:_check_help_provider(this.providers[1]);
   endmethod
 
-  method test_shipped_programmer_help owner: cowbell::ARCH_WIZARD
+  method test_shipped_programmer_help owner: core::ARCH_WIZARD
     "Check every programmer help article.";
     return this:_check_help_provider(this.providers[2]);
   endmethod
 
-  method test_shipped_builder_help owner: cowbell::ARCH_WIZARD
+  method test_shipped_builder_help owner: core::ARCH_WIZARD
     "Check every builder help article.";
     return this:_check_help_provider(this.providers[3]);
   endmethod
 
-  method test_shipped_admin_help owner: cowbell::ARCH_WIZARD
+  method test_shipped_admin_help owner: core::ARCH_WIZARD
     "Check every administrator help article.";
     return this:_check_help_provider(this.providers[4]);
   endmethod
 
-  method test_shipped_wizard_help owner: cowbell::ARCH_WIZARD
+  method test_shipped_wizard_help owner: core::ARCH_WIZARD
     "Check every wizard help article.";
     return this:_check_help_provider(this.providers[5]);
   endmethod
 
-  method test_authored_producers_and_edit_validation owner: cowbell::ARCH_WIZARD
+  method test_authored_producers_and_edit_validation owner: core::ARCH_WIZARD
     "Speech parses only the message; descriptions and notes validate selected Djot before saving.";
     const actor = create($player, player, 2);
     const note = create($note, player, 2);
@@ -170,7 +170,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_annotation_boundaries owner: cowbell::ARCH_WIZARD
+  method test_help_annotation_boundaries owner: core::ARCH_WIZARD
     "Code blocks and link labels stay opaque; unrepresentable examples remain inline code.";
     const source = "[`look`](https://example.org/) and `no_such_command`.\n\n```\nlook\n```\n\n`@chown <object>.<property> to <owner>`";
     const content = $help_utils:annotate_prose($format.djot:blocks(source), player);
@@ -185,7 +185,7 @@ object DJOT_SCENARIOS [
     return true;
   endmethod
 
-  method test_djot_diagnostics_and_limits owner: cowbell::HACKER
+  method test_djot_diagnostics_and_limits owner: core::HACKER
     "Unsupported constructs, bad destinations, block input, and resource excess fail explicitly.";
     for source in ({"{+new+}", "{+two\nlines+}", "{=bright=}", "x~2~", "x^2^", "$`math`", "[^note]", "[span]{.class}", "`raw`{=html}", "::: box\ntext\n::: ", "a) alphabetic", "```=html\n<b>raw</b>\n```", "[lost][missing]", "[local](#section)", "[unsafe](javascript:alert(1))", "{#anchor}", "####### too deep", "[label][Case]\n\n[case]: https://example.org"})
       let message = "";

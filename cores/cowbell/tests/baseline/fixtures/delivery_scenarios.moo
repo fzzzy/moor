@@ -2,14 +2,14 @@ object DELIVERY_SCENARIOS [
   import_export_id -> "delivery_scenarios"
 ]
   name: "Document Delivery Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property encodes (owner: cowbell::ARCH_WIZARD, flags: "rw") = 0;
-  property renders (owner: cowbell::ARCH_WIZARD, flags: "rw") = 0;
+  property encodes (owner: core::ARCH_WIZARD, flags: "rw") = 0;
+  property renders (owner: core::ARCH_WIZARD, flags: "rw") = 0;
 
-  method test_offline_room_snapshot_skips_content owner: cowbell::ARCH_WIZARD
+  method test_offline_room_snapshot_skips_content owner: core::ARCH_WIZARD
     "A live room panel has no recipient when the player has no attached connections.";
     const receiver = #90102;
     $test_utils:assert_eq(`connections(receiver) ! E_INVARG => {}', {}, "fixture player is disconnected");
@@ -24,7 +24,7 @@ object DELIVERY_SCENARIOS [
     return true;
   endmethod
 
-  method _instrument owner: cowbell::ARCH_WIZARD
+  method _instrument owner: core::ARCH_WIZARD
     "Count actual encoder and renderer entry calls inside this isolated test database.";
     const {target, method_name, counter} = args;
     const original = verb_code(target, method_name);
@@ -33,7 +33,7 @@ object DELIVERY_SCENARIOS [
     return original;
   endmethod
 
-  method _receiver owner: cowbell::ARCH_WIZARD
+  method _receiver owner: core::ARCH_WIZARD
     "Capture effects without network connections; ordinary delivery code still resolves and serializes.";
     const receiver = create($event_receiver, player, 2);
     add_property(receiver, "test_notices", {}, {player, "r"});
@@ -47,7 +47,7 @@ object DELIVERY_SCENARIOS [
     return receiver;
   endmethod
 
-  method test_shared_delivery_document owner: cowbell::ARCH_WIZARD
+  method test_shared_delivery_document owner: core::ARCH_WIZARD
     "History and mixed connections share one encoding; unused bindings and stale envelopes stay private.";
     const receiver = this:_receiver();
     const encode_code = this:_instrument($document_schema, "_checked", "encodes");
@@ -100,7 +100,7 @@ object DELIVERY_SCENARIOS [
     return true;
   endmethod
 
-  method test_render_options_and_finalization owner: cowbell::ARCH_WIZARD
+  method test_render_options_and_finalization owner: core::ARCH_WIZARD
     "Canonical option sets share a rendering, while changed options retain the same document.";
     const render_code = this:_instrument($document_renderer, "_render", "renders");
     try
@@ -124,7 +124,7 @@ object DELIVERY_SCENARIOS [
     return true;
   endmethod
 
-  method test_public_welcome_and_manifest owner: cowbell::ARCH_WIZARD
+  method test_public_welcome_and_manifest owner: core::ARCH_WIZARD
     "Banner facts stay literal after Djot parsing; the managed package owns the document pipeline.";
     const message = $login.welcome_message;
     const title = $login.moo_title;
@@ -151,7 +151,7 @@ object DELIVERY_SCENARIOS [
     return true;
   endmethod
 
-  method test_dynamic_authored_help owner: cowbell::ARCH_WIZARD
+  method test_dynamic_authored_help owner: core::ARCH_WIZARD
     "Contextual topics select Djot for authored markup and preserve their block structure.";
     for provider in ({$room, $social_features, $mail_features, $mr_welcome})
       for topic in (provider:help_topics(player))

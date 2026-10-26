@@ -4,7 +4,7 @@ object HEADLESS_WORLD_WEST_ROOM [
   import_export_id -> "headless_world_west_room"
 ]
   name: "Runtime World West Room"
-  parent: cowbell::ROOM
+  parent: core::ROOM
   location: HEADLESS_WORLD_AREA
   owner: fixtures::RUNTIME_WIZARD
 endobject

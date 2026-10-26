@@ -2,16 +2,16 @@ object DISCORD_SCENARIOS [
   import_export_id -> "discord_scenarios"
 ]
   name: "Discord Bridge Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property channel (owner: cowbell::ARCH_WIZARD, flags: "r") = {};
-  property heard (owner: cowbell::ARCH_WIZARD, flags: "r") = {};
-  property posts (owner: cowbell::ARCH_WIZARD, flags: "r") = {};
-  property reads (owner: cowbell::ARCH_WIZARD, flags: "r") = {};
+  property channel (owner: core::ARCH_WIZARD, flags: "r") = {};
+  property heard (owner: core::ARCH_WIZARD, flags: "r") = {};
+  property posts (owner: core::ARCH_WIZARD, flags: "r") = {};
+  property reads (owner: core::ARCH_WIZARD, flags: "r") = {};
 
-  method request owner: cowbell::ARCH_WIZARD
+  method request owner: core::ARCH_WIZARD
     "Stand in for the curl worker: record webhook posts and answer channel reads.";
     const {method, url, body, headers} = args;
     if (method == "POST")
@@ -22,13 +22,13 @@ object DISCORD_SCENARIOS [
     return {200, {}, generate_json(this.channel)};
   endmethod
 
-  method tell owner: cowbell::ARCH_WIZARD
+  method tell owner: core::ARCH_WIZARD
     "Stand in for a player in the room.";
     const {event} = args;
     this.heard = {@this.heard, $document:render(event:resolve(this), 'text_plain)['body]};
   endmethod
 
-  method _setup owner: cowbell::ARCH_WIZARD
+  method _setup owner: core::ARCH_WIZARD
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
     let saved = ["listeners" -> $presence_listeners, "location" -> this.location];
@@ -50,7 +50,7 @@ object DISCORD_SCENARIOS [
     return saved;
   endmethod
 
-  method _teardown owner: cowbell::ARCH_WIZARD
+  method _teardown owner: core::ARCH_WIZARD
     "Restore the bridge and drop its schedules.";
     const {saved} = args;
     const bridge = $discord_bridge;
@@ -64,7 +64,7 @@ object DISCORD_SCENARIOS [
     move(this, saved["location"]);
   endmethod
 
-  method _message owner: cowbell::ARCH_WIZARD
+  method _message owner: core::ARCH_WIZARD
     "A channel message as Discord's API returns it.";
     const {id, author_id, name, text, ?extra = []} = args;
     let message = ["id" -> id, "type" -> 0, "channel_id" -> "5", "content" -> text, "author" -> ["id" -> author_id, "username" -> name, "global_name" -> name, "avatar" -> "abc123"]];
@@ -74,7 +74,7 @@ object DISCORD_SCENARIOS [
     return message;
   endmethod
 
-  method test_room_events_are_batched_into_posts owner: cowbell::ARCH_WIZARD
+  method test_room_events_are_batched_into_posts owner: core::ARCH_WIZARD
     "What the room announces goes out under the world's name, packed into one post, markdown escaped and mentions off.";
     const saved = this:_setup();
     const room = create($room);
@@ -107,7 +107,7 @@ object DISCORD_SCENARIOS [
     return true;
   endmethod
 
-  method test_channel_messages_reach_the_room owner: cowbell::ARCH_WIZARD
+  method test_channel_messages_reach_the_room owner: core::ARCH_WIZARD
     "Polling speaks new channel messages in order, cleaned and marked as from Discord, and skips bots, webhooks and history.";
     const saved = this:_setup();
     const room = create($room);
@@ -143,7 +143,7 @@ object DISCORD_SCENARIOS [
     return true;
   endmethod
 
-  method test_linked_authors_are_named_as_players owner: cowbell::ARCH_WIZARD
+  method test_linked_authors_are_named_as_players owner: core::ARCH_WIZARD
     "A linked Discord user speaks under their player's name, and the player appears in Discord as a mention of that user.";
     const saved = this:_setup();
     const room = create($room);
@@ -179,7 +179,7 @@ object DISCORD_SCENARIOS [
     return true;
   endmethod
 
-  method test_presence_is_posted_once_per_quiet_period owner: cowbell::ARCH_WIZARD
+  method test_presence_is_posted_once_per_quiet_period owner: core::ARCH_WIZARD
     "Arrivals and departures post once per quiet period; a new player always posts.";
     const saved = this:_setup();
     const old_name = #90102.name;
