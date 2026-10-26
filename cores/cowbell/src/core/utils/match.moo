@@ -528,4 +528,63 @@ object MATCH [
     const ranked = {@buckets[1], @buckets[2], @buckets[3], @buckets[4], @buckets[5]};
     return ["items" -> ranked[1..min(length(ranked), limit)], "more" -> count > limit];
   endmethod
+
+  method parse_curie owner: ARCH_WIZARD
+    "Resolve oid:N, uuid:ID, sysobj:name.path, or match(\"name\") to an object.";
+    "The optional context defaults to player. Return false when parsing fails.";
+    set_task_perms(caller_perms());
+    const {curie_str, ?context = player} = args;
+    typeof(curie_str) == TYPE_STR || raise(E_TYPE, "CURIE must be a string");
+    if (curie_str:starts_with("oid:"))
+      const oid_part = curie_str[5..$];
+      if (oid_part:is_numeric())
+        return toobj("#" + oid_part);
+      endif
+      return false;
+    endif
+    if (curie_str:starts_with("uuid:"))
+      const uuid_part = curie_str[6..$];
+      try
+        return toobj("#" + uuid_part);
+      except (ANY)
+        return false;
+      endtry
+    endif
+    if (curie_str:starts_with("sysobj:"))
+      const sysobj_part = curie_str[8..$];
+      try
+        let target = #0;
+        const parts = sysobj_part:split(".");
+        for part in (parts)
+          target = target.(part);
+        endfor
+        return typeof(target) == TYPE_OBJ ? target | false;
+      except (ANY)
+        return false;
+      endtry
+    endif
+    if (curie_str:starts_with("match(\"") && curie_str:ends_with("\")"))
+      const match_str = curie_str[8..length(curie_str) - 2];
+      if (!valid(context))
+        return false;
+      endif
+      try
+        return $match:match_object(match_str, context);
+      except (ANY)
+        return false;
+      endtry
+    endif
+    return false;
+  endmethod
+
+  method test_parse_curie owner: ARCH_WIZARD
+    "CURIE strings resolve to objects, and malformed ones to false.";
+    $test_utils:assert_true(equal(this:parse_curie("oid:1"), #1), "parse_curie oid");
+    $test_utils:assert_true(equal(this:parse_curie("oid:abc"), false), "parse_curie rejects invalid oid");
+    $test_utils:assert_true(equal(this:parse_curie("sysobj:root"), $root), "parse_curie sysobj");
+    $test_utils:assert_true(equal(this:parse_curie("sysobj:nonexistent_property"), false), "parse_curie rejects invalid sysobj");
+    $test_utils:assert_true(equal(this:parse_curie("match(\"anything\")", #-1), false), "parse_curie rejects invalid match context");
+    $test_utils:assert_true(equal(this:parse_curie("invalid"), false), "parse_curie rejects unknown prefix");
+    return true;
+  endmethod
 endobject

@@ -478,7 +478,7 @@ def check_changes(
         return
 
     # Change one real verb while fetching and validating the complete Cowbell subtree.
-    entry = package.parent / "cores/cowbell/src/core/git/git_entry.moo"
+    entry = package.parent / "cores/cowbell/src/git/git_entry.moo"
     original = entry.read_text()
     header = "  method has_content owner: HACKER\n"
     assert original.count(header) == 1

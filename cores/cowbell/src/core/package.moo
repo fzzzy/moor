@@ -1,6 +1,6 @@
 package "core" [
   objdef_version -> 2,
-  depends -> {"package"}
+  depends -> {"package", "types", "git"}
 ];
 
 define SYSOBJ = #0;
@@ -56,12 +56,6 @@ define FORMAT_PARAGRAPH = #114;
 define FORMAT_ANNOTATION = #134;
 define FORMAT_TEXT = #139;
 define FORMAT_DJOT = #3006;
-
-// git
-define GIT = #135;
-define GIT_REPOSITORY = #136;
-define GIT_SNAPSHOT = #137;
-define GIT_ENTRY = #138;
 
 // help
 define HELP_UTILS = #58;
@@ -183,12 +177,8 @@ define CONDITION = #3011;
 define WORLD_FACTS = #3012;
 
 // types
-define STR_PROTO = #13;
-define LIST_PROTO = #14;
-define INT_PROTO = #15;
 define VERB = #54;
 define PROPERTY = #55;
-define SYM_PROTO = #133;
 
 // utils
 define MATCH = #21;

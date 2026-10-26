@@ -1,5 +1,5 @@
 core/relations
-core/git
+git
 core/initial/housekeeping.moo
 core/root.moo:create
 core/root.moo:destroy
@@ -153,7 +153,7 @@ core/format/format_annotation.moo:exit
 core/format/format_annotation.moo:help
 core/format/format_annotation.moo:verb
 core/format/format_annotation.moo:property
-core/types/list_proto.moo
+types/list_proto.moo
 core/format/format_annotation.moo:mk
 core/world/room.moo:exit_annotation
 
@@ -176,7 +176,7 @@ core/format/format_paragraph.moo:inline
 core/document
 core/help/help_utils.moo:command_usage
 
-core/types/str_proto.moo
+types/str_proto.moo
 
 core/features/prog_features.moo:@ps
 core/features/builder_features.moo:_schedule_rows

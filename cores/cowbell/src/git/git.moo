@@ -1,15 +1,13 @@
 object GIT [
-  import_export_id -> "git",
-  import_export_hierarchy -> {"git"}
+  import_export_id -> "git"
 ]
   name: "Git"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  owner: core::ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Read-only Git access. Network operations require a wizard caller. Repository and result flyweights carry data, not authority.";
+  property description (owner: core::ARCH_WIZARD, flags: "rc") = "Read-only Git access. Network operations require a wizard caller. Repository and result flyweights carry data, not authority.";
 
-  method repository owner: ARCH_WIZARD
+  method repository owner: core::ARCH_WIZARD
     "Create a repository descriptor without network access. Args: URL, optional limits, timeout seconds.";
     set_task_perms(caller_perms());
     const {url, ?limits = [], ?timeout = 30.0} = args;
@@ -29,14 +27,14 @@ object GIT [
     return toflyweight($git_repository, ['url -> url, 'limits -> normalized, 'timeout -> timeout]);
   endmethod
 
-  method capabilities owner: ARCH_WIZARD
+  method capabilities owner: core::ARCH_WIZARD
     "Return worker capabilities. Wizard only; suspends and commits the current transaction.";
     set_task_perms(caller_perms());
     const {} = args;
     return $git:request('capabilities, []);
   endmethod
 
-  method request owner: ARCH_WIZARD
+  method request owner: core::ARCH_WIZARD
     "Send a schema-1 request as the incoming wizard. Suspends; returns validated results or raises E_GIT with worker details.";
     const actor = caller_perms();
     valid(actor) && actor.wizard || raise(E_PERM, "Git requests require wizard authority.");
@@ -60,7 +58,7 @@ object GIT [
     return $git:unpack(op, response, repository);
   endmethod
 
-  method _send owner: ARCH_WIZARD
+  method _send owner: core::ARCH_WIZARD
     "Transport boundary. Direct calls also require a wizard; worker errors propagate unchanged.";
     const actor = caller_perms();
     valid(actor) && actor.wizard || raise(E_PERM, "Git requests require wizard authority.");
@@ -70,7 +68,7 @@ object GIT [
     return worker_request('git, {operation, request}, ['timeout_seconds -> timeout]);
   endmethod
 
-  method check_timeout owner: HACKER
+  method check_timeout owner: core::HACKER
     "Validate a finite, positive timeout before passing it to the worker builtin.";
     const {timeout} = args;
     typeof(timeout) == TYPE_FLOAT || raise(E_TYPE, "Git timeout must be a float.");
@@ -78,7 +76,7 @@ object GIT [
     return timeout;
   endmethod
 
-  method field owner: HACKER
+  method field owner: core::HACKER
     "Read a required wire field. Malformed worker data raises E_INVARG.";
     const {record, key, expected_type} = args;
     typeof(record) == TYPE_MAP || raise(E_INVARG, "Malformed Git record.");
@@ -87,7 +85,7 @@ object GIT [
     return record[key];
   endmethod
 
-  method oid owner: HACKER
+  method oid owner: core::HACKER
     "Validate a schema-1 full SHA-1 object ID without changing its spelling.";
     const {value} = args;
     typeof(value) == TYPE_STR || raise(E_INVARG, "Invalid Git object ID.");
@@ -97,7 +95,7 @@ object GIT [
     return value;
   endmethod
 
-  method unpack owner: HACKER
+  method unpack owner: core::HACKER
     "Decode a worker envelope into local values. Public and pure; supplied data establishes no authority.";
     const {operation, response, ?repository = ""} = args;
     $git:field(response, "schema", TYPE_INT) == 1 || raise(E_INVARG, "Unsupported Git response schema.");

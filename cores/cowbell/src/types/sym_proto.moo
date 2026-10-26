@@ -1,23 +1,20 @@
 object SYM_PROTO [
-  import_export_id -> "sym_proto",
-  import_export_hierarchy -> {"types"}
+  import_export_id -> "sym_proto"
 ]
   name: "Symbol Utilities"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: HACKER
+  owner: core::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Prototype object for symbol utility methods.";
+  property description (owner: core::HACKER, flags: "rc") = "Prototype object for symbol utility methods.";
 
-  method as_string owner: HACKER
+  method as_string owner: core::HACKER
     "Return the symbol's text.";
     {sym} = args;
     typeof(sym) == TYPE_SYM || raise(E_TYPE, "Method must be called on symbol");
     return tostr(sym);
   endmethod
 
-  method starts_with owner: HACKER
+  method starts_with owner: core::HACKER
     "Return whether the symbol text starts with prefix.";
     {sym, prefix} = args;
     typeof(sym) == TYPE_SYM || raise(E_TYPE, "Method must be called on symbol");
@@ -28,7 +25,7 @@ object SYM_PROTO [
     return tostr(sym):starts_with(prefix);
   endmethod
 
-  method ends_with owner: HACKER
+  method ends_with owner: core::HACKER
     "Return whether the symbol text ends with suffix.";
     {sym, suffix} = args;
     typeof(sym) == TYPE_SYM || raise(E_TYPE, "Method must be called on symbol");
@@ -39,7 +36,7 @@ object SYM_PROTO [
     return tostr(sym):ends_with(suffix);
   endmethod
 
-  method contains owner: HACKER
+  method contains owner: core::HACKER
     "Return whether the symbol text contains needle.";
     {sym, needle} = args;
     typeof(sym) == TYPE_SYM || raise(E_TYPE, "Method must be called on symbol");
@@ -50,7 +47,7 @@ object SYM_PROTO [
     return tostr(sym):contains(needle);
   endmethod
 
-  method test_symbol_text_helpers owner: HACKER
+  method test_symbol_text_helpers owner: core::HACKER
     "Cover symbol text projection and matching helpers.";
     $test_utils:assert_eq('topic_say:as_string(), "topic_say", "as_string returns symbol text");
     $test_utils:assert_true('topic_say:starts_with('topic_), "starts_with accepts symbol prefix");

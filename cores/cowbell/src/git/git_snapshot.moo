@@ -1,15 +1,13 @@
 object GIT_SNAPSHOT [
-  import_export_id -> "git_snapshot",
-  import_export_hierarchy -> {"git"}
+  import_export_id -> "git_snapshot"
 ]
   name: "Git Snapshot"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  owner: core::ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Local Git directory data with repository, commit, tree, path, complete, and entries slots. Lookup never fetches missing data.";
+  property description (owner: core::ARCH_WIZARD, flags: "rc") = "Local Git directory data with repository, commit, tree, path, complete, and entries slots. Lookup never fetches missing data.";
 
-  method mk owner: HACKER
+  method mk owner: core::HACKER
     "Wrap a directory result. Complete means recursive contents from snapshot, rather than a tree listing.";
     const {result, repository, complete} = args;
     typeof(repository) == TYPE_STR || raise(E_TYPE);
@@ -25,7 +23,7 @@ object GIT_SNAPSHOT [
     return toflyweight($git_snapshot, ['repository -> repository, 'commit -> commit, 'tree -> tree, 'path -> path, 'complete -> complete, 'entries -> entries]);
   endmethod
 
-  method entry owner: HACKER
+  method entry owner: core::HACKER
     "Find a local entry by exact, case-sensitive subtree-relative path; raise E_RANGE if absent.";
     const {path} = args;
     typeof(path) == TYPE_STR || raise(E_TYPE);

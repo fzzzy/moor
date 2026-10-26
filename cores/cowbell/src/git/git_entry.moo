@@ -1,15 +1,13 @@
 object GIT_ENTRY [
-  import_export_id -> "git_entry",
-  import_export_hierarchy -> {"git"}
+  import_export_id -> "git_entry"
 ]
   name: "Git Entry"
-  parent: ROOT
-  owner: ARCH_WIZARD
+  owner: core::ARCH_WIZARD
   readable: true
 
-  override description (owner: ARCH_WIZARD, flags: "rc") = "Local Git entry data. Files and symlinks can contain exact bytes; directories and submodules contain object IDs only.";
+  property description (owner: core::ARCH_WIZARD, flags: "rc") = "Local Git entry data. Files and symlinks can contain exact bytes; directories and submodules contain object IDs only.";
 
-  method mk owner: HACKER
+  method mk owner: core::HACKER
     "Validate and wrap an entry. No network access or authority is attached to the result.";
     const {record, repository, commit, ?require_content = false} = args;
     typeof(repository) == TYPE_STR || raise(E_TYPE);
@@ -37,20 +35,20 @@ object GIT_ENTRY [
     return toflyweight($git_entry, slots);
   endmethod
 
-  method has_content owner: HACKER
+  method has_content owner: core::HACKER
     "Return whether this local entry includes blob bytes.";
     const {} = args;
     return maphaskey(flyslots(this), 'content);
   endmethod
 
-  method bytes owner: HACKER
+  method bytes owner: core::HACKER
     "Return exact local bytes, including symlink targets. Raise E_NACC when content was not fetched.";
     const {} = args;
     maphaskey(flyslots(this), 'content) || raise(E_NACC, "Git entry has no local content.");
     return this.content;
   endmethod
 
-  method text owner: HACKER
+  method text owner: core::HACKER
     "Decode local bytes as strict UTF-8. Invalid text raises E_INVARG; missing content raises E_NACC.";
     const {} = args;
     maphaskey(flyslots(this), 'content) || raise(E_NACC, "Git entry has no local content.");
