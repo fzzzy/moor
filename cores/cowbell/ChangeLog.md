@@ -8,6 +8,10 @@ Cowbell entries.
 
 ### Added
 
+- `$http`, in a new `http` package with `$url_utils`, makes HTTP requests through the curl worker
+  with the caller's permissions: `$http:request(method, url [, body [, headers [, options]]])` and
+  `$http:get(url [, headers [, options]])`, where options may set `timeout_seconds`. The change
+  manager, the Discord bridge, the LLM provider and link previews now use it.
 - `$package`, the class of package objects. A package object is a child of `$package` tagged with
   its package's `objdef_package` metadata. At startup, and after `@changes` applies an update,
   `$package:sync()` calls `init()` on each package whose `version` changed and then `refresh()` on

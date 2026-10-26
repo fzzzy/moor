@@ -15,7 +15,7 @@ true
 true
 
 // The harness has no worker transport. Inject the daemon's missing-worker error at the call site.
-; let code = verb_code($change_manager, "_fetch"); for i in [1..length(code)] const offset = index(code[i], "worker_request("); if (offset) code[i] = code[i][1..offset - 1] + "raise(E_INVARG, \"No worker available for curl\");"; endif endfor return set_verb_code($change_manager, "_fetch", code);
+; let code = verb_code($change_manager, "_fetch"); for i in [1..length(code)] const offset = index(code[i], "$http:get("); if (offset) code[i] = code[i][1..offset - 1] + "raise(E_INVARG, \"No worker available for curl\");"; endif endfor return set_verb_code($change_manager, "_fetch", code);
 0
 
 % @changes fetch

@@ -67,6 +67,7 @@ object SYSOBJ [
   property help_topics (owner: ARCH_WIZARD, flags: "r") = HELP_TOPICS;
   property help_utils (owner: HACKER, flags: "r") = HELP_UTILS;
   property housekeeping (owner: HACKER, flags: "r") = HOUSEKEEPING;
+  property http (owner: HACKER, flags: "r") = http::HTTP;
   property int_proto (owner: HACKER, flags: "r") = types::INT_PROTO;
   property letter (owner: HACKER, flags: "r") = LETTER;
   property list_proto (owner: HACKER, flags: "r") = types::LIST_PROTO;
@@ -160,7 +161,7 @@ object SYSOBJ [
   property test_utils (owner: HACKER, flags: "r") = TEST_UTILS;
   property thing (owner: HACKER, flags: "r") = THING;
   property travel_examples (owner: HACKER, flags: "r") = TRAVEL_EXAMPLES;
-  property url_utils (owner: HACKER, flags: "r") = URL_UTILS;
+  property url_utils (owner: HACKER, flags: "r") = http::URL_UTILS;
   property verb (owner: HACKER, flags: "r") = VERB;
   property wearable (owner: HACKER, flags: "r") = WEARABLE;
   property wiz_features (owner: HACKER, flags: "r") = WIZ_FEATURES;

@@ -1,15 +1,12 @@
 object URL_UTILS [
-  import_export_id -> "url_utils",
-  import_export_hierarchy -> {"utils"}
+  import_export_id -> "url_utils"
 ]
   name: "URL Utilities"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: HACKER
+  owner: core::HACKER
 
-  override description (owner: HACKER, flags: "rc") = "Utilities for fetching and parsing URL metadata (OpenGraph, meta tags) for link previews.";
+  property description (owner: core::HACKER, flags: "rc") = "Utilities for fetching and parsing URL metadata (OpenGraph, meta tags) for link previews.";
 
-  method fetch_preview owner: ARCH_WIZARD
+  method fetch_preview owner: core::ARCH_WIZARD
     "Fetch URL and extract OpenGraph/meta preview data.";
     "Args: {url} => map with url, title, description, image, site_name";
     {url} = args;
@@ -17,7 +14,7 @@ object URL_UTILS [
     "Fetch the URL";
     headers = {{"User-Agent", "mooR/1.0 (Link Preview)"}};
     try
-      response = worker_request('curl, {"GET", url, "", headers});
+      response = $http:get(url, headers);
     except e (ANY)
       return result;
     endtry
@@ -34,7 +31,7 @@ object URL_UTILS [
     return result;
   endmethod
 
-  method _parse_meta owner: ARCH_WIZARD
+  method _parse_meta owner: core::ARCH_WIZARD
     "Parse HTML for OpenGraph and meta tags using html_query.";
     {html, result} = args;
     "Query for OpenGraph meta tags";
@@ -64,7 +61,7 @@ object URL_UTILS [
     return result;
   endmethod
 
-  method to_curie_str owner: HACKER
+  method to_curie_str owner: core::HACKER
     "Convert an object reference to a CURIE string for web-host RESTful paths.";
     "Returns strings like 'uuid:...', 'oid:...' depending on object type.";
     "Usage: $url_utils:to_curie_str(target)";
