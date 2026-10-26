@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Objdef reviews report `bindings`, the qualified constants of the packages the reviewed source
+  declares, so a source tree that builds on another can be given that tree's bindings. Objects a
+  review creates record their package in `objdef_package` metadata, so an export writes them to that
+  package's directory.
 - Objdef reviews can change an installed object's parent or location. With `attribute` in the
   request's `fields`, a review shows a row for each changed parent or location, compared with the
   accepted value like a program. A parent change that would delete property values set on the object

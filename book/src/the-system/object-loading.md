@@ -729,6 +729,18 @@ The object baseline records `creation` and `creation_schema` alongside field bas
 is `objdef-v1:creation-text:sha256`. The hash covers normalized objdef text with reserved baselines
 removed. It identifies the accepted initial definition. It does not authorize replacing live data.
 
+### Packages in separate source trees
+
+A source tree can build on objects that another tree defines. Its source names them with qualified
+constants, such as `core::ROOT`, and the request's `constants` bind those names; the review treats
+the other tree's objects like any other existing object outside the managed scope.
+
+The report's `bindings` lists the bindings the reviewed source provides to trees that depend on it:
+the constants of each package it declares, qualified, such as `games::BOARD`. A source without
+`package.moo` files provides all of its bindings under their plain names. An object a review creates
+records the package its file belongs to as `objdef_package` metadata, so exporting the world writes
+it to that package's directory.
+
 ### Review updates with an agent
 
 Cowbell publishes 25 `changes_*` tools through its MCP catalog. `moor-web-mcp` exposes these tools
