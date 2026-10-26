@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Add `binary_pack()`, `binary_unpack()`, `binary_field()`, `binary_set_field()` and
+  `binary_set_fields()` for unsigned integers packed into binary values at a fixed width of 1 to 32
+  bits. MOO code can read and change compact grids, bitmaps and palette indices without working bit
+  by bit.
 - `objects_with_metadata(key, value)` answers from an index of metadata values rather than scanning
   every metadata row, so tagging objects with metadata and finding them by tag stays fast as a world
   grows. The index is built in memory at startup; the database format is unchanged.

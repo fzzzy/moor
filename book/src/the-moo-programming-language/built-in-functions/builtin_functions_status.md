@@ -153,19 +153,24 @@ open an issue on the [mooR GitHub issue tracker](https://github.com/timbran-proj
 
 ### Values / encoding
 
-| Name                                        | Complete | Notes                                                                              |
-| ------------------------------------------- | -------- | ---------------------------------------------------------------------------------- |
-| [`value_bytes`](values.md#value_bytes)      | &check;  |                                                                                    |
-| [`value_hash`](values.md#value_hash)        | &check;  | mooR CBOR value representation                                                     |
-| [`value_diff`](value-diffs.md#value_diff)   | &check;  | mooR extension                                                                     |
-| [`value_diff3`](value-diffs.md#value_diff3) | &check;  | mooR extension                                                                     |
-| [`encode_cbor`](values.md#encode_cbor)      | &check;  | mooR extension                                                                     |
-| [`decode_cbor`](values.md#decode_cbor)      | &check;  | mooR extension                                                                     |
-| [`string_hash`](values.md#string_hash)      | &check;  |                                                                                    |
-| [`binary_hash`](values.md#binary_hash)      | &check;  |                                                                                    |
-| [`decode_binary`](strings.md#decode_binary) |          | Binary encoding will likely work differently in moor. See README.md for more info. |
-| [`encode_binary`](strings.md#encode_binary) |          |                                                                                    |
-| [`object_bytes`](values.md#object_bytes)    | &check;  |                                                                                    |
+| Name                                               | Complete | Notes                                                                              |
+| -------------------------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| [`value_bytes`](values.md#value_bytes)             | &check;  |                                                                                    |
+| [`value_hash`](values.md#value_hash)               | &check;  | mooR CBOR value representation                                                     |
+| [`value_diff`](value-diffs.md#value_diff)          | &check;  | mooR extension                                                                     |
+| [`value_diff3`](value-diffs.md#value_diff3)        | &check;  | mooR extension                                                                     |
+| [`encode_cbor`](values.md#encode_cbor)             | &check;  | mooR extension                                                                     |
+| [`decode_cbor`](values.md#decode_cbor)             | &check;  | mooR extension                                                                     |
+| [`string_hash`](values.md#string_hash)             | &check;  |                                                                                    |
+| [`binary_hash`](values.md#binary_hash)             | &check;  |                                                                                    |
+| [`decode_binary`](strings.md#decode_binary)        |          | Binary encoding will likely work differently in moor. See README.md for more info. |
+| [`encode_binary`](strings.md#encode_binary)        |          |                                                                                    |
+| [`object_bytes`](values.md#object_bytes)           | &check;  |                                                                                    |
+| [`binary_pack`](values.md#binary_pack)             | &check;  | mooR extension                                                                     |
+| [`binary_unpack`](values.md#binary_unpack)         | &check;  | mooR extension                                                                     |
+| [`binary_field`](values.md#binary_field)           | &check;  | mooR extension                                                                     |
+| [`binary_set_field`](values.md#binary_set_field)   | &check;  | mooR extension                                                                     |
+| [`binary_set_fields`](values.md#binary_set_fields) | &check;  | mooR extension                                                                     |
 
 ### Structured Data Matching and Pathfinding
 

@@ -22,9 +22,9 @@ use crate::{
 use moor_common::util::write_i64_decimal;
 use moor_compiler::{ObjDefParseError, offset_for_builtin, parse_literal_value, to_literal};
 use moor_var::{
-    ByteSized, E_ARGS, E_FLOAT, E_INVARG, E_MAXREC, E_RANGE, E_TYPE, ValueDiffOptions, Variant,
-    decode_var_cbor, encode_var_cbor, v_binary, v_err, v_float, v_int, v_obj, v_objid, v_str,
-    v_string, v_sym, value_diff, value_diff3,
+    ByteSized, E_ARGS, E_FLOAT, E_INVARG, E_MAXREC, E_RANGE, E_TYPE, ValueDiffOptions, Var,
+    Variant, decode_var_cbor, encode_var_cbor, v_binary, v_err, v_float, v_int, v_list_iter, v_obj,
+    v_objid, v_str, v_string, v_sym, value_diff, value_diff3,
 };
 use std::fmt::Write;
 use uuid::Uuid;
@@ -657,6 +657,232 @@ fn bf_uuid(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     }
 }
 
+/// Entries packed, unpacked or changed per tick charged by the packed-field builtins.
+const PACKED_ENTRIES_PER_TICK: usize = 256;
+
+/// The widest packed field, in bits.
+const MAX_PACKED_WIDTH: i64 = 32;
+
+/// Packed fields: unsigned integers of `width` bits laid end to end in one bit stream, entry `i`
+/// (from 0) at bits `i * width` to `i * width + width - 1`. Bit `k` of the stream is bit `k % 8` of
+/// byte `k / 8`, and each value's lowest bit comes first. Entries may span bytes.
+fn packed_width(arg: &Var, name: &str) -> Result<usize, BfErr> {
+    let Some(width) = arg.as_integer() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    if !(1..=MAX_PACKED_WIDTH).contains(&width) {
+        return Err(BfErr::ErrValue(E_INVARG.msg(format!(
+            "{name}() width must be from 1 to {MAX_PACKED_WIDTH}"
+        ))));
+    }
+    Ok(width as usize)
+}
+
+fn packed_entries(bytes: &[u8], width: usize) -> usize {
+    bytes.len() * 8 / width
+}
+
+fn packed_get(bytes: &[u8], width: usize, entry: usize) -> u64 {
+    let bit = entry * width;
+    let first = bit / 8;
+    let last = (bit + width - 1) / 8;
+    let mut word = 0u64;
+    for (i, byte) in bytes[first..=last].iter().enumerate() {
+        word |= u64::from(*byte) << (i * 8);
+    }
+    (word >> (bit % 8)) & ((1u64 << width) - 1)
+}
+
+fn packed_set(bytes: &mut [u8], width: usize, entry: usize, value: u64) {
+    let bit = entry * width;
+    let shift = bit % 8;
+    let first = bit / 8;
+    let last = (bit + width - 1) / 8;
+    let mask = ((1u64 << width) - 1) << shift;
+    let value = value << shift;
+    for (i, byte) in bytes[first..=last].iter_mut().enumerate() {
+        let byte_mask = (mask >> (i * 8)) as u8;
+        *byte = (*byte & !byte_mask) | ((value >> (i * 8)) as u8 & byte_mask);
+    }
+}
+
+/// A value to store in a packed field, checked against the width.
+fn packed_value(value: &Var, width: usize, name: &str) -> Result<u64, BfErr> {
+    let Some(value) = value.as_integer() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    if value < 0 || value >= 1i64 << width {
+        return Err(BfErr::ErrValue(E_INVARG.msg(format!(
+            "{name}() value {value} does not fit in {width} bits"
+        ))));
+    }
+    Ok(value as u64)
+}
+
+/// A 1-based entry index, as a 0-based one.
+fn packed_index(index: &Var, entries: usize, name: &str) -> Result<usize, BfErr> {
+    let Some(index) = index.as_integer() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    if index < 1 || index as u64 > entries as u64 {
+        return Err(BfErr::ErrValue(
+            E_RANGE.msg(format!("{name}() index {index} is outside 1 to {entries}")),
+        ));
+    }
+    Ok(index as usize - 1)
+}
+
+fn packed_ticks(bf_args: &mut BfCallState<'_>, entries: usize) -> Result<(), BfErr> {
+    bf_args
+        .tick_budget()
+        .consume_ticks(entries / PACKED_ENTRIES_PER_TICK)
+}
+
+/// Usage: `binary binary_pack(list values, int width)`
+/// Packs non-negative integers into a binary value, `width` bits each, end to end. The result is
+/// as many bytes as the values need, with any unused bits of the last byte zero.
+fn bf_binary_pack(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() != 2 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("binary_pack() requires exactly 2 arguments"),
+        ));
+    }
+    let width = packed_width(&bf_args.args[1], "binary_pack")?;
+    let Some(values) = bf_args.args[0].as_list() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let mut bytes = vec![0u8; (values.len() * width).div_ceil(8)];
+    for (entry, value) in values.iter().enumerate() {
+        packed_set(
+            &mut bytes,
+            width,
+            entry,
+            packed_value(&value, width, "binary_pack")?,
+        );
+    }
+    let entries = values.len();
+    packed_ticks(bf_args, entries)?;
+    Ok(Ret(v_binary(bytes)))
+}
+
+/// Usage: `list binary_unpack(binary data, int width [, int start [, int count]])`
+/// Reads `count` packed fields of `width` bits from `data`, starting at entry `start` (default
+/// 1). By default it reads every whole entry from `start` to the end.
+fn bf_binary_unpack(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() < 2 || bf_args.args.len() > 4 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("binary_unpack() takes 2 to 4 arguments"),
+        ));
+    }
+    let width = packed_width(&bf_args.args[1], "binary_unpack")?;
+    let Variant::Binary(data) = bf_args.args[0].variant() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let bytes = data.as_bytes();
+    let entries = packed_entries(bytes, width);
+    let start = match bf_args.args.iter_ref().nth(2) {
+        None => 1,
+        Some(start) => start.as_integer().ok_or(BfErr::Code(E_TYPE))?,
+    };
+    let count = match bf_args.args.iter_ref().nth(3) {
+        None => entries as i64 - start + 1,
+        Some(count) => count.as_integer().ok_or(BfErr::Code(E_TYPE))?,
+    };
+    if start < 1 || count < 0 || (start - 1).saturating_add(count) > entries as i64 {
+        return Err(BfErr::ErrValue(E_RANGE.msg(format!(
+            "binary_unpack() entries {start} to {} are outside 1 to {entries}",
+            start.saturating_add(count) - 1
+        ))));
+    }
+    let first = start as usize - 1;
+    let values: Vec<Var> = (first..first + count as usize)
+        .map(|entry| v_int(packed_get(bytes, width, entry) as i64))
+        .collect();
+    packed_ticks(bf_args, values.len())?;
+    Ok(Ret(v_list_iter(values)))
+}
+
+/// Usage: `int binary_field(binary data, int width, int index)`
+/// Returns entry `index` of the packed fields of `width` bits in `data`.
+fn bf_binary_field(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() != 3 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("binary_field() requires exactly 3 arguments"),
+        ));
+    }
+    let width = packed_width(&bf_args.args[1], "binary_field")?;
+    let Variant::Binary(data) = bf_args.args[0].variant() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let bytes = data.as_bytes();
+    let entry = packed_index(
+        &bf_args.args[2],
+        packed_entries(bytes, width),
+        "binary_field",
+    )?;
+    Ok(Ret(v_int(packed_get(bytes, width, entry) as i64)))
+}
+
+/// Usage: `binary binary_set_field(binary data, int width, int index, int value)`
+/// Returns a copy of `data` with entry `index` of its packed fields of `width` bits set to
+/// `value`.
+fn bf_binary_set_field(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() != 4 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("binary_set_field() requires exactly 4 arguments"),
+        ));
+    }
+    let width = packed_width(&bf_args.args[1], "binary_set_field")?;
+    let Variant::Binary(data) = bf_args.args[0].variant() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let mut bytes = data.as_bytes().to_vec();
+    let entry = packed_index(
+        &bf_args.args[2],
+        packed_entries(&bytes, width),
+        "binary_set_field",
+    )?;
+    let value = packed_value(&bf_args.args[3], width, "binary_set_field")?;
+    packed_set(&mut bytes, width, entry, value);
+    Ok(Ret(v_binary(bytes)))
+}
+
+/// Usage: `binary binary_set_fields(binary data, int width, list changes)`
+/// Returns a copy of `data` with each `{index, value}` pair in `changes` applied to its packed
+/// fields of `width` bits, in order, so a later pair for the same index wins.
+fn bf_binary_set_fields(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
+    if bf_args.args.len() != 3 {
+        return Err(BfErr::ErrValue(
+            E_ARGS.msg("binary_set_fields() requires exactly 3 arguments"),
+        ));
+    }
+    let width = packed_width(&bf_args.args[1], "binary_set_fields")?;
+    let Variant::Binary(data) = bf_args.args[0].variant() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let Some(changes) = bf_args.args[2].as_list() else {
+        return Err(BfErr::Code(E_TYPE));
+    };
+    let mut bytes = data.as_bytes().to_vec();
+    let entries = packed_entries(&bytes, width);
+    for change in changes.iter() {
+        let Some(pair) = change.as_list() else {
+            return Err(BfErr::Code(E_TYPE));
+        };
+        if pair.len() != 2 {
+            return Err(BfErr::ErrValue(
+                E_TYPE.msg("binary_set_fields() changes must be {index, value} pairs"),
+            ));
+        }
+        let entry = packed_index(&pair[0], entries, "binary_set_fields")?;
+        let value = packed_value(&pair[1], width, "binary_set_fields")?;
+        packed_set(&mut bytes, width, entry, value);
+    }
+    let count = changes.len();
+    packed_ticks(bf_args, count)?;
+    Ok(Ret(v_binary(bytes)))
+}
+
 pub(crate) fn register_bf_values(builtins: &mut [BuiltinFunction]) {
     builtins[offset_for_builtin("typeof")] = bf_typeof;
     builtins[offset_for_builtin("tostr")] = bf_tostr;
@@ -680,4 +906,65 @@ pub(crate) fn register_bf_values(builtins: &mut [BuiltinFunction]) {
     builtins[offset_for_builtin("decode_cbor")] = bf_decode_cbor;
     builtins[offset_for_builtin("value_diff")] = bf_value_diff;
     builtins[offset_for_builtin("value_diff3")] = bf_value_diff3;
+    builtins[offset_for_builtin("binary_pack")] = bf_binary_pack;
+    builtins[offset_for_builtin("binary_unpack")] = bf_binary_unpack;
+    builtins[offset_for_builtin("binary_field")] = bf_binary_field;
+    builtins[offset_for_builtin("binary_set_field")] = bf_binary_set_field;
+    builtins[offset_for_builtin("binary_set_fields")] = bf_binary_set_fields;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{packed_entries, packed_get, packed_set};
+
+    fn pack(values: &[u64], width: usize) -> Vec<u8> {
+        let mut bytes = vec![0u8; (values.len() * width).div_ceil(8)];
+        for (entry, value) in values.iter().enumerate() {
+            packed_set(&mut bytes, width, entry, *value);
+        }
+        bytes
+    }
+
+    #[test]
+    fn fields_round_trip_at_every_width() {
+        for width in 1..=32 {
+            let max = (1u64 << width) - 1;
+            let values: Vec<u64> = (0..37u64)
+                .map(|i| i.wrapping_mul(0x9E37_79B9) & max)
+                .collect();
+            let bytes = pack(&values, width);
+            assert_eq!(bytes.len(), (values.len() * width).div_ceil(8));
+            for (entry, value) in values.iter().enumerate() {
+                assert_eq!(packed_get(&bytes, width, entry), *value, "width {width}");
+            }
+        }
+    }
+
+    #[test]
+    fn fields_are_lowest_bit_first_and_span_bytes() {
+        // Width 5: entry 0 is bits 0-4 of byte 0, entry 1 is bits 5-7 of byte 0 and 0-1 of
+        // byte 1.
+        let bytes = pack(&[0b10110, 0b01101, 0b11111], 5);
+        assert_eq!(bytes, vec![0b1011_0110, 0b0111_1101]);
+        // Width 12, as for a large palette: entry 1 starts half way through byte 1.
+        let bytes = pack(&[0xABC, 0x123], 12);
+        assert_eq!(bytes, vec![0xBC, 0x3A, 0x12]);
+    }
+
+    #[test]
+    fn setting_a_field_leaves_its_neighbours() {
+        let mut bytes = vec![0xFF; 4];
+        packed_set(&mut bytes, 7, 1, 0);
+        assert_eq!(packed_get(&bytes, 7, 0), 0x7F);
+        assert_eq!(packed_get(&bytes, 7, 1), 0);
+        assert_eq!(packed_get(&bytes, 7, 2), 0x7F);
+        assert_eq!(bytes, vec![0x7F, 0xC0, 0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn only_whole_entries_count() {
+        assert_eq!(packed_entries(&[0; 2048], 4), 4096);
+        assert_eq!(packed_entries(&[0; 3], 5), 4);
+        assert_eq!(packed_entries(&[], 1), 0);
+    }
 }
