@@ -12,7 +12,7 @@ object DISCORD_BRIDGE [
   property batch_seconds (owner: ARCH_WIZARD, flags: "") = 5;
   property bot_token (owner: ARCH_WIZARD, flags: "") = "";
   property channel_id (owner: ARCH_WIZARD, flags: "") = "";
-  property channel_members (owner: ARCH_WIZARD, flags: "") = {};
+  property channel_members (owner: ARCH_WIZARD, flags: "") = [];
   property cursor (owner: ARCH_WIZARD, flags: "") = "";
   property enabled (owner: ARCH_WIZARD, flags: "") = false;
   property flush_schedule (owner: ARCH_WIZARD, flags: "") = 0;
@@ -24,6 +24,7 @@ object DISCORD_BRIDGE [
   property last_error (owner: ARCH_WIZARD, flags: "") = [];
   property lookup_seconds (owner: ARCH_WIZARD, flags: "") = 300;
   property max_length (owner: ARCH_WIZARD, flags: "") = 400;
+  property member_seconds (owner: ARCH_WIZARD, flags: "") = 7776000;
   property outbox (owner: ARCH_WIZARD, flags: "") = {};
   property poll_schedule (owner: ARCH_WIZARD, flags: "") = 0;
   property poll_seconds (owner: ARCH_WIZARD, flags: "") = 10;
@@ -120,7 +121,12 @@ object DISCORD_BRIDGE [
     const key = tostr(user, " ", kind);
     const last = `this.presence[key] ! E_RANGE => 0';
     kind != 'created && time() - last < this.presence_quiet_seconds && return false;
-    this.presence[key] = time();
+    "Entries past the quiet period no longer hold anything back, so they are dropped.";
+    let presence = [key -> time()];
+    for other in (mapkeys(this.presence))
+      time() - this.presence[other] < this.presence_quiet_seconds && (presence[other] = this.presence[other]);
+    endfor
+    this.presence = presence;
     const name = user:name();
     const text = kind == 'created ? "A new guest, " + name + ", has arrived for the first time." | kind == 'connected ? name + " has arrived at " + this.world_name + "." | name + " has left.";
     this:_queue(text);
@@ -202,7 +208,12 @@ object DISCORD_BRIDGE [
     typeof(discord_id) == TYPE_STR && length(display_name) && length(text) || return 0;
     this:_admit() || return -1;
     "Whoever posts here is a member of the channel's server, so a mention of them will resolve.";
-    this.channel_members = setadd(this.channel_members, discord_id);
+    let members = [discord_id -> time()];
+    const seen = this:_members();
+    for other in (mapkeys(seen))
+      time() - seen[other] < this.member_seconds && (members[other] = seen[other]);
+    endfor
+    this.channel_members = members;
     const linked = $login:find_by_oauth2("discord", discord_id);
     const linked_player = valid(linked) && is_player(linked) ? linked | #-1;
     for speaker in (this.speakers)
@@ -217,7 +228,7 @@ object DISCORD_BRIDGE [
     const {actor} = args;
     typeof(actor) == TYPE_OBJ && valid(actor) && is_player(actor) || return "";
     for identity in (`actor.oauth2_identities ! ANY => {}')
-      if (typeof(identity) == TYPE_LIST && length(identity) == 2 && identity[1] == "discord" && identity[2] in this.channel_members)
+      if (typeof(identity) == TYPE_LIST && length(identity) == 2 && identity[1] == "discord" && maphaskey(this:_members(), identity[2]))
         return "<@" + identity[2] + ">";
       endif
     endfor
@@ -317,6 +328,18 @@ object DISCORD_BRIDGE [
     const {text} = args;
     server_log(text);
     this.last_error = ["time" -> time(), "message" -> text];
+  endmethod
+
+  method _members owner: ARCH_WIZARD
+    "Channel members as a map of Discord id to when they last posted; an older list of ids counts as seen now.";
+    caller == this || raise(E_PERM);
+    const members = this.channel_members;
+    typeof(members) == TYPE_MAP && return members;
+    let converted = [];
+    for id in (typeof(members) == TYPE_LIST ? members | {})
+      typeof(id) == TYPE_STR && (converted[id] = time());
+    endfor
+    return converted;
   endmethod
 
   method _request owner: ARCH_WIZARD

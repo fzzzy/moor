@@ -45,7 +45,7 @@ object DISCORD_SCENARIOS [
     bridge.outbox = {};
     bridge.presence = [];
     bridge.inbound = {};
-    bridge.channel_members = {};
+    bridge.channel_members = [];
     "The scenarios use short ids, which Discord would have made in 2015.";
     bridge.backlog_seconds = 0;
     bridge.speakers = {};
@@ -299,6 +299,36 @@ object DISCORD_SCENARIOS [
       $test_utils:assert_true($discord_bridge:status()["polling"], "and polls again");
     finally
       this:_teardown(saved);
+    endtry
+    return true;
+  endmethod
+
+  method test_old_presence_and_members_are_dropped owner: core::ARCH_WIZARD
+    "Presence entries past the quiet period and members unseen for the member period are dropped; a list of members still works.";
+    const saved = this:_setup();
+    const room = create($room);
+    const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
+    try
+      move(speaker, room);
+      move(this, room);
+      $discord_bridge:add_speaker(speaker);
+      $discord_bridge.presence = ["#1 connected" -> time() - 7200, "#2 connected" -> time()];
+      $discord_bridge:presence_event(#90102, 'connected);
+      $test_utils:assert_eq(mapkeys($discord_bridge.presence), {"#2 connected", tostr(#90102, " connected")}, "the old entry is gone");
+      $discord_bridge.channel_members = {"7", "8"};
+      $discord_bridge.cursor = "100";
+      this.channel = {this:_message("101", "9", "alice", "hello")};
+      $discord_bridge:_poll();
+      $test_utils:assert_eq(mapkeys($discord_bridge.channel_members), {"7", "8", "9"}, "a list of members becomes a map");
+      $discord_bridge.channel_members["7"] = time() - 8000000;
+      this.channel = {this:_message("102", "9", "alice", "again")};
+      $discord_bridge:_poll();
+      $test_utils:assert_eq(mapkeys($discord_bridge.channel_members), {"8", "9"}, "a member unseen for 90 days is gone");
+    finally
+      this:_teardown(saved);
+      recycle(speaker);
+      recycle(room);
     endtry
     return true;
   endmethod
