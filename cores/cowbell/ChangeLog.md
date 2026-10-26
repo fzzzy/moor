@@ -121,6 +121,9 @@ Cowbell entries.
 
 ### Changed
 
+- `@changes` sends each package's `package.moo` with the fetched source, so Cowbell's source can
+  be split into packages. This needs a server with package-aware objdef review; upgrade the server
+  before updating Cowbell past this change.
 - Cowbell's source is an objdef package: `src/package.moo`, declaring `package "cowbell"`, replaces
   `src/constants.moo`. Cowbell's own files are unchanged. Packages built on Cowbell refer to its
   objects as `cowbell::THING`, `cowbell::ARCH_WIZARD` and so on, as the test fixtures now do.

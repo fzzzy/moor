@@ -44,6 +44,9 @@ E_PERM
 ; const snapshot = toflyweight($git_snapshot, ['complete -> true, 'entries -> {toflyweight($git_entry, ['kind -> 'file, 'path -> "constants.moo", 'content -> decode_base64("/w==")]), toflyweight($git_entry, ['kind -> 'file, 'path -> "notes.txt", 'content -> decode_base64("/w==")]), toflyweight($git_entry, ['kind -> 'file, 'path -> "nested/object.moo", 'content -> binary_from_str("object #9500\nendobject")])}]); return $change_manager:git_test_sources(snapshot);
 {["label" -> "nested/object.moo", "text" -> "object #9500\nendobject"]}
 
+; const snapshot = toflyweight($git_snapshot, ['complete -> true, 'entries -> {toflyweight($git_entry, ['kind -> 'file, 'path -> "core/package.moo", 'content -> binary_from_str("package \"core\" [objdef_version -> 2];")]), toflyweight($git_entry, ['kind -> 'file, 'path -> "core/object.moo", 'content -> binary_from_str("object #9500\nendobject")])}]); return $change_manager:git_test_sources(snapshot);
+{["label" -> "core/package.moo", "text" -> "package \"core\" [objdef_version -> 2];"], ["label" -> "core/object.moo", "text" -> "object #9500\nendobject"]}
+
 ; const snapshot = toflyweight($git_snapshot, ['complete -> true, 'entries -> {toflyweight($git_entry, ['kind -> 'file, 'path -> "broken.moo", 'content -> decode_base64("/w==")])}]); try $change_manager:git_test_sources(snapshot); except error (E_INVARG) return error[3]["code"]; endtry return "not rejected";
 "invalid_git_utf8"
 
