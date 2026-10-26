@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Objdef reviews leave locations that changed in the world alone: a location row appears only when
+  source moved an object that has not moved since, and never for a player. Players walking around no
+  longer show up in every update.
 - Verb code in objdef source can name a package's object constants qualified, such as
   `core::ROOT:name()`. They compile to object literals, and exporting writes object literals that a
   package constant binds as their qualified names. Outside objdef source, `pkg::NAME` is refused.

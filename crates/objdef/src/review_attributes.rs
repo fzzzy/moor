@@ -13,13 +13,17 @@
 
 //! Parent and location changes for installed objects.
 //!
+//! Where an object is, is mostly world state: players and things move in play. So a location is
+//! reviewed only when source moved the object and it is still where it was last accepted, and a
+//! player's never is; a class of players can be.
+//!
 //! A parent change drops every property the object inherited from its old ancestors and does
 //! not inherit from its new ones, from the object and all of its descendants. A row that would
 //! drop a value someone set is refused, unless the same review defines that property on the
 //! object itself, which restores it.
 
 use super::{BASE_KEY, ChangeRow, ChangeTarget, ReviewError, classify, digest, inspection, record};
-use moor_common::model::{TaskPermissions, ValSet, WorldState, WorldStateError};
+use moor_common::model::{ObjFlag, TaskPermissions, ValSet, WorldState, WorldStateError};
 use moor_compiler::ObjectDefinition;
 use moor_var::{Associative, NOTHING, Obj, Symbol, Var, v_bool, v_list, v_map, v_obj, v_str};
 use std::collections::BTreeSet;
@@ -86,6 +90,10 @@ impl Context<'_> {
         let live_hash = digest(&v_obj(live))?;
         let incoming_hash = digest(&v_obj(incoming))?;
         let base = inspection::baseline_hash(Some(self.local), "attribute", name);
+        let classification = classify(base.as_deref(), &live_hash, &incoming_hash);
+        if name == "location" && (classification != "upstream" || self.is_player_instance()?) {
+            return Ok(None);
+        }
         let mut blockers = Vec::new();
         if !self.trusted {
             blockers.push(v_str("untrusted_target_authority"));
@@ -150,7 +158,6 @@ impl Context<'_> {
             v_list(&descendants),
             v_list(&losses),
         ]));
-        let classification = classify(base.as_deref(), &live_hash, &incoming_hash);
         let eligible = blockers.is_empty();
         let default = if eligible && classification == "upstream" {
             "incoming"
@@ -226,6 +233,16 @@ impl Context<'_> {
             },
             report,
         )))
+    }
+
+    /// Whether the object is a player rather than a class of players: it has the player flag and
+    /// no children.
+    fn is_player_instance(&self) -> Result<bool, ReviewError> {
+        Ok(self.world.flags_of(&self.object)?.contains(ObjFlag::User)
+            && self
+                .world
+                .children_of(self.permissions, &self.object)?
+                .is_empty())
     }
 
     /// Whether `target` is already the object's descendant (for a parent) or inside it (for a

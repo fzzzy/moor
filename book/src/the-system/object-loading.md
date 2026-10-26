@@ -708,6 +708,11 @@ incoming, and accepted values like a program row, so an upstream change defaults
 local change or conflict waits for a decision. `incoming` changes the attribute; `local` keeps the
 live value and records the incoming one as accepted. Both record the new accepted value.
 
+Locations are mostly world state: players and things move in play. A review shows a location row
+only when source moved the object and the object is still at its accepted location. An object moved
+in the world keeps its location without a row, even when source moved it too. A player, an object
+with the player flag and no children, never gets a location row; a class of players can.
+
 A parent change makes the object and its descendants stop inheriting the properties of the old
 ancestors that the new ones do not define. The row lists these properties in `removes`. If the
 object or a descendant has its own value for one of them, the row is blocked with
