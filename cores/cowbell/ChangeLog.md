@@ -8,6 +8,11 @@ Cowbell entries.
 
 ### Added
 
+- `@changes` packages can come from separate source trees. `@changes depends PACKAGE DEPENDENCY ...`
+  lets a package's source name another package's objects with qualified constants, such as
+  `core::ROOT`, using the bindings that package's last applied or finished review provided. The
+  packages list shows each package's dependencies, and agents can set them with
+  `changes_set_depends`. This needs a server whose reviews report their bindings.
 - `$http`, in a new `http` package with `$url_utils`, makes HTTP requests through the curl worker
   with the caller's permissions: `$http:request(method, url [, body [, headers [, options]]])` and
   `$http:get(url [, headers [, options]])`, where options may set `timeout_seconds`. The change

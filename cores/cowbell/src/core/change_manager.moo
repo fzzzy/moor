@@ -434,7 +434,7 @@ object CHANGE_MANAGER [
     const auth = `this:_entry(caller_perms()) ! E_PERM => {}';
     length(auth) || return ["schema" -> 1, "authorized" -> false];
     set_task_perms(auth[2]);
-    return ["schema" -> 1, "authorized" -> true, "operations" -> {"packages", "history", "configure", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object", "attribute"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
+    return ["schema" -> 1, "authorized" -> true, "operations" -> {"packages", "history", "configure", "depends", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object", "attribute"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
   endmethod
 
   method packages owner: ARCH_WIZARD
@@ -466,8 +466,17 @@ object CHANGE_MANAGER [
     "Create or conditionally replace explicit package bindings and review policy.";
     const auth = this:_entry(caller_perms());
     set_task_perms(auth[2]);
-    const {name, objects, constants, ?url = "", ?expected = 0, ?trusted_owners = {}} = args;
+    let {name, objects, constants, ?url = "", ?expected = 0, ?trusted_owners = {}, ?depends = 0} = args;
     typeof(name) == TYPE_STR && length(name) > 0 && length(name) <= 64 || raise(E_INVARG);
+    if (depends == 0)
+      "Settings saved without dependencies keep the ones already configured.";
+      depends = `this.packages[name]["depends"] ! E_RANGE => {}';
+    endif
+    typeof(depends) == TYPE_LIST && length(depends) <= 32 || raise(E_INVARG);
+    for dependency in (depends)
+      typeof(dependency) == TYPE_STR && dependency != name && maphaskey(this.packages, dependency) || this:_error("missing_dependency", tostr("Configure package ", toliteral(dependency), " before depending on it."));
+      !(name in this:_dependencies(dependency)) || this:_error("dependency_cycle", tostr("Package ", dependency, " already depends on ", name, "."));
+    endfor
     typeof(objects) == TYPE_LIST && length(objects) <= 4096 || raise(E_INVARG);
     typeof(constants) == TYPE_MAP && value_bytes(constants) <= 1048576 || raise(E_INVARG);
     typeof(trusted_owners) == TYPE_LIST && length(trusted_owners) <= 128 || raise(E_INVARG);
@@ -498,11 +507,12 @@ object CHANGE_MANAGER [
       length(this.packages) < 32 || raise(E_QUOTA);
     endif
     generation == expected || this:_error("stale_generation", "Package settings changed.");
-    const package = ["schema" -> 1, "generation" -> generation + 1, "objects" -> objects, "fields" -> {"program", "property", "object", "attribute"}, "constants" -> constants, "trusted_owners" -> trusted_owners, "upstream" -> upstream, "active" -> 0];
+    const package = ["schema" -> 1, "generation" -> generation + 1, "objects" -> objects, "fields" -> {"program", "property", "object", "attribute"}, "constants" -> constants, "trusted_owners" -> trusted_owners, "depends" -> depends, "upstream" -> upstream, "active" -> 0];
     let configured = package;
     if (maphaskey(this.packages, name))
       configured["policy"] = `this.packages[name]["policy"] ! E_RANGE => ["schema" -> 1, "groups" -> {}]';
       configured["members"] = `this.packages[name]["members"] ! E_RANGE => []';
+      configured["provided_bindings"] = `this.packages[name]["provided_bindings"] ! E_RANGE => []';
     endif
     this.packages[name] = configured;
     return configured;
@@ -569,6 +579,53 @@ object CHANGE_MANAGER [
     maphaskey(this.packages, name) || raise(E_INVARG);
     const package = this.packages[name];
     return this:configure(name, package["objects"], package["constants"], url, expected, package["trusted_owners"]);
+  endmethod
+
+  method depends owner: ARCH_WIZARD
+    "Conditionally set the packages whose objects a package's source builds on.";
+    const auth = this:_entry(caller_perms());
+    set_task_perms(auth[2]);
+    const {name, depends, expected} = args;
+    maphaskey(this.packages, name) || raise(E_INVARG);
+    const package = this.packages[name];
+    return this:configure(name, package["objects"], package["constants"], package["upstream"], expected, package["trusted_owners"], depends);
+  endmethod
+
+  method _dependencies owner: ARCH_WIZARD
+    "The packages a package depends on, directly or through others, dependencies first.";
+    caller == this || raise(E_PERM);
+    const {name, ?visiting = {}} = args;
+    !(name in visiting) || this:_error("dependency_cycle", tostr("Package ", name, " depends on itself."));
+    let ordered = {};
+    for dependency in (`this.packages[name]["depends"] ! E_RANGE => {}')
+      for inherited in ({@this:_dependencies(dependency, {@visiting, name}), dependency})
+        if (!(inherited in ordered))
+          ordered = {@ordered, inherited};
+        endif
+      endfor
+    endfor
+    return ordered;
+  endmethod
+
+  method _bindings owner: ARCH_WIZARD
+    "A package's bindings with those its dependencies provide, which its source names qualified.";
+    caller == this || raise(E_PERM);
+    const {name} = args;
+    let bindings = [];
+    for dependency in (this:_dependencies(name))
+      const provided = `this.packages[dependency]["provided_bindings"] ! E_RANGE => 0';
+      typeof(provided) == TYPE_MAP || this:_error("unreviewed_dependency", tostr("Review package ", dependency, " before ", name, ", so its bindings are known."));
+      for constant in (mapkeys(provided))
+        !maphaskey(bindings, constant) || bindings[constant] == provided[constant] || this:_error("binding_conflict", tostr("Packages bind ", constant, " differently."));
+        bindings[constant] = provided[constant];
+      endfor
+    endfor
+    const own = this.packages[name]["constants"];
+    for constant in (mapkeys(own))
+      !maphaskey(bindings, constant) || this:_error("binding_conflict", tostr("Package ", name, " binds ", constant, ", which a dependency provides."));
+      bindings[constant] = own[constant];
+    endfor
+    return bindings;
   endmethod
 
   method _keys owner: ARCH_WIZARD
@@ -705,9 +762,10 @@ object CHANGE_MANAGER [
     if (!sources && typeof(package["upstream"]) == TYPE_MAP)
       auth[1].wizard || raise(E_PERM, "Git staging requires wizard authority.");
     endif
+    const constants = this:_bindings(name);
     const id = this.next_review;
     this.next_review = id + 1;
-    let record = ["id" -> id, "generation" -> 1, "actor" -> auth[1], "authority" -> auth[2], "package" -> name, "package_generation" -> package["generation"], "upstream" -> package["upstream"], "status" -> "fetching", "task" -> 0, "error" -> [], "sources" -> {}, "report" -> [], "choices" -> [], "provenance" -> [], "request" -> ["schema" -> 1, "operation" -> operation, "objects" -> package["objects"], "fields" -> package["fields"], "constants" -> package["constants"], "trusted_owners" -> package["trusted_owners"]]];
+    let record = ["id" -> id, "generation" -> 1, "actor" -> auth[1], "authority" -> auth[2], "package" -> name, "package_generation" -> package["generation"], "upstream" -> package["upstream"], "status" -> "fetching", "task" -> 0, "error" -> [], "sources" -> {}, "report" -> [], "choices" -> [], "provenance" -> [], "request" -> ["schema" -> 1, "operation" -> operation, "objects" -> package["objects"], "fields" -> package["fields"], "constants" -> constants, "trusted_owners" -> package["trusted_owners"]]];
     record["request"]["fields"] = {"program", "property", "object", "attribute"};
     record["request"]["policy"] = `package["policy"] ! E_RANGE => ["schema" -> 1, "groups" -> {}]';
     this.packages[name]["active"] = id;
@@ -1462,6 +1520,7 @@ object CHANGE_MANAGER [
         members[created["member"]] = created;
       endfor
       this.packages[record["package"]]["members"] = members;
+      this:_provide_bindings(record);
       let policy = record["request"]["policy"];
       let creations = `policy["creations"] ! E_RANGE => {}';
       let proposals = `this.packages[record["package"]]["proposed_bindings"] ! E_RANGE => []';
@@ -1597,9 +1656,22 @@ object CHANGE_MANAGER [
     if (state != "discarded" || receipt["decision_count"] > 0)
       this:_store_receipt(receipt);
     endif
+    if (state == "finished")
+      this:_provide_bindings(record);
+    endif
     this.pending = mapdelete(this.pending, record["id"]);
     this.packages[record["package"]]["active"] = 0;
     return this:_receipt_page(receipt, 1);
+  endmethod
+
+  method _provide_bindings owner: ARCH_WIZARD
+    "Keep the bindings an applied or finished review's source provides to packages that depend on it.";
+    caller == this || raise(E_PERM);
+    const {record} = args;
+    const provided = `record["report"]["bindings"] ! E_RANGE, E_TYPE => 0';
+    if (typeof(provided) == TYPE_MAP && maphaskey(this.packages, record["package"]))
+      this.packages[record["package"]]["provided_bindings"] = provided;
+    endif
   endmethod
 
   method _store_receipt owner: ARCH_WIZARD
@@ -2513,7 +2585,7 @@ object CHANGE_MANAGER [
       return this:_command_overview();
     endif
     const action = words[1];
-    action in {"packages", "package", "upstream", "fetch", "stage", "adopt", "status", "diff", "details", "source", "base", "apply", "refresh", "discard", "resolve", "group", "select-group", "skip-group", "initialize", "bindings"} || raise(E_INVARG, tostr("Unknown @changes command: ", action, ". Use help @changes."));
+    action in {"packages", "package", "depends", "upstream", "fetch", "stage", "adopt", "status", "diff", "details", "source", "base", "apply", "refresh", "discard", "resolve", "group", "select-group", "skip-group", "initialize", "bindings"} || raise(E_INVARG, tostr("Unknown @changes command: ", action, ". Use help @changes."));
     if (action == "upstream" && length(words) >= 2)
       const git_index = words[2] == "git" ? 2 | 3;
       if (length(words) >= git_index && words[git_index] == "git")
@@ -2540,9 +2612,10 @@ object CHANGE_MANAGER [
         const review = package["active"] ? this:_command_action(tostr("@changes diff ", package["active"]), tostr("Review ", package["active"])) | "None";
         const complete = `package["policy"]["complete"] ! E_RANGE => {}';
         const scope = length(complete) == length(package["objects"]) && length(complete) > 0 ? "Complete" | complete ? "Mixed" | "Partial";
-        rows = {@rows, {name, tostr(package["generation"]), tostr(length(package["objects"])), scope, source, review}};
+        const depends = `package["depends"] ! E_RANGE => {}';
+        rows = {@rows, {name, tostr(package["generation"]), tostr(length(package["objects"])), scope, depends ? depends:join(", ") | "None", source, review}};
       endfor
-      return {$format.title:mk("Change packages", 3), $format.table:mk({"Package", "Generation", "Objects", "Scope", "Upstream", "Review"}, rows)};
+      return {$format.title:mk("Change packages", 3), $format.table:mk({"Package", "Generation", "Objects", "Scope", "Depends on", "Upstream", "Review"}, rows)};
     endif
     if (action == "package" && length(words) >= 2)
       let objects = {};
@@ -2560,6 +2633,11 @@ object CHANGE_MANAGER [
       const owners = `this.packages[words[2]]["trusted_owners"] ! E_RANGE => {}';
       const result = this:configure(words[2], objects, constants, "", previous, owners);
       return {tostr("Package ", words[2], " configured at generation ", result["generation"], ".")};
+    endif
+    if (action == "depends" && length(words) >= 2)
+      maphaskey(this.packages, words[2]) || raise(E_INVARG, "Configure the package first.");
+      const result = this:depends(words[2], words[3..$], this.packages[words[2]]["generation"]);
+      return {result["depends"] ? tostr("Package ", words[2], " depends on ", result["depends"]:join(", "), ".") | tostr("Package ", words[2], " has no dependencies.")};
     endif
     if (action == "upstream" && length(words) == 3)
       const package = this.packages[words[2]];

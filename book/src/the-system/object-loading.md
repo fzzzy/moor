@@ -741,9 +741,30 @@ the constants of each package it declares, qualified, such as `games::BOARD`. A 
 records the package its file belongs to as `objdef_package` metadata, so exporting the world writes
 it to that package's directory.
 
+In Cowbell, give such a package its own upstream and name the packages it depends on:
+
+```text
+@changes package games
+@changes upstream games git https://example.org/games.git refs/heads/main src
+@changes depends games cowbell
+@changes bindings games GENERATION BOARD=#9600
+@changes fetch games
+```
+
+A review of `games` adds the bindings that `cowbell`'s last applied or finished review provided, and
+those of its own dependencies, to the package's own bindings. Review the dependency first; until
+then, staging the dependent package fails with `unreviewed_dependency`. A dependency on a package
+that is not configured, a cycle, or two packages binding one name differently is refused.
+`@changes depends games` with no names removes the dependencies. Settings saved without dependencies
+keep the configured ones.
+
+Verb code cannot use objdef constants yet. A constant name there compiles as a local variable and
+fails at runtime with `E_VARNF`, and `pkg::NAME` does not parse. Use `$name` references in verb
+code, and constants in headers and property values.
+
 ### Review updates with an agent
 
-Cowbell publishes 25 `changes_*` tools through its MCP catalog. `moor-web-mcp` exposes these tools
+Cowbell publishes 26 `changes_*` tools through its MCP catalog. `moor-web-mcp` exposes these tools
 through web-host. LLM coding rooms use the same definitions and service checks. Tool discovery does
 not grant permission to change the MOO.
 

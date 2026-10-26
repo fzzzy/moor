@@ -1,0 +1,37 @@
+// A package from another source tree names its dependency's objects qualified.
+@wizard
+; load_object({"object #9500", tostr("owner: ", player), tostr("verb test (this none this) owner: ", player, " flags: \"rxd\""), "return 1;", "endverb", "endobject"}); load_object({"object #9501", tostr("owner: ", player), tostr("verb test (this none this) owner: ", player, " flags: \"rxd\""), "return #9500:test();", "endverb", "endobject"}); add_property(#0, "depends_probe", [], {player, ""}); $change_manager:configure("base", {#9500}, ["THING" -> #9500]); return $change_manager:configure("games", {#9501}, ["BOARD" -> #9501], "", 0, {}, {"base"})["depends"];
+{"base"}
+
+// The dependency's bindings are known only after one of its reviews is applied or finished.
+; try $change_manager:stage("games", {["label" -> "board.moo", "text" -> "object #9501\nendobject"]}); except failure (E_INVARG) return failure[3]["code"]; endtry
+"unreviewed_dependency"
+
+; const thing = {"object THING", tostr("owner: ", player), tostr("verb test (this none this) owner: ", player, " flags: \"rxd\""), "return 1;", "endverb", "endobject"}; const review = $change_manager:stage("base", {["label" -> "base/package.moo", "text" -> "package \"base\" [objdef_version -> 2];\ndefine THING = #9500;"], ["label" -> "base/thing.moo", "text" -> thing]}, "adopt"); #0.depends_probe["base"] = review["review_id"]; return $change_manager:apply(review["review_id"], 1)["status"];
+"applying"
+
+; for i in [1..100] if ($change_manager:status(#0.depends_probe["base"])["status"] == "complete") return $change_manager.packages["base"]["provided_bindings"]; endif suspend(0.01); endfor return false;
+["base::THING" -> #9500]
+
+// Settings saved without dependencies keep them.
+; return $change_manager:upstream("games", "", $change_manager.packages["games"]["generation"])["depends"];
+{"base"}
+
+; const board = {"object BOARD", tostr("owner: ", player), tostr("property piece (owner: ", player, ", flags: \"r\") = base::THING;"), tostr("verb test (this none this) owner: ", player, " flags: \"rxd\""), "return #9500:test();", "endverb", "endobject"}; const review = $change_manager:stage("games", {["label" -> "games/package.moo", "text" -> "package \"games\" [objdef_version -> 2, depends -> {\"base\"}];\ndefine BOARD = #9501;"], ["label" -> "games/board.moo", "text" -> board]}, "adopt"); const record = $change_manager.pending[review["review_id"]]; #0.depends_probe["games"] = review["review_id"]; return {review["status"], record["request"]["constants"], record["report"]["bindings"]};
+{"ready", ["BOARD" -> #9501, "base::THING" -> #9500], ["games::BOARD" -> #9501]}
+
+; const id = #0.depends_probe["games"]; $change_manager:discard(id, $change_manager:status(id)["generation"]); try $change_manager:depends("base", {"games"}, $change_manager.packages["base"]["generation"]); except failure (E_INVARG) return failure[3]["code"]; endtry
+"dependency_cycle"
+
+; try $change_manager:configure("stray", {}, [], "", 0, {}, {"missing"}); except failure (E_INVARG) return failure[3]["code"]; endtry
+"missing_dependency"
+
+% @changes depends games
+~~Package games has no dependencies.
+
+% @changes depends games base
+~~Package games depends on base.
+
+; for name in ({"games", "base"}) $change_manager.packages = mapdelete($change_manager.packages, name); endfor recycle(#9501); recycle(#9500); delete_property(#0, "depends_probe"); return true;
+true
+@quiet
