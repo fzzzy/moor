@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `preview_objdef_changes()` and `apply_objdef_changes()` read a source unit labelled
+  `<dir>/package.moo` as the package of the units under `<dir>/`, so source split into packages
+  resolves each file's bare names in its own package. A package record's bindings recorded under
+  bare names keep working: each moves to the qualified name of the package that defines it.
 - `objects_with_metadata(key [, value])` returns the objects that have an object metadata key, or
   that have it set to a given value, leaving out objects the caller may not read.
 - Objdef directories can be packages. A `package.moo`, declaring the package's name, its

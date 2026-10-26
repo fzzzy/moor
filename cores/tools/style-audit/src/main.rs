@@ -113,6 +113,7 @@ fn run() -> Result<bool, Box<dyn Error>> {
                 .into_owned(),
             contents: fs::read_to_string(path)?,
             path: Some(path.clone()),
+            package: None,
         });
     }
     let options = CompileOptions {

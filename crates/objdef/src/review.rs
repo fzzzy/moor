@@ -42,12 +42,15 @@ use crate::{
 use moor_common::model::{
     HasUuid, Named, ObjFlag, TaskPermissions, ValSet, VerbArgsSpec, WorldState, WorldStateError,
 };
-use moor_compiler::{CompileOptions, compile, program_to_tree, unparse};
+use moor_compiler::{
+    CompileOptions, NAMESPACE_SEPARATOR, ObjFileContext, compile, compile_object_definitions,
+    program_to_tree, unparse,
+};
 use moor_var::{
     Associative, ByteSized, Symbol, Var, program::ProgramType, v_bool, v_int, v_list, v_map, v_obj,
     v_str,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 /// Reserved bookkeeping key; source content cannot establish its authority.
 pub const BASE_KEY: &str = "objdef_base";
@@ -192,6 +195,109 @@ fn decode_sources(value: &Var) -> Result<Vec<ObjDefSource>, ReviewError> {
         result.push(ObjDefSource::new(label, text));
     }
     Ok(result)
+}
+
+/// The file a package's declaration is in.
+const PACKAGE_FILE: &str = "package.moo";
+
+/// Parse source units as one world. A unit labelled `<dir>/package.moo` declares the package the
+/// units under `<dir>/` belong to, so their bare constant names mean that package's constants. It
+/// is not an object file, and its `define`s are not bindings: the request's constants are.
+fn parse_units(
+    options: &CompileOptions,
+    constants: Option<&Constants>,
+    units: Vec<ObjDefSource>,
+) -> Result<ObjDefSet, ReviewError> {
+    let (declarations, mut units): (Vec<_>, Vec<_>) = units.into_iter().partition(|unit| {
+        unit.label == PACKAGE_FILE || unit.label.ends_with(&format!("/{PACKAGE_FILE}"))
+    });
+    // Each package: the label prefix of its directory, its name, and the bare names it defines.
+    let mut packages: Vec<(String, String, Vec<String>)> = Vec::new();
+    for unit in &declarations {
+        let mut context = ObjFileContext::new();
+        compile_object_definitions(&unit.contents, options, &mut context)
+            .map_err(|e| ObjdefLoaderError::ObjectDefParseError(unit.label.clone(), Box::new(e)))?;
+        let Some(declaration) = context.declaration() else {
+            return Err(ReviewError::Invalid(format!(
+                "{} must begin with a package declaration",
+                unit.label
+            )));
+        };
+        let prefix = format!("{}{NAMESPACE_SEPARATOR}", declaration.name);
+        let names = context
+            .constants()
+            .keys()
+            .filter_map(|name| name.as_string().strip_prefix(&prefix).map(str::to_string))
+            .collect();
+        let directory = &unit.label[..unit.label.len() - PACKAGE_FILE.len()];
+        packages.push((directory.to_string(), declaration.name.clone(), names));
+    }
+    for unit in &mut units {
+        unit.package = packages
+            .iter()
+            .filter(|(directory, ..)| unit.label.starts_with(directory.as_str()))
+            .max_by_key(|(directory, ..)| directory.len())
+            .map(|(_, name, _)| name.clone());
+    }
+    let constants = match constants {
+        Some(Constants::Map(bindings)) if !packages.is_empty() => {
+            Some(Constants::Map(qualify_bindings(bindings, &packages)?))
+        }
+        other => other.cloned(),
+    };
+    Ok(ObjDefSet::parse_sources(
+        options,
+        None,
+        constants.as_ref(),
+        units,
+    )?)
+}
+
+/// Bindings recorded under a bare name, as a package record made before its source was split into
+/// packages has them, moved to the qualified name of the package that defines that name. A
+/// binding a package's source can already find, qualified or global, is kept as it is.
+fn qualify_bindings(
+    bindings: &moor_var::Map,
+    packages: &[(String, String, Vec<String>)],
+) -> Result<moor_var::Map, ReviewError> {
+    let mut definers: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (_, package, names) in packages {
+        for name in names {
+            definers.entry(name.as_str()).or_default().push(package);
+        }
+    }
+    let recorded = bindings
+        .iter()
+        .filter_map(|(key, _)| key.as_symbol().ok().map(|name| name.as_string()))
+        .collect::<BTreeSet<_>>();
+    let mut entries = Vec::new();
+    for (key, value) in bindings.iter() {
+        let name = key
+            .as_symbol()
+            .map_err(|_| ReviewError::Invalid("constant names must be strings".into()))?
+            .as_string();
+        match definers.get(name.as_str()) {
+            Some(packages)
+                if !name.contains(NAMESPACE_SEPARATOR)
+                    && !packages.iter().any(|package| {
+                        recorded.contains(&format!("{package}{NAMESPACE_SEPARATOR}{name}"))
+                    }) =>
+            {
+                let [package] = packages.as_slice() else {
+                    return Err(ReviewError::Invalid(format!(
+                        "binding {name} is defined by packages {}; record it qualified",
+                        packages.join(" and ")
+                    )));
+                };
+                entries.push((
+                    v_str(&format!("{package}{NAMESPACE_SEPARATOR}{name}")),
+                    value,
+                ));
+            }
+            _ => entries.push((key, value)),
+        }
+    }
+    Ok(v_map(&entries).as_map().unwrap().clone())
 }
 
 /// Classify content equality. An absent baseline never authorizes an update.
@@ -479,16 +585,11 @@ pub(crate) fn analyze(
                     "base_sources requires selected program details".into(),
                 ));
             }
-            Ok(ObjDefSet::parse_sources(
-                options,
-                None,
-                constants.as_ref(),
-                decode_sources(sources)?,
-            )?)
+            parse_units(options, constants.as_ref(), decode_sources(sources)?)
         })
         .transpose()?;
     let units = decode_sources(sources)?;
-    let set = ObjDefSet::parse_sources(options, None, constants.as_ref(), units)?;
+    let set = parse_units(options, constants.as_ref(), units)?;
     let work = set
         .graph()
         .object_definitions()

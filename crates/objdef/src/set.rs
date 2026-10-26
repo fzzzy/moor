@@ -47,6 +47,9 @@ pub struct ObjDefSource {
     pub contents: String,
     /// Filesystem path, when the source came from disk.
     pub path: Option<PathBuf>,
+    /// For an in-memory source, the package whose files it belongs to, which decides what its
+    /// bare constant names mean. A source from disk takes its package from its directory instead.
+    pub package: Option<String>,
 }
 
 impl ObjDefSource {
@@ -56,6 +59,7 @@ impl ObjDefSource {
             label: label.into(),
             contents: contents.into(),
             path: None,
+            package: None,
         }
     }
 
@@ -65,6 +69,7 @@ impl ObjDefSource {
             label: path.to_string_lossy().into_owned(),
             contents,
             path: Some(path),
+            package: None,
         }
     }
 }
@@ -456,7 +461,10 @@ impl ObjDefSet {
             }
             match source.path.as_deref() {
                 Some(path) => context.set_base_path(path),
-                None => context.clear_base_path(),
+                None => {
+                    context.clear_base_path();
+                    context.set_namespace(source.package.as_deref());
+                }
             }
             let compiled_defs = compile_normalized_object_definitions(
                 &source.contents,
