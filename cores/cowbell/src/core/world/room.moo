@@ -1057,23 +1057,23 @@ object ROOM [
 
   verb _acoustic_debug_bump (this none none) owner: ARCH_WIZARD flags: "rxd"
     {reason, ?entry = 0} = args;
-    enabled = `#7.acoustic_debug_enabled ! E_PROPNF => 0';
+    enabled = `core::ROOM.acoustic_debug_enabled ! E_PROPNF => 0';
     if (typeof(enabled) != TYPE_INT && typeof(enabled) != TYPE_FLOAT)
       enabled = enabled ? 1 | 0;
     endif
     !enabled && return;
-    owner_info = `property_info(#7, "acoustic_debug_counts") ! E_INVARG => {#2, "rc"}';
-    prop_owner = typeof(owner_info) == TYPE_LIST && length(owner_info) >= 1 ? owner_info[1] | #2;
+    owner_info = `property_info(core::ROOM, "acoustic_debug_counts") ! E_INVARG => {core::ARCH_WIZARD, "rc"}';
+    prop_owner = typeof(owner_info) == TYPE_LIST && length(owner_info) >= 1 ? owner_info[1] | core::ARCH_WIZARD;
     set_task_perms(prop_owner);
-    counts = `#7.acoustic_debug_counts ! E_PROPNF, E_TYPE => []';
+    counts = `core::ROOM.acoustic_debug_counts ! E_PROPNF, E_TYPE => []';
     if (typeof(counts) != TYPE_MAP)
       counts = [];
     endif
     prev = `counts[reason] ! E_RANGE, E_TYPE => 0';
     counts[reason] = prev + 1;
-    `#7.acoustic_debug_counts = counts ! E_PERM';
+    `core::ROOM.acoustic_debug_counts = counts ! E_PERM';
     if (entry != 0)
-      log = `#7.acoustic_debug_log ! E_PROPNF, E_TYPE => {}';
+      log = `core::ROOM.acoustic_debug_log ! E_PROPNF, E_TYPE => {}';
       if (typeof(log) != TYPE_LIST)
         log = {};
       endif
@@ -1084,7 +1084,7 @@ object ROOM [
       if (length(log) > 20)
         log = log[1..20];
       endif
-      `#7.acoustic_debug_log = log ! E_PERM';
+      `core::ROOM.acoustic_debug_log = log ! E_PERM';
     endif
   endverb
 

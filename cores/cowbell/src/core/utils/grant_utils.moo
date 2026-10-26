@@ -104,13 +104,13 @@ object GRANT_UTILS [
 
   method test_format_grant owner: HACKER
     "Test basic grant formatting.";
-    result = this:format_grant(#38, 'area, {'add_room, 'create_passage});
+    result = this:format_grant(core::PROG_FEATURES, 'area, {'add_room, 'create_passage});
     result == "#38.area(add_room,create_passage)" || raise(E_ASSERT, "format_grant failed: " + result);
     "Test single capability";
-    result = this:format_grant(#12, 'room, {'dig_from});
+    result = this:format_grant(core::PASSAGE, 'room, {'dig_from});
     result == "#12.room(dig_from)" || raise(E_ASSERT, "Single cap format failed: " + result);
     "Test empty capability list";
-    result = this:format_grant(#1, 'test, {});
+    result = this:format_grant(core::ROOT, 'test, {});
     result == "#1.test()" || raise(E_ASSERT, "Empty cap list failed: " + result);
   endmethod
 
@@ -126,20 +126,20 @@ object GRANT_UTILS [
   method test_parse_grant owner: HACKER
     "Test parsing valid grant specifications.";
     {target, category, cap_list} = this:parse_grant("#38.area(add_room,create_passage)");
-    target == #38 || raise(E_ASSERT, "Wrong target: " + tostr(target));
+    target == core::PROG_FEATURES || raise(E_ASSERT, "Wrong target: " + tostr(target));
     category == 'area || raise(E_ASSERT, "Wrong category: " + tostr(category));
     length(cap_list) == 2 || raise(E_ASSERT, "Wrong cap list length: " + tostr(length(cap_list)));
     'add_room in cap_list || raise(E_ASSERT, "'add_room not in cap_list");
     'create_passage in cap_list || raise(E_ASSERT, "'create_passage not in cap_list");
     "Test single capability with whitespace";
     {target, category, cap_list} = this:parse_grant("#12.room( dig_from )");
-    target == #12 || raise(E_ASSERT, "Wrong target (whitespace test)");
+    target == core::PASSAGE || raise(E_ASSERT, "Wrong target (whitespace test)");
     category == 'room || raise(E_ASSERT, "Wrong category (whitespace test)");
     length(cap_list) == 1 || raise(E_ASSERT, "Wrong cap list length (whitespace test)");
     'dig_from in cap_list || raise(E_ASSERT, "'dig_from not in cap_list (whitespace test)");
     "Test empty capability list";
     {target, category, cap_list} = this:parse_grant("#1.test()");
-    target == #1 || raise(E_ASSERT, "Wrong target (empty caps)");
+    target == core::ROOT || raise(E_ASSERT, "Wrong target (empty caps)");
     category == 'test || raise(E_ASSERT, "Wrong category (empty caps)");
     length(cap_list) == 0 || raise(E_ASSERT, "Cap list should be empty");
   endmethod
@@ -169,7 +169,7 @@ object GRANT_UTILS [
 
   method test_round_trip owner: HACKER
     "Test format->parse round trip.";
-    original_target = #38;
+    original_target = core::PROG_FEATURES;
     original_category = 'area;
     original_caps = {'add_room, 'create_passage, 'test_cap};
     formatted = this:format_grant(original_target, original_category, original_caps);

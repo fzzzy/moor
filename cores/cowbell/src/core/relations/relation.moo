@@ -320,58 +320,58 @@ object RELATION [
     "Test basic assertion and membership checking";
     const rel = $relation:create(true);
     "Test binary relation";
-    rel:assert({#1, #2});
-    !rel:member({#1, #2}) && raise(E_ASSERT, "Binary tuple not found after assert");
-    rel:member({#2, #1}) && raise(E_ASSERT, "Element position within tuple should matter");
+    rel:assert({core::ROOT, core::ARCH_WIZARD});
+    !rel:member({core::ROOT, core::ARCH_WIZARD}) && raise(E_ASSERT, "Binary tuple not found after assert");
+    rel:member({core::ARCH_WIZARD, core::ROOT}) && raise(E_ASSERT, "Element position within tuple should matter");
     "Test ternary relation";
-    rel:assert({#12, #39, "passage1"});
-    !rel:member({#12, #39, "passage1"}) && raise(E_ASSERT, "Ternary tuple not found");
-    rel:member({#12, #39}) && raise(E_ASSERT, "Partial tuple should not match");
+    rel:assert({core::PASSAGE, core::WIZ_FEATURES, "passage1"});
+    !rel:member({core::PASSAGE, core::WIZ_FEATURES, "passage1"}) && raise(E_ASSERT, "Ternary tuple not found");
+    rel:member({core::PASSAGE, core::WIZ_FEATURES}) && raise(E_ASSERT, "Partial tuple should not match");
     "Test different arities in same relation";
-    rel:assert({#5, #6, #7, #8});
-    !rel:member({#5, #6, #7, #8}) && raise(E_ASSERT, "Quaternary tuple not found");
+    rel:assert({core::PLAYER, core::HACKER, core::ROOM, core::THING});
+    !rel:member({core::PLAYER, core::HACKER, core::ROOM, core::THING}) && raise(E_ASSERT, "Quaternary tuple not found");
   endmethod
 
   method test_retract owner: HACKER
     "Test tuple removal";
     const rel = $relation:create(true);
-    rel:assert({#1, #2, "edge1"});
-    rel:assert({#1, #3, "edge2"});
-    rel:assert({#2, #3, "edge3"});
+    rel:assert({core::ROOT, core::ARCH_WIZARD, "edge1"});
+    rel:assert({core::ROOT, core::ACTOR, "edge2"});
+    rel:assert({core::ARCH_WIZARD, core::ACTOR, "edge3"});
     "Verify all present";
-    !rel:member({#1, #2, "edge1"}) && raise(E_ASSERT, "Setup failed");
+    !rel:member({core::ROOT, core::ARCH_WIZARD, "edge1"}) && raise(E_ASSERT, "Setup failed");
     "Retract one tuple";
-    !rel:retract({#1, #2, "edge1"}) && raise(E_ASSERT, "Retract should return true");
-    rel:member({#1, #2, "edge1"}) && raise(E_ASSERT, "Tuple still present after retract");
+    !rel:retract({core::ROOT, core::ARCH_WIZARD, "edge1"}) && raise(E_ASSERT, "Retract should return true");
+    rel:member({core::ROOT, core::ARCH_WIZARD, "edge1"}) && raise(E_ASSERT, "Tuple still present after retract");
     "Other tuples should remain";
-    !rel:member({#1, #3, "edge2"}) && raise(E_ASSERT, "Other tuple incorrectly removed");
-    !rel:member({#2, #3, "edge3"}) && raise(E_ASSERT, "Other tuple incorrectly removed");
+    !rel:member({core::ROOT, core::ACTOR, "edge2"}) && raise(E_ASSERT, "Other tuple incorrectly removed");
+    !rel:member({core::ARCH_WIZARD, core::ACTOR, "edge3"}) && raise(E_ASSERT, "Other tuple incorrectly removed");
     "Retracting non-existent tuple should return false";
-    rel:retract({#99, #100, "none"}) && raise(E_ASSERT, "Retract of missing tuple should be false");
+    rel:retract({core::LLM_RESPONSE, #100, "none"}) && raise(E_ASSERT, "Retract of missing tuple should be false");
   endmethod
 
   method test_select owner: HACKER
     "Test position-based selection";
     const rel = $relation:create(true);
     "Setup passage-like data";
-    rel:assert({#12, #39, "north"});
-    rel:assert({#12, #40, "east"});
-    rel:assert({#39, #40, "south"});
+    rel:assert({core::PASSAGE, core::WIZ_FEATURES, "north"});
+    rel:assert({core::PASSAGE, core::LLM_CLIENT, "east"});
+    rel:assert({core::WIZ_FEATURES, core::LLM_CLIENT, "south"});
     "Select by first position";
-    let results = rel:select(1, #12);
+    let results = rel:select(1, core::PASSAGE);
     length(results) != 2 && raise(E_ASSERT, "Expected 2 results from position 1");
-    {#12, #39, "north"} in results || raise(E_ASSERT, "Missing expected tuple");
-    {#12, #40, "east"} in results || raise(E_ASSERT, "Missing expected tuple");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in results || raise(E_ASSERT, "Missing expected tuple");
+    {core::PASSAGE, core::LLM_CLIENT, "east"} in results || raise(E_ASSERT, "Missing expected tuple");
     "Select by second position";
-    results = rel:select(2, #39);
+    results = rel:select(2, core::WIZ_FEATURES);
     length(results) != 1 && raise(E_ASSERT, "Expected 1 result from position 2");
-    {#12, #39, "north"} in results || raise(E_ASSERT, "Missing expected tuple");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in results || raise(E_ASSERT, "Missing expected tuple");
     "Select by third position";
     results = rel:select(3, "south");
     length(results) != 1 && raise(E_ASSERT, "Expected 1 result from position 3");
-    {#39, #40, "south"} in results || raise(E_ASSERT, "Missing expected tuple");
+    {core::WIZ_FEATURES, core::LLM_CLIENT, "south"} in results || raise(E_ASSERT, "Missing expected tuple");
     "Select non-existent value";
-    results = rel:select(1, #99);
+    results = rel:select(1, core::LLM_RESPONSE);
     length(results) != 0 && raise(E_ASSERT, "Expected empty results for non-existent value");
   endmethod
 
@@ -381,41 +381,41 @@ object RELATION [
     "Empty relation";
     length(rel:tuples()) != 0 && raise(E_ASSERT, "Empty relation should have no tuples");
     "Add some tuples";
-    rel:assert({#1, #2});
-    rel:assert({#3, #4});
-    rel:assert({#5, #6, #7});
+    rel:assert({core::ROOT, core::ARCH_WIZARD});
+    rel:assert({core::ACTOR, core::EVENT_RECEIVER});
+    rel:assert({core::PLAYER, core::HACKER, core::ROOM});
     const all_tuples = rel:tuples();
     length(all_tuples) != 3 && raise(E_ASSERT, "Expected 3 tuples");
-    {#1, #2} in all_tuples || raise(E_ASSERT, "Missing tuple");
-    {#3, #4} in all_tuples || raise(E_ASSERT, "Missing tuple");
-    {#5, #6, #7} in all_tuples || raise(E_ASSERT, "Missing tuple");
+    {core::ROOT, core::ARCH_WIZARD} in all_tuples || raise(E_ASSERT, "Missing tuple");
+    {core::ACTOR, core::EVENT_RECEIVER} in all_tuples || raise(E_ASSERT, "Missing tuple");
+    {core::PLAYER, core::HACKER, core::ROOM} in all_tuples || raise(E_ASSERT, "Missing tuple");
   endmethod
 
   method test_clear owner: HACKER
     "Test clearing all tuples";
     const rel = $relation:create(true);
     "Add several tuples";
-    rel:assert({#1, #2, "a"});
-    rel:assert({#3, #4, "b"});
-    rel:assert({#5, #6, "c"});
+    rel:assert({core::ROOT, core::ARCH_WIZARD, "a"});
+    rel:assert({core::ACTOR, core::EVENT_RECEIVER, "b"});
+    rel:assert({core::PLAYER, core::HACKER, "c"});
     length(rel:tuples()) != 3 && raise(E_ASSERT, "Setup failed");
     "Clear the relation";
     !rel:clear() && raise(E_ASSERT, "Clear should return true");
     "Verify empty";
     length(rel:tuples()) != 0 && raise(E_ASSERT, "Relation should be empty after clear");
-    rel:member({#1, #2, "a"}) && raise(E_ASSERT, "Tuple still present after clear");
+    rel:member({core::ROOT, core::ARCH_WIZARD, "a"}) && raise(E_ASSERT, "Tuple still present after clear");
   endmethod
 
   method test_duplicate_assert owner: HACKER
     "Repeated assertion keeps one identity, one fact, and one query answer.";
     const relation = $relation:create(true);
-    const first = relation:assert({#1, #2, "edge"});
-    const again = relation:assert({#1, #2, "edge"});
+    const first = relation:assert({core::ROOT, core::ARCH_WIZARD, "edge"});
+    const again = relation:assert({core::ROOT, core::ARCH_WIZARD, "edge"});
     $test_utils:assert_eq(first, again, "Assertion is idempotent");
     $test_utils:assert_eq(relation:count(), 1, "One stored fact");
-    $test_utils:assert_eq(relation:query({#1, {'var, 'To}, {'var, 'Label}}), {['To -> #2, 'Label -> "edge"]}, "One binding map");
-    $test_utils:assert_true(relation:retract({#1, #2, "edge"}), "One retraction removes the fact");
-    $test_utils:assert_false(relation:member({#1, #2, "edge"}), "No duplicate remains");
+    $test_utils:assert_eq(relation:query({core::ROOT, {'var, 'To}, {'var, 'Label}}), {['To -> core::ARCH_WIZARD, 'Label -> "edge"]}, "One binding map");
+    $test_utils:assert_true(relation:retract({core::ROOT, core::ARCH_WIZARD, "edge"}), "One retraction removes the fact");
+    $test_utils:assert_false(relation:member({core::ROOT, core::ARCH_WIZARD, "edge"}), "No duplicate remains");
     return true;
   endmethod
 
@@ -423,40 +423,40 @@ object RELATION [
     "Test that a single tuple is indexed under all its values.";
     const rel = $relation:create(true);
     "Assert a passage-like tuple";
-    rel:assert({#12, #39, "north"});
+    rel:assert({core::PASSAGE, core::WIZ_FEATURES, "north"});
     "Find tuples containing #12";
-    const results_from_12 = rel:select_containing(#12);
+    const results_from_12 = rel:select_containing(core::PASSAGE);
     length(results_from_12) != 1 && raise(E_ASSERT, "Should find 1 tuple via #12");
-    {#12, #39, "north"} in results_from_12 || raise(E_ASSERT, "Wrong tuple via #12");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in results_from_12 || raise(E_ASSERT, "Wrong tuple via #12");
     "Find tuples containing #39";
-    const results_from_39 = rel:select_containing(#39);
+    const results_from_39 = rel:select_containing(core::WIZ_FEATURES);
     length(results_from_39) != 1 && raise(E_ASSERT, "Should find 1 tuple via #39");
-    {#12, #39, "north"} in results_from_39 || raise(E_ASSERT, "Wrong tuple via #39");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in results_from_39 || raise(E_ASSERT, "Wrong tuple via #39");
     "Find tuples containing 'north'";
     const results_from_north = rel:select_containing("north");
     length(results_from_north) != 1 && raise(E_ASSERT, "Should find 1 tuple via 'north'");
-    {#12, #39, "north"} in results_from_north || raise(E_ASSERT, "Wrong tuple via 'north'");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in results_from_north || raise(E_ASSERT, "Wrong tuple via 'north'");
     "Verify it's the SAME tuple found three different ways";
     results_from_12 == results_from_39 || raise(E_ASSERT, "Results should be identical");
     results_from_39 == results_from_north || raise(E_ASSERT, "Results should be identical");
     "Test with multiple passages";
-    rel:assert({#12, #40, "east"});
-    rel:assert({#39, #40, "south"});
+    rel:assert({core::PASSAGE, core::LLM_CLIENT, "east"});
+    rel:assert({core::WIZ_FEATURES, core::LLM_CLIENT, "south"});
     "Find all passages from #12";
-    const from_12 = rel:select_containing(#12);
+    const from_12 = rel:select_containing(core::PASSAGE);
     length(from_12) != 2 && raise(E_ASSERT, "Room #12 should have 2 passages");
-    {#12, #39, "north"} in from_12 || raise(E_ASSERT, "Missing north passage");
-    {#12, #40, "east"} in from_12 || raise(E_ASSERT, "Missing east passage");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in from_12 || raise(E_ASSERT, "Missing north passage");
+    {core::PASSAGE, core::LLM_CLIENT, "east"} in from_12 || raise(E_ASSERT, "Missing east passage");
     "Find all passages from #40";
-    const from_40 = rel:select_containing(#40);
+    const from_40 = rel:select_containing(core::LLM_CLIENT);
     length(from_40) != 2 && raise(E_ASSERT, "Room #40 should have 2 passages");
-    {#12, #40, "east"} in from_40 || raise(E_ASSERT, "Missing east passage");
-    {#39, #40, "south"} in from_40 || raise(E_ASSERT, "Missing south passage");
+    {core::PASSAGE, core::LLM_CLIENT, "east"} in from_40 || raise(E_ASSERT, "Missing east passage");
+    {core::WIZ_FEATURES, core::LLM_CLIENT, "south"} in from_40 || raise(E_ASSERT, "Missing south passage");
     "Room #39 appears in different positions but both found";
-    const from_39 = rel:select_containing(#39);
+    const from_39 = rel:select_containing(core::WIZ_FEATURES);
     length(from_39) != 2 && raise(E_ASSERT, "Room #39 should have 2 passages");
-    {#12, #39, "north"} in from_39 || raise(E_ASSERT, "Missing north passage (pos 2)");
-    {#39, #40, "south"} in from_39 || raise(E_ASSERT, "Missing south passage (pos 1)");
+    {core::PASSAGE, core::WIZ_FEATURES, "north"} in from_39 || raise(E_ASSERT, "Missing north passage (pos 2)");
+    {core::WIZ_FEATURES, core::LLM_CLIENT, "south"} in from_39 || raise(E_ASSERT, "Missing south passage (pos 1)");
   endmethod
 
   method query_result owner: ARCH_WIZARD
@@ -557,18 +557,18 @@ object RELATION [
   method test_query_basic owner: HACKER
     "Test basic pattern matching with variables";
     const rel = $relation:create(true);
-    rel:assert({#12, #39, "north"});
-    rel:assert({#12, #40, "east"});
-    rel:assert({#39, #40, "south"});
+    rel:assert({core::PASSAGE, core::WIZ_FEATURES, "north"});
+    rel:assert({core::PASSAGE, core::LLM_CLIENT, "east"});
+    rel:assert({core::WIZ_FEATURES, core::LLM_CLIENT, "south"});
     "Query for all passages from #12";
-    let results = rel:query({#12, {'var, 'dest}, {'var, 'label}});
+    let results = rel:query({core::PASSAGE, {'var, 'dest}, {'var, 'label}});
     length(results) != 2 && raise(E_ASSERT, "Expected 2 results from #12");
-    ['dest -> #39, 'label -> "north"] in results || raise(E_ASSERT, "Missing north binding");
-    ['dest -> #40, 'label -> "east"] in results || raise(E_ASSERT, "Missing east binding");
+    ['dest -> core::WIZ_FEATURES, 'label -> "north"] in results || raise(E_ASSERT, "Missing north binding");
+    ['dest -> core::LLM_CLIENT, 'label -> "east"] in results || raise(E_ASSERT, "Missing east binding");
     "Query for passages to #39";
-    results = rel:query({{'var, 'src}, #39, {'var, 'label}});
+    results = rel:query({{'var, 'src}, core::WIZ_FEATURES, {'var, 'label}});
     length(results) != 1 && raise(E_ASSERT, "Expected 1 result to #39");
-    ['src -> #12, 'label -> "north"] in results || raise(E_ASSERT, "Missing binding");
+    ['src -> core::PASSAGE, 'label -> "north"] in results || raise(E_ASSERT, "Missing binding");
     "Query all tuples";
     results = rel:query({{'var, 'a}, {'var, 'b}, {'var, 'c}});
     length(results) != 3 && raise(E_ASSERT, "Expected 3 results for all tuples");
@@ -578,25 +578,25 @@ object RELATION [
     "Test transitive closure - note: relation is bidirectional";
     const rel = $relation:create(true);
     "Build a chain: 1 <-> 2 <-> 3 <-> 4";
-    rel:assert({#1, #2});
-    rel:assert({#2, #3});
-    rel:assert({#3, #4});
+    rel:assert({core::ROOT, core::ARCH_WIZARD});
+    rel:assert({core::ARCH_WIZARD, core::ACTOR});
+    rel:assert({core::ACTOR, core::EVENT_RECEIVER});
     "Add a branch: 2 <-> 5";
-    rel:assert({#2, #5});
-    let reachable = rel:reachable_from(#1);
+    rel:assert({core::ARCH_WIZARD, core::PLAYER});
+    let reachable = rel:reachable_from(core::ROOT);
     length(reachable) != 5 && raise(E_ASSERT, "Should reach 5 nodes from #1");
-    #1 in reachable || raise(E_ASSERT, "Should include start node");
-    #2 in reachable || raise(E_ASSERT, "Should reach #2");
-    #3 in reachable || raise(E_ASSERT, "Should reach #3");
-    #4 in reachable || raise(E_ASSERT, "Should reach #4");
-    #5 in reachable || raise(E_ASSERT, "Should reach #5");
+    core::ROOT in reachable || raise(E_ASSERT, "Should include start node");
+    core::ARCH_WIZARD in reachable || raise(E_ASSERT, "Should reach #2");
+    core::ACTOR in reachable || raise(E_ASSERT, "Should reach #3");
+    core::EVENT_RECEIVER in reachable || raise(E_ASSERT, "Should reach #4");
+    core::PLAYER in reachable || raise(E_ASSERT, "Should reach #5");
     "From #3 reaches all nodes (bidirectional graph)";
-    reachable = rel:reachable_from(#3);
+    reachable = rel:reachable_from(core::ACTOR);
     length(reachable) != 5 && raise(E_ASSERT, "Should reach all 5 nodes from #3");
-    #1 in reachable || raise(E_ASSERT, "Should reach #1 via bidirectional edges");
-    #2 in reachable || raise(E_ASSERT, "Should reach #2");
-    #4 in reachable || raise(E_ASSERT, "Should reach #4");
-    #5 in reachable || raise(E_ASSERT, "Should reach #5 via #2");
+    core::ROOT in reachable || raise(E_ASSERT, "Should reach #1 via bidirectional edges");
+    core::ARCH_WIZARD in reachable || raise(E_ASSERT, "Should reach #2");
+    core::EVENT_RECEIVER in reachable || raise(E_ASSERT, "Should reach #4");
+    core::PLAYER in reachable || raise(E_ASSERT, "Should reach #5 via #2");
   endmethod
 
   method count owner: ARCH_WIZARD

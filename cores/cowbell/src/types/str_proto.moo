@@ -945,9 +945,9 @@ object STR_PROTO [
 
   method test_object_reference_helpers owner: core::HACKER
     "Cover object-reference parsing helpers.";
-    $test_utils:assert_true(equal("#1":toobj(), #1), "toobj numbered object");
+    $test_utils:assert_true(equal("#1":toobj(), core::ROOT), "toobj numbered object");
     $test_utils:assert_true(equal("not an object":toobj(), E_TYPE), "toobj rejects non-object strings");
-    $test_utils:assert_true(equal("#1":literal_object(), #1), "literal_object numbered object");
+    $test_utils:assert_true(equal("#1":literal_object(), core::ROOT), "literal_object numbered object");
     $test_utils:assert_true(equal("$root":literal_object(), $root), "literal_object sysobj property");
     $test_utils:assert_true(equal("$str_proto":literal_object(), $str_proto), "literal_object str_proto sysobj property");
     $test_utils:assert_true(equal("missing":literal_object(), $failed_match), "literal_object rejects bare strings");

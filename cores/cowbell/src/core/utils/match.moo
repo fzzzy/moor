@@ -312,7 +312,7 @@ object MATCH [
   method test_match_object owner: ARCH_WIZARD
     "Test object matching - returns actual objects.";
     let result = this:match_object("#1");
-    result != #1 && raise(E_ASSERT, "Should return actual object #1: " + toliteral(result));
+    result != core::ROOT && raise(E_ASSERT, "Should return actual object #1: " + toliteral(result));
     result = this:match_object("$root");
     result != $root && raise(E_ASSERT, "Should return actual $root object: " + toliteral(result));
     try
@@ -345,9 +345,9 @@ object MATCH [
   endmethod
 
   method test_resolve_in_scope_literals owner: HACKER
-    scope = {#49, #50};
+    scope = {core::FIRST_ROOM, core::FIRST_AREA};
     result = this:resolve_in_scope("#49", scope);
-    result != #49 && raise(E_ASSERT, "Literal numeric ID should resolve to #49: " + toliteral(result));
+    result != core::FIRST_ROOM && raise(E_ASSERT, "Literal numeric ID should resolve to #49: " + toliteral(result));
     temp = create($root);
     try
       uuid_str = tostr(temp);
@@ -362,25 +362,25 @@ object MATCH [
   endmethod
 
   method test_resolve_in_scope_aliases owner: HACKER
-    scope = {{#49, "first room", "lobby"}, {#50, "first area"}};
+    scope = {{core::FIRST_ROOM, "first room", "lobby"}, {core::FIRST_AREA, "first area"}};
     result = this:resolve_in_scope("lobby", scope);
-    result != #49 && raise(E_ASSERT, "Alias should resolve to first room: " + toliteral(result));
+    result != core::FIRST_ROOM && raise(E_ASSERT, "Alias should resolve to first room: " + toliteral(result));
     result = this:resolve_in_scope("first area", scope);
-    result != #50 && raise(E_ASSERT, "Text alias should resolve to first area: " + toliteral(result));
+    result != core::FIRST_AREA && raise(E_ASSERT, "Text alias should resolve to first area: " + toliteral(result));
   endmethod
 
   method test_resolve_in_scope_ordinals owner: HACKER
-    scope = {{#49, "room"}, {#50, "room"}};
+    scope = {{core::FIRST_ROOM, "room"}, {core::FIRST_AREA, "room"}};
     result = this:resolve_in_scope("second room", scope);
-    result != #50 && raise(E_ASSERT, "Ordinal should pick second entry: " + toliteral(result));
+    result != core::FIRST_AREA && raise(E_ASSERT, "Ordinal should pick second entry: " + toliteral(result));
     result = this:resolve_in_scope("third room", scope);
     result != #-3 && raise(E_ASSERT, "Out-of-range ordinal should fail: " + toliteral(result));
   endmethod
 
   method test_resolve_in_scope_fuzzy owner: HACKER
-    scope = {{#49, "lobby"}};
+    scope = {{core::FIRST_ROOM, "lobby"}};
     result = this:resolve_in_scope("lobbi", scope, ['fuzzy_threshold -> 0.8]);
-    result != #49 && raise(E_ASSERT, "Fuzzy match should succeed with threshold: " + toliteral(result));
+    result != core::FIRST_ROOM && raise(E_ASSERT, "Fuzzy match should succeed with threshold: " + toliteral(result));
     result = this:resolve_in_scope("lobbi", scope, ['fuzzy_threshold -> 0.0]);
     result != #-3 && raise(E_ASSERT, "Fuzzy disabled should fail: " + toliteral(result));
   endmethod
@@ -579,7 +579,7 @@ object MATCH [
 
   method test_parse_curie owner: ARCH_WIZARD
     "CURIE strings resolve to objects, and malformed ones to false.";
-    $test_utils:assert_true(equal(this:parse_curie("oid:1"), #1), "parse_curie oid");
+    $test_utils:assert_true(equal(this:parse_curie("oid:1"), core::ROOT), "parse_curie oid");
     $test_utils:assert_true(equal(this:parse_curie("oid:abc"), false), "parse_curie rejects invalid oid");
     $test_utils:assert_true(equal(this:parse_curie("sysobj:root"), $root), "parse_curie sysobj");
     $test_utils:assert_true(equal(this:parse_curie("sysobj:nonexistent_property"), false), "parse_curie rejects invalid sysobj");
