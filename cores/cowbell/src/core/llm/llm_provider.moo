@@ -149,7 +149,7 @@ object LLM_PROVIDER [
       const id = $llm_account:reserve(actor, reservation, deadline + 5, purpose, model);
       let response = {};
       try
-        response = worker_request('curl, {method, endpoint, payload, headers, ["max_bytes" -> 1048576, "strict_utf8" -> true]}, ["timeout_seconds" -> tofloat(min(30, remaining))]);
+        response = $http:request(method, endpoint, payload, headers, ["max_bytes" -> 1048576, "strict_utf8" -> true, "timeout_seconds" -> tofloat(min(30, remaining))]);
       except (ANY)
         $llm_account:finish(actor, id, false, 'transport_error);
         raise(E_INVARG, "LLM transport failed; provider usage is unknown.");

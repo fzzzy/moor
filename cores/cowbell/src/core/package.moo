@@ -1,6 +1,6 @@
 package "core" [
   objdef_version -> 2,
-  depends -> {"package", "types", "git"}
+  depends -> {"package", "types", "git", "http"}
 ];
 
 define SYSOBJ = #0;
@@ -185,7 +185,6 @@ define MATCH = #21;
 define GRANT_UTILS = #25;
 define PROG_UTILS = #53;
 define OBJ_UTILS = #57;
-define URL_UTILS = #96;
 define TEST_UTILS = #127;
 
 // world

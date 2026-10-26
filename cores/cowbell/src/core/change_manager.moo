@@ -79,6 +79,7 @@ object CHANGE_MANAGER [
         "HELP_UTILS" -> HELP_UTILS,
         "HOUSEKEEPING" -> HOUSEKEEPING,
         "HOUSEKEEPING_SWEEP_MSGS" -> HOUSEKEEPING_SWEEP_MSGS,
+        "HTTP" -> http::HTTP,
         "INT_PROTO" -> types::INT_PROTO,
         "LETTER" -> LETTER,
         "LIST_PROTO" -> types::LIST_PROTO,
@@ -170,7 +171,7 @@ object CHANGE_MANAGER [
         "TEST_UTILS" -> TEST_UTILS,
         "THING" -> THING,
         "TRAVEL_EXAMPLES" -> TRAVEL_EXAMPLES,
-        "URL_UTILS" -> URL_UTILS,
+        "URL_UTILS" -> http::URL_UTILS,
         "VERB" -> VERB,
         "WEARABLE" -> WEARABLE,
         "WIZ_FEATURES" -> WIZ_FEATURES,
@@ -337,13 +338,14 @@ object CHANGE_MANAGER [
         OBJ_UTILS,
         PROG_UTILS,
         TEST_UTILS,
-        URL_UTILS,
+        http::URL_UTILS,
         AREA,
         PASSAGE,
         ROOM,
         DISCORD_BRIDGE,
         DISCORD_SPEAKER,
-        package::PACKAGE_CLASS
+        package::PACKAGE_CLASS,
+        http::HTTP
       },
       "schema" -> 1,
       "trusted_owners" -> {HACKER, LOGIN},
@@ -783,7 +785,7 @@ object CHANGE_MANAGER [
         return;
       endif
       const url = upstream;
-      const response = worker_request("curl", {"GET", url, "", {}, ["max_bytes" -> 4194304, "strict_utf8" -> true, "include_url" -> true]}, ["timeout_seconds" -> 30.0]);
+      const response = $http:get(url, {}, ["max_bytes" -> 4194304, "strict_utf8" -> true, "include_url" -> true, "timeout_seconds" -> 30.0]);
       record = this:_job(id, generation, "fetching");
       length(response) == 4 && response[1] == 200 || this:_error("http_failure", "HTTP bundle fetch did not return status 200.");
       let etag = "";

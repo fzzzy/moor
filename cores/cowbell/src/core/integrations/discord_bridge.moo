@@ -188,11 +188,11 @@ object DISCORD_BRIDGE [
   endmethod
 
   method _request owner: ARCH_WIZARD
-    "Make one HTTP request through the curl worker, or the test transport when one is set.";
+    "Make one HTTP request, or ask the test transport when one is set.";
     caller == this || raise(E_PERM);
     const {method, url, body, headers} = args;
     valid(this.transport) && return this.transport:request(method, url, body, headers);
-    return worker_request('curl, {method, url, body, headers, ["max_bytes" -> 262144]}, ["timeout_seconds" -> 10.0]);
+    return $http:request(method, url, body, headers, ["max_bytes" -> 262144, "timeout_seconds" -> 10.0]);
   endmethod
 
   method _admit owner: ARCH_WIZARD
