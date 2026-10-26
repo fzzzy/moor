@@ -161,7 +161,8 @@ object DISCORD_BRIDGE [
     const discord_id = `author["id"] ! E_RANGE => ""';
     const global_name = `author["global_name"] ! E_RANGE => ""';
     const display_name = this:_clean(typeof(global_name) == TYPE_STR && length(global_name) ? global_name | `author["username"] ! E_RANGE => ""', 64);
-    const text = this:_clean(`message["content"] ! E_RANGE => ""', this.max_length);
+    const content = this:_mentions_to_names(`message["content"] ! E_RANGE => ""', `message["mentions"] ! E_RANGE => {}');
+    const text = this:_clean(content, this.max_length);
     typeof(discord_id) == TYPE_STR && length(display_name) && length(text) || return 0;
     this:_admit() || return 0;
     "Whoever posts here is a member of the channel's server, so a mention of them will resolve.";
@@ -185,6 +186,32 @@ object DISCORD_BRIDGE [
       endif
     endfor
     return "";
+  endmethod
+
+  method _mentions_to_names owner: ARCH_WIZARD
+    "Replace user mentions in a channel message with the linked player's name, or the @name Discord gave for the user.";
+    caller == this || raise(E_PERM);
+    const {content, mentions} = args;
+    typeof(content) == TYPE_STR || return "";
+    let names = [];
+    for user in (typeof(mentions) == TYPE_LIST ? mentions | {})
+      const id = `user["id"] ! ANY => ""';
+      const global_name = `user["global_name"] ! ANY => ""';
+      const name = typeof(global_name) == TYPE_STR && length(global_name) ? global_name | `user["username"] ! ANY => ""';
+      typeof(id) == TYPE_STR && typeof(name) == TYPE_STR && length(name) && (names[id] = "@" + name);
+    endfor
+    let rest = content;
+    let result = "";
+    let found = match(rest, "<@!?%([0-9]+%)>");
+    while (found)
+      const id = rest[found[3][1][1]..found[3][1][2]];
+      const linked = $login:find_by_oauth2("discord", id);
+      const name = valid(linked) && is_player(linked) ? linked:name() | `names[id] ! E_RANGE => "@someone"';
+      result = result + rest[1..found[1] - 1] + name;
+      rest = rest[found[2] + 1..$];
+      found = match(rest, "<@!?%([0-9]+%)>");
+    endwhile
+    return result + rest;
   endmethod
 
   method _request owner: ARCH_WIZARD
