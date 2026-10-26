@@ -8,6 +8,9 @@ Cowbell entries.
 
 ### Added
 
+- Rooms call `show_arrival(who)` to show themselves to an arriving player, and `on_contents_enter(what)`
+  and `on_contents_exit(what)` after something enters or leaves, so a child room can change or react
+  to arrivals without replacing `enterfunc` or `exitfunc`.
 - `@changes` packages can come from separate source trees. `@changes depends PACKAGE DEPENDENCY ...`
   lets a package's source name another package's objects with qualified constants, such as
   `core::ROOT`, using the bindings that package's last applied or finished review provided. The
@@ -289,6 +292,10 @@ Cowbell entries.
 
 ### Fixed
 
+- Recycling a thing makes it leave its room first, so the room's exit handling runs: its panel drops
+  the thing, and its contents and `on_contents_exit` hear of the departure.
+- Recycling an LLM wearable removes it from its wearer's `wearing` list; its recycle verb skipped the
+  wearable's own cleanup.
 - Evaluating or linking an object that does not descend from `$root`, such as `$package`, no longer
   fails with `E_VERBNF` for `reference_kind`. Object references and completion choices use the
   object's `name` property and the kind `object` when it lacks those verbs.

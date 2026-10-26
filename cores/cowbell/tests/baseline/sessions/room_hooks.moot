@@ -1,0 +1,34 @@
+// Rooms tell their own hooks about arrivals and departures after the move commits, recycling included.
+@wizard
+; add_property(#0, "hooks_probe", [], {player, ""}); const room = create($room); add_property(room, "seen", {}, {player, "r"}); add_verb(room, {player, "rxd", "on_contents_enter"}, {"this", "none", "this"}); set_verb_code(room, "on_contents_enter", {"this.seen = {@this.seen, {\"enter\", args[1]}};"}); add_verb(room, {player, "rxd", "on_contents_exit"}, {"this", "none", "this"}); set_verb_code(room, "on_contents_exit", {"this.seen = {@this.seen, {\"exit\", args[1]}};"}); const thing = create($thing); #0.hooks_probe = ["room" -> room, "thing" -> thing]; move(thing, room); return true;
+true
+
+; suspend(0.2); const {room, thing} = {#0.hooks_probe["room"], #0.hooks_probe["thing"]}; move(thing, #-1); return room.seen == {{"enter", thing}};
+true
+
+; suspend(0.2); const {room, thing} = {#0.hooks_probe["room"], #0.hooks_probe["thing"]}; return room.seen == {{"enter", thing}, {"exit", thing}};
+true
+
+// Recycling a thing makes it leave its room first, so the room hears of it.
+; const {room, thing} = {#0.hooks_probe["room"], #0.hooks_probe["thing"]}; move(thing, room); room.seen = {}; return true;
+true
+
+; suspend(0.2); const {room, thing} = {#0.hooks_probe["room"], #0.hooks_probe["thing"]}; room.seen = {}; recycle(thing); return valid(thing);
+false
+
+; suspend(0.2); const {room, thing} = {#0.hooks_probe["room"], #0.hooks_probe["thing"]}; return {room.seen == {{"exit", thing}}, room.contents};
+{true, {}}
+
+// Only the owner or a wizard may run a thing's recycle verb.
+@programmer
+; return `$thing:recycle() ! ANY';
+E_PERM
+
+// A recycled wearable leaves its wearer's list.
+@wizard
+; const worn = create($wearable); move(worn, player); player.wearing = setadd(player.wearing, worn); #0.hooks_probe["worn"] = worn; recycle(worn); return worn in player.wearing;
+0
+
+; recycle(#0.hooks_probe["room"]); delete_property(#0, "hooks_probe"); return true;
+true
+@quiet
