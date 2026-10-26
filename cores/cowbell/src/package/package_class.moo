@@ -97,6 +97,28 @@ object PACKAGE_CLASS [
     return {};
   endmethod
 
+  method named owner: core::ARCH_WIZARD
+    "The installed package object for a package name, or #-1.";
+    const {name} = args;
+    typeof(name) == TYPE_STR && name || return #-1;
+    for object in (objects_with_metadata('objdef_package, name))
+      if (object != $package && isa(object, $package))
+        return object;
+      endif
+    endfor
+    return #-1;
+  endmethod
+
+  method client_data owner: core::ARCH_WIZARD
+    "Structured data a client sent in this package's namespace, from #0:do_client_data; player is the sender. Implementations should check that caller is #0. Ignored by default.";
+    return;
+  endmethod
+
+  method host_call owner: core::ARCH_WIZARD
+    "A host's own call to this package, from #0:invoke_package_handler; player is the acting player, or #0 when the host acts for itself. Implementations should check that caller is #0. Refused by default.";
+    raise(E_INVARG, tostr("Package ", this:package_name(), " takes no host calls."));
+  endmethod
+
   method test_installed_follows_depends owner: core::ARCH_WIZARD
     "Packages come after those they depend on, whatever their names.";
     const later = create(this);
@@ -112,6 +134,24 @@ object PACKAGE_CLASS [
     finally
       recycle(later);
       recycle(earlier);
+    endtry
+    return true;
+  endmethod
+
+  method test_named_finds_the_package_object owner: core::ARCH_WIZARD
+    "A package name finds its package object, not the package's other objects.";
+    const package = create(this);
+    const member = create(#-1);
+    try
+      set_object_metadata(package, 'objdef_package, "zz_test_named");
+      set_object_metadata(member, 'objdef_package, "zz_test_named");
+      $test_utils:assert_eq(this:named("zz_test_named"), package, "the package object");
+      $test_utils:assert_eq(this:named("zz_test_absent"), #-1, "no such package");
+      $test_utils:assert_eq(this:named(""), #-1, "no name");
+      $test_utils:assert_raises(E_INVARG, package, "host_call", {"anything"}, "host calls are refused by default");
+    finally
+      recycle(package);
+      recycle(member);
     endtry
     return true;
   endmethod

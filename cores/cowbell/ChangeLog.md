@@ -8,6 +8,11 @@ Cowbell entries.
 
 ### Added
 
+- Packages can take client data and calls from their own host processes without changing `#0`.
+  `#0:do_client_data` hands each namespace to the installed package of that name, as
+  `package:client_data(kind, payload)`, and `#0:invoke_package_handler(name, operation, ...)`, reached
+  through the daemon's system handler with type `package`, calls `package:host_call(operation, ...)`.
+  `$package:named(name)` finds an installed package object.
 - Rooms call `show_arrival(who)` to show themselves to an arriving player, and `on_contents_enter(what)`
   and `on_contents_exit(what)` after something enters or leaves, so a child room can change or react
   to arrivals without replacing `enterfunc` or `exitfunc`.
