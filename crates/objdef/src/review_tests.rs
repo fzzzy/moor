@@ -3932,6 +3932,69 @@ fn a_location_change_moves_the_object() {
 }
 
 #[test]
+fn locations_moved_in_the_world_and_players_have_no_rows() {
+    let has_location_row = |world: &dyn WorldState, source: &str, object: Obj| {
+        let report = preview(
+            world,
+            &permissions(),
+            &CompileOptions::default(),
+            &sources(&reparent_source(source)),
+            &reparent_request(None, &[]),
+            None,
+        )
+        .unwrap();
+        let id = v_str(&format!(
+            "attribute/{}",
+            attributes::member_key(object, "location")
+        ));
+        get(&report, "rows")
+            .as_list()
+            .unwrap()
+            .iter()
+            .any(|row| get(&row, "id") == id)
+    };
+    let moved = CHILD_UNDER_ROOT.replace("parent: #1\n", "parent: #1\nlocation: #3\n");
+
+    // Moved in the world, and source still has the accepted location: world state, no row.
+    let db = reparent_world();
+    let mut world = db.new_world_state().unwrap();
+    world.move_object(&permissions(), &CHILD, &OTHER).unwrap();
+    assert!(!has_location_row(world.as_ref(), CHILD_UNDER_ROOT, CHILD));
+    // Moved in the world and by source alike is a conflict, which the world wins.
+    let elsewhere = CHILD_UNDER_ROOT.replace("parent: #1\n", "parent: #1\nlocation: #1\n");
+    assert!(!has_location_row(world.as_ref(), &elsewhere, CHILD));
+
+    // A player is never placed by source; a class of players is.
+    let db = reparent_world();
+    let mut world = db.new_world_state().unwrap();
+    assert!(has_location_row(world.as_ref(), &moved, CHILD));
+    let player = BitEnum::new_with(ObjFlag::User);
+    world.set_flags_of(&permissions(), &CHILD, player).unwrap();
+    assert!(!has_location_row(world.as_ref(), &moved, CHILD));
+    let wizard_player = BitEnum::new_with(ObjFlag::User) | ObjFlag::Wizard;
+    world
+        .set_flags_of(&permissions(), &ROOT, wizard_player)
+        .unwrap();
+    let root_moved = reparent_source(CHILD_UNDER_ROOT).replace(
+        "object #1 [import_export_id -> \"review_root\"]\nowner: #1\n",
+        "object #1 [import_export_id -> \"review_root\"]\nowner: #1\nlocation: #3\n",
+    );
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &sources(&root_moved),
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    row_with(
+        &report,
+        &format!("attribute/{}", attributes::member_key(ROOT, "location")),
+    );
+}
+
+#[test]
 fn a_source_tree_builds_on_another_trees_bindings() {
     // A tree of its own, holding only a games package. It names core's objects through bindings
     // the request supplies qualified, reports its own bindings for trees that depend on it, and
