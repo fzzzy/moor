@@ -1751,6 +1751,17 @@ fn float_key(f: f64) -> f64 {
     if f == 0.0 { 0.0 } else { f }
 }
 
+/// Order an int against a float by value, the int first when they are equal. `==` never holds an
+/// int equal to a float, so ordering must not either: otherwise a map keyed by `1` would find
+/// `1.0`, and could not hold both.
+#[inline]
+fn int_float_cmp(int: i64, float: f64) -> Ordering {
+    match (int as f64).total_cmp(&float_key(float)) {
+        Ordering::Equal => Ordering::Less,
+        order => order,
+    }
+}
+
 impl Hash for Var {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self.variant() {
@@ -1829,12 +1840,10 @@ impl Ord for Var {
 
         // Fast path: int cmp float / float cmp int
         if self.tag == TAG_INT && other.tag == TAG_FLOAT {
-            return float_key(self.data as i64 as f64)
-                .total_cmp(&float_key(f64::from_bits(other.data)));
+            return int_float_cmp(self.data as i64, f64::from_bits(other.data));
         }
         if self.tag == TAG_FLOAT && other.tag == TAG_INT {
-            return float_key(f64::from_bits(self.data))
-                .total_cmp(&float_key(other.data as i64 as f64));
+            return int_float_cmp(other.data as i64, f64::from_bits(self.data)).reverse();
         }
 
         // Slow path for other types
@@ -1870,8 +1879,8 @@ impl Var {
                 let r_ptr = &*r.0.body.0 as *const PrgInner;
                 l_ptr.cmp(&r_ptr)
             }
-            (Variant::Int(l), Variant::Float(r)) => (l as f64).total_cmp(&float_key(r)),
-            (Variant::Float(l), Variant::Int(r)) => float_key(l).total_cmp(&(r as f64)),
+            (Variant::Int(l), Variant::Float(r)) => int_float_cmp(l, r),
+            (Variant::Float(l), Variant::Int(r)) => int_float_cmp(r, l).reverse(),
             (Variant::None, _) => Ordering::Less,
             (_, Variant::None) => Ordering::Greater,
             (Variant::Bool(_), _) => Ordering::Less,

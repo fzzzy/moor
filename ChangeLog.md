@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Maps keep an integer and a float as different keys, as `==` does: a map keyed by `1` no longer
+  finds `1.0`, and can hold both. A stored map never held both, so existing databases load
+  unchanged.
 - Maps treat `-0.0` and `0.0` as the same key, as `==` already does. Before, a map keyed by `0.0`
   did not find `-0.0`, and a map could hold both. A stored map with both keys loads with one,
   keeping the later entry.
