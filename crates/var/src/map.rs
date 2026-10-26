@@ -314,7 +314,7 @@ impl Hash for Map {
 #[cfg(test)]
 mod tests {
     use crate::{
-        Associative, IndexMode, v_bool_int, v_int, v_str,
+        Associative, IndexMode, v_bool_int, v_float, v_int, v_str,
         variant::{Var, Variant},
     };
 
@@ -691,5 +691,32 @@ mod tests {
 
         let result = m.index_in(&key, false, IndexMode::OneBased).unwrap();
         assert_eq!(result, v_bool_int(true));
+    }
+
+    #[test]
+    fn test_signed_zero_is_one_key() {
+        // -0.0 == 0.0, so a map must treat them as the same key.
+        use std::hash::{BuildHasher, RandomState};
+        let positive = v_float(0.0);
+        let negative = v_float(-0.0);
+        assert_eq!(positive, negative);
+        assert_eq!(positive.cmp(&negative), std::cmp::Ordering::Equal);
+        let hasher = RandomState::new();
+        assert_eq!(hasher.hash_one(&positive), hasher.hash_one(&negative));
+
+        let m = Var::mk_map(&[(positive.clone(), v_str("pos"))]);
+        let Variant::Map(map) = m.variant() else {
+            panic!("not a map");
+        };
+        assert_eq!(map.get(&negative).unwrap(), v_str("pos"));
+        assert!(map.contains_key(&negative, false).unwrap());
+
+        // Built from both, as a literal or a stored map is, the later entry wins.
+        let both = Var::mk_map(&[(negative, v_int(1)), (positive, v_int(2))]);
+        let Variant::Map(both) = both.variant() else {
+            panic!("not a map");
+        };
+        assert_eq!(both.len(), 1);
+        assert_eq!(both.get(&v_float(0.0)).unwrap(), v_int(2));
     }
 }

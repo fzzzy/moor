@@ -1743,6 +1743,14 @@ impl Debug for Var {
     }
 }
 
+/// A float as ordering and hashing see it: `-0.0` as `0.0`, since `==` holds them equal. Without
+/// this, a map could hold both as separate keys, and a value equal to a key by `==` could fail to
+/// find it.
+#[inline]
+fn float_key(f: f64) -> f64 {
+    if f == 0.0 { 0.0 } else { f }
+}
+
 impl Hash for Var {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self.variant() {
@@ -1750,7 +1758,7 @@ impl Hash for Var {
             Variant::Bool(b) => b.hash(state),
             Variant::Obj(o) => o.hash(state),
             Variant::Int(i) => i.hash(state),
-            Variant::Float(f) => f.to_bits().hash(state),
+            Variant::Float(f) => float_key(f).to_bits().hash(state),
             Variant::List(l) => l.hash(state),
             Variant::Str(s) => s.hash(state),
             Variant::Map(m) => m.hash(state),
@@ -1815,15 +1823,18 @@ impl Ord for Var {
 
         // Fast path: float cmp float
         if self.tag == TAG_FLOAT && other.tag == TAG_FLOAT {
-            return f64::from_bits(self.data).total_cmp(&f64::from_bits(other.data));
+            return float_key(f64::from_bits(self.data))
+                .total_cmp(&float_key(f64::from_bits(other.data)));
         }
 
         // Fast path: int cmp float / float cmp int
         if self.tag == TAG_INT && other.tag == TAG_FLOAT {
-            return (self.data as i64 as f64).total_cmp(&f64::from_bits(other.data));
+            return float_key(self.data as i64 as f64)
+                .total_cmp(&float_key(f64::from_bits(other.data)));
         }
         if self.tag == TAG_FLOAT && other.tag == TAG_INT {
-            return f64::from_bits(self.data).total_cmp(&(other.data as i64 as f64));
+            return float_key(f64::from_bits(self.data))
+                .total_cmp(&float_key(other.data as i64 as f64));
         }
 
         // Slow path for other types
@@ -1839,7 +1850,7 @@ impl Var {
             (Variant::Bool(l), Variant::Bool(r)) => l.cmp(&r),
             (Variant::Obj(l), Variant::Obj(r)) => l.cmp(&r),
             (Variant::Int(l), Variant::Int(r)) => l.cmp(&r),
-            (Variant::Float(l), Variant::Float(r)) => l.total_cmp(&r),
+            (Variant::Float(l), Variant::Float(r)) => float_key(l).total_cmp(&float_key(r)),
             (Variant::List(l), Variant::List(r)) => l.cmp(r),
             (Variant::Str(l), Variant::Str(r)) => {
                 if self.str_is_ascii() && other.str_is_ascii() {
@@ -1859,8 +1870,8 @@ impl Var {
                 let r_ptr = &*r.0.body.0 as *const PrgInner;
                 l_ptr.cmp(&r_ptr)
             }
-            (Variant::Int(l), Variant::Float(r)) => (l as f64).total_cmp(&r),
-            (Variant::Float(l), Variant::Int(r)) => l.total_cmp(&(r as f64)),
+            (Variant::Int(l), Variant::Float(r)) => (l as f64).total_cmp(&float_key(r)),
+            (Variant::Float(l), Variant::Int(r)) => float_key(l).total_cmp(&(r as f64)),
             (Variant::None, _) => Ordering::Less,
             (_, Variant::None) => Ordering::Greater,
             (Variant::Bool(_), _) => Ordering::Less,
