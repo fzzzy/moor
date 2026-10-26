@@ -764,8 +764,9 @@ mod tests {
         };
         assert_eq!(map.get(&explained).unwrap(), v_str("denied"));
 
-        // A message no longer moves an error past other codes.
-        let div = v_error(E_DIV.msg("by zero"));
-        assert_eq!(div.cmp(&v_err(E_TYPE)), E_DIV.cmp(&E_TYPE));
+        // A message no longer moves an error past later codes: E_TYPE comes before E_DIV.
+        assert!(E_TYPE < E_DIV);
+        let type_error = v_error(E_TYPE.msg("not a number"));
+        assert_eq!(type_error.cmp(&v_err(E_DIV)), std::cmp::Ordering::Less);
     }
 }
