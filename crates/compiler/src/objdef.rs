@@ -19,6 +19,7 @@ use moor_common::{
 use moor_var::{Obj, Symbol, Var, VarType, program::ProgramType};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Maximum nesting depth for list/map/flyweight/lambda literals, matching the
 /// verb-call recursion limit exposed to MOO as `E_MAXREC`.
@@ -55,6 +56,8 @@ pub fn is_package_name(name: &str) -> bool {
 
 pub struct ObjFileContext {
     constants: HashMap<Symbol, Var>,
+    /// The qualified object constants verb code can name, built when first needed after a change.
+    package_constants: Option<Arc<HashMap<Symbol, Obj>>>,
     /// The package whose files are being read. Its constants are stored qualified, and bare
     /// names resolve to them before global ones.
     namespace: Option<String>,
@@ -75,6 +78,7 @@ impl ObjFileContext {
     pub fn new() -> Self {
         Self {
             constants: HashMap::new(),
+            package_constants: None,
             namespace: None,
             declaration: None,
             base_path: None,
@@ -84,6 +88,22 @@ impl ObjFileContext {
 
     pub fn add_constant(&mut self, name: Symbol, value: Var) {
         self.constants.insert(name, value);
+        self.package_constants = None;
+    }
+
+    /// The constants verb code can name as `pkg::NAME`: the qualified ones that bind objects.
+    pub(crate) fn package_constants(&mut self) -> Arc<HashMap<Symbol, Obj>> {
+        self.package_constants
+            .get_or_insert_with(|| {
+                Arc::new(
+                    self.constants
+                        .iter()
+                        .filter(|(name, _)| name.as_arc_str().contains(NAMESPACE_SEPARATOR))
+                        .filter_map(|(name, value)| Some((*name, value.as_object()?)))
+                        .collect(),
+                )
+            })
+            .clone()
     }
 
     /// Read the following sources as files of `package`, or with None, as global sources.
@@ -1361,6 +1381,60 @@ mod tests {
             VerbFlag::rxd(),
             "flags = 42; is body code, not a header attribute"
         );
+    }
+
+    #[test]
+    fn verb_code_names_package_object_constants() {
+        let mut context = ObjFileContext::new();
+        context.set_namespace(Some("core"));
+        let objects = compile_object_definitions(
+            r#"define ROOT = #1;
+            define TITLE = "Root";
+            object ROOT
+              name: TITLE
+              method probe owner: ROOT
+                return core::ROOT:name();
+              endmethod
+            endobject"#,
+            &CompileOptions::default(),
+            &mut context,
+        )
+        .unwrap();
+        let ProgramType::MooR(program) = &objects[0].verbs[0].program;
+        let literal = crate::compile("return #1:name();", CompileOptions::default()).unwrap();
+        assert_eq!(program, &literal, "the constant compiles to its object");
+
+        // A constant that binds no object, and an unknown one, are refused.
+        for (code, message) in [
+            (
+                "return core::TITLE;",
+                "`core::TITLE` is not an object constant",
+            ),
+            (
+                "return core::MISSING;",
+                "`core::MISSING` is not an object constant",
+            ),
+        ] {
+            let Err(error) = compile_object_definitions(
+                &format!("object #2\n  method probe owner: #1\n    {code}\n  endmethod\nendobject"),
+                &CompileOptions::default(),
+                &mut context,
+            ) else {
+                panic!("{code} compiled");
+            };
+            assert!(error.to_string().contains(message), "{error}");
+        }
+
+        // Outside objdef source there are no constants to name.
+        let error = crate::compile("return core::ROOT;", CompileOptions::default()).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("can only be used in objdef source"),
+            "{error}"
+        );
+        // Spaced colons are still a verb call on a variable, as before.
+        assert!(crate::compile("return x:y();", CompileOptions::default()).is_ok());
     }
 
     #[test]

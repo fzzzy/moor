@@ -553,6 +553,8 @@ struct ObjectDumpSink<'a> {
     options: ObjectDumpOptions,
     directory_path: &'a Path,
     index_names: &'a HashMap<Obj, String>,
+    /// Names verb code writes for objects, the same in every directory.
+    code_names: &'a HashMap<Obj, String>,
     file_names: &'a HashMap<Obj, String>,
     hierarchies: &'a HashMap<Obj, Vec<String>>,
     directories: HashMap<Vec<String>, PathBuf>,
@@ -567,6 +569,7 @@ impl<'a> ObjectDumpSink<'a> {
         directory_path: &'a Path,
         declaration: Option<&PackageDeclaration>,
         index_names: &'a HashMap<Obj, String>,
+        code_names: &'a HashMap<Obj, String>,
         constants: &HashMap<Obj, String>,
         file_names: &'a HashMap<Obj, String>,
         hierarchies: &'a HashMap<Obj, Vec<String>>,
@@ -589,6 +592,7 @@ impl<'a> ObjectDumpSink<'a> {
             options,
             directory_path,
             index_names,
+            code_names,
             file_names,
             hierarchies,
             directories,
@@ -626,6 +630,7 @@ impl<'a> ObjectDumpSink<'a> {
             let mut file = File::create(path)?;
             return crate::write::write_validated_dump_object(
                 self.index_names,
+                self.code_names,
                 object,
                 self.options,
                 &mut file,
@@ -642,7 +647,13 @@ impl<'a> ObjectDumpSink<'a> {
         if !first_in_hierarchy {
             writeln!(file)?;
         }
-        crate::write::write_validated_dump_object(self.index_names, object, self.options, &mut file)
+        crate::write::write_validated_dump_object(
+            self.index_names,
+            self.code_names,
+            object,
+            self.options,
+            &mut file,
+        )
     }
 }
 
@@ -796,6 +807,7 @@ pub fn dump_snapshot_object_definitions_with_options(
     let metadata_elapsed = metadata_started.elapsed();
 
     let (index_names, file_names) = extract_object_constants_from_identities(&identities);
+    let code_names = crate::write::code_names(&index_names);
     let hierarchies = identities
         .iter()
         .map(|identity| (identity.oid, identity.hierarchy.clone()))
@@ -823,6 +835,7 @@ pub fn dump_snapshot_object_definitions_with_options(
                 &target.directory,
                 target.declaration.as_ref(),
                 &target.index_names,
+                &code_names,
                 &target.constants,
                 &file_names,
                 &hierarchies,
@@ -910,10 +923,12 @@ pub(crate) fn dump_object_definitions(
         .filter(|object| !object.oid.is_anonymous())
         .count();
     let anonymous_count = object_defs.len() - regular_count;
+    let code_names = crate::write::code_names(&index_names);
     let mut sink = ObjectDumpSink::new(
         directory_path,
         None,
         &index_names,
+        &code_names,
         &index_names,
         &file_names,
         &hierarchies,
@@ -943,7 +958,8 @@ pub fn dump_object_with_options(
     o: &ObjectDefinition,
     options: ObjectDumpOptions,
 ) -> Result<Vec<Var>, ObjectDumpError> {
-    Ok(crate::write::collect_dump_object_lines(index_names, o, options)?.lines)
+    let code_names = crate::write::code_names(index_names);
+    Ok(crate::write::collect_dump_object_lines(index_names, &code_names, o, options)?.lines)
 }
 
 #[cfg(test)]
@@ -1031,7 +1047,7 @@ mod tests {
         // No id: the package infers its own from its constants, though core's objects have ids.
         std::fs::write(
             minecraft.join("region.moo"),
-            "object REGION\n  name: \"region\"\n  parent: core::THING\n  owner: LEGACY\n  location: #-1\n  readable: true\nendobject\n",
+            "object REGION\n  name: \"region\"\n  parent: core::THING\n  owner: LEGACY\n  location: #-1\n  readable: true\n\n  method spot owner: LEGACY\n    return {core::THING:name(), minecraft::REGION, #0, #-1, #50};\n  endmethod\nendobject\n",
         )
         .unwrap();
         // A plain directory beside the packages, with global constants.
@@ -1081,6 +1097,14 @@ mod tests {
         assert!(text("minecraft/region.moo").contains("parent: core::THING"));
         assert!(text("minecraft/region.moo").contains("owner: LEGACY"));
         assert!(text("minecraft/region.moo").starts_with("object REGION"));
+        // Verb code names objects by their qualified constants. #0, #-1 and a global constant's
+        // object keep their numbers, since a bare name there would be a variable.
+        assert!(
+            text("minecraft/region.moo")
+                .contains("return {core::THING:name(), minecraft::REGION, #0, #-1, #50};"),
+            "{}",
+            text("minecraft/region.moo")
+        );
         assert!(!text("core/sysobj.moo").contains("objdef_packages"));
         assert!(!text("minecraft/region.moo").contains("objdef_package"));
 

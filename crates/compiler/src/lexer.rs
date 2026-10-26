@@ -296,10 +296,26 @@ impl<'a> Lexer<'a> {
         }
 
         let text = &self.source[start..self.pos];
-        keyword_kind(text)
+        let kind = keyword_kind(text)
             .or_else(|| type_constant_kind(text))
             .or_else(|| error_literal_kind(text))
-            .unwrap_or(SyntaxKind::Ident)
+            .unwrap_or(SyntaxKind::Ident);
+        // `pkg::NAME`, with no space around the separator. MOO has no other use for `::`.
+        if kind == SyntaxKind::Ident
+            && self.matches("::")
+            && self.source[self.pos + 2..]
+                .chars()
+                .next()
+                .is_some_and(|ch| ch == '_' || ch.is_ascii_alphabetic())
+        {
+            self.bump();
+            self.bump();
+            while self.peek().is_some_and(is_ident_continue) {
+                self.bump();
+            }
+            return SyntaxKind::QualifiedName;
+        }
+        kind
     }
 
     fn lex_string(&mut self) -> SyntaxKind {

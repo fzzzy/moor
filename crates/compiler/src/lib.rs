@@ -62,7 +62,7 @@ pub use crate::{
     },
     precedence::{PrecedenceLevel, expr_precedence_level},
     syntax_kind::SyntaxKind,
-    unparse::{to_literal, to_literal_objsub, unparse, unparse_for_comparison},
+    unparse::{to_literal, to_literal_objsub, unparse, unparse_for_comparison, unparse_objsub},
 };
 // Re-export from var
 pub use moor_common::builtins::{

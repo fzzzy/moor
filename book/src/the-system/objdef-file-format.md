@@ -432,6 +432,26 @@ verb "look_self" (this none none) owner: WIZARD flags: "rxd"
 endverb
 ```
 
+### Constants in verb code
+
+Verb code can name an object constant of a package qualified, even inside that package:
+
+```moo
+method in_room owner: core::ARCH_WIZARD
+  return isa(this.location, core::ROOM);
+endmethod
+```
+
+The constant compiles to the object it binds, so the stored program holds `#7`, as if the source had
+said so. A bare name such as `ROOM` is a variable in verb code, as it always was, and a constant
+that binds something other than an object is refused.
+
+Only objdef source has constants. In the running world, `@program` and `set_verb_code()` refuse
+`core::ROOM`, and listing a verb shows `#7`. Exporting the world turns each object literal in verb
+code that a package constant binds back into its qualified name, except `#0` and negative numbers.
+Since a program keeps only the number, this also names literals that were written as numbers, such
+as `#7` used as test data.
+
 ## Data Types
 
 ### Primitive Types

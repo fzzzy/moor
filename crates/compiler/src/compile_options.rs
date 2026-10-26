@@ -11,6 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use moor_var::{Obj, Symbol};
+use std::{collections::HashMap, sync::Arc};
+
 /// Options controlling MOO compilation behavior.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CompileOptions {
@@ -30,6 +33,9 @@ pub struct CompileOptions {
     /// When true (textdump import mode), these are parsed as type literals.
     /// Note: The new TYPE_* forms (TYPE_INT, TYPE_OBJ, etc.) are always recognized.
     pub legacy_type_constants: bool,
+    /// The object constants of objdef source, by qualified name, which verb code may name as
+    /// `pkg::NAME`. Only objdef compilation sets them; elsewhere `pkg::NAME` is refused.
+    pub package_constants: Option<Arc<HashMap<Symbol, Obj>>>,
 }
 
 impl Default for CompileOptions {
@@ -41,6 +47,7 @@ impl Default for CompileOptions {
             custom_errors: true,
             call_unsupported_builtins: false,
             legacy_type_constants: false,
+            package_constants: None,
         }
     }
 }

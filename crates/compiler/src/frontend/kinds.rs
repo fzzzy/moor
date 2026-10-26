@@ -58,6 +58,7 @@ pub(crate) fn is_atom_token(kind: SyntaxKind) -> bool {
             | SyntaxKind::ErrorLit
             | SyntaxKind::SymbolLit
             | SyntaxKind::BinaryLit
+            | SyntaxKind::QualifiedName
             | SyntaxKind::TypeConstant
             | SyntaxKind::TrueKw
             | SyntaxKind::FalseKw

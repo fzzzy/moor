@@ -1474,7 +1474,9 @@ impl<'a> LiteralParser<'a> {
 
         let (_, source_column) = self.line_col(self.pos);
         let (statements_text, verb_start_line) = self.parse_verb_body_until_endverb()?;
-        let program = compile(statements_text.as_str(), compile_options.clone()).map_err(|e| {
+        let mut verb_options = compile_options.clone();
+        verb_options.package_constants = Some(self.context.package_constants());
+        let program = compile(statements_text.as_str(), verb_options).map_err(|e| {
             ObjDefParseError::VerbCompileError(
                 offset_compile_error(e, verb_start_line.saturating_sub(1)),
                 statements_text.clone(),
@@ -1536,7 +1538,9 @@ impl<'a> LiteralParser<'a> {
         let (_, source_column) = self.line_col(self.pos);
         let (statements_text, verb_start_line) =
             self.parse_verb_body_until_end_keyword("endmethod", "missing endmethod")?;
-        let program = compile(statements_text.as_str(), compile_options.clone()).map_err(|e| {
+        let mut verb_options = compile_options.clone();
+        verb_options.package_constants = Some(self.context.package_constants());
+        let program = compile(statements_text.as_str(), verb_options).map_err(|e| {
             ObjDefParseError::VerbCompileError(
                 offset_compile_error(e, verb_start_line.saturating_sub(1)),
                 statements_text.clone(),

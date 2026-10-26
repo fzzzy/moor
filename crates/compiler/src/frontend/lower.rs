@@ -1453,6 +1453,7 @@ impl<'a> Lowerer<'a> {
             }
             SyntaxKind::ErrorLit => self.lower_error_literal_token(&token),
             SyntaxKind::ObjectLit => self.lower_object_literal(token),
+            SyntaxKind::QualifiedName => self.lower_package_constant(&token),
             SyntaxKind::TypeConstant => {
                 let type_id = VarType::parse(token.text()).ok_or_else(|| {
                     CompileError::UnknownTypeConstant(
@@ -1522,6 +1523,27 @@ impl<'a> Lowerer<'a> {
             ));
         }
         Ok(Expr::Error(error, None))
+    }
+
+    /// A package constant compiles to the object it binds, so the program holds an ordinary object
+    /// literal. Only objdef source has constants to look up.
+    fn lower_package_constant(&self, token: &SyntaxToken) -> Result<Expr, CompileError> {
+        let name = token.text();
+        let Some(constants) = &self.options.package_constants else {
+            return Err(self.make_parse_error(
+                token.text_range(),
+                "package constant",
+                &format!("package constants such as `{name}` can only be used in objdef source"),
+            ));
+        };
+        let Some(object) = constants.get(&Symbol::mk(name)) else {
+            return Err(self.make_parse_error(
+                token.text_range(),
+                "package constant",
+                &format!("`{name}` is not an object constant"),
+            ));
+        };
+        Ok(Expr::Value(v_obj(*object)))
     }
 
     fn lower_object_literal(&self, token: SyntaxToken) -> Result<Expr, CompileError> {

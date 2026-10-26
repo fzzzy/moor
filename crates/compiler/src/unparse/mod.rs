@@ -307,6 +307,20 @@ pub fn unparse(
     Ok(buffer.lines().map(|s| s.to_string()).collect())
 }
 
+/// Unparse a program, writing each object literal that `names` has a name for as that name, such as
+/// a package constant in objdef source.
+pub fn unparse_objsub(
+    tree: &Parse,
+    fully_paren: bool,
+    indent: bool,
+    names: &HashMap<Obj, String>,
+) -> Result<Vec<String>, DecompileError> {
+    let unparse = Unparse::new_objsub(tree, fully_paren, indent, names);
+    let mut buffer = String::new();
+    unparse.unparse_stmts(&tree.stmts, &mut buffer, 0)?;
+    Ok(buffer.lines().map(|s| s.to_string()).collect())
+}
+
 /// Render program structure with numbered placeholders and a separate literal table.
 ///
 /// This is comparison input, not executable source or a versioned serialization. Separating
