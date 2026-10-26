@@ -321,6 +321,90 @@ human-readable output.
 
 **Returns:** The decoded value
 
+### `binary_pack`
+
+**Description**: Packs non-negative integers into a binary value as fixed-width fields, laid end to
+end.\
+**Arguments**:
+
+- `values`: A list of integers, each from 0 to 2<sup> `width`</sup> − 1
+- `width`: The bits in each field, from 1 to 32
+
+**Returns:** A binary value of `ceil(length(values) * width / 8)` bytes
+
+Field `i` (counting from 0) occupies bits `i * width` to `i * width + width - 1` of one bit stream.
+Bit `k` of the stream is bit `k % 8` of byte `k / 8`, and each value's lowest bit comes first.
+Fields may cross byte boundaries. Unused bits at the end of the last byte are zero.
+
+A binary value does not record how many fields it holds, so those unused bits read back as extra
+zero fields. Pass a count to `binary_unpack()` when the number of fields matters.
+
+```moo
+binary_pack({22, 13, 31}, 5)                    => a 2-byte binary value
+binary_unpack(binary_pack({22, 13, 31}, 5), 5)  => {22, 13, 31}
+binary_unpack(binary_pack({1, 2, 3}, 3), 3)     => {1, 2, 3, 0, 0}
+```
+
+**Note:** This is a mooR extension, as are the other packed-field functions below. They suit compact
+grids, bitmaps and palette indices.
+
+### `binary_unpack`
+
+**Description**: Reads fixed-width fields from a binary value, in the layout `binary_pack()`
+writes.\
+**Arguments**:
+
+- `data`: The binary value
+- `width`: The bits in each field, from 1 to 32
+- `start`: Optional. The first field to read, counting from 1. Defaults to 1
+- `count`: Optional. How many fields to read. Defaults to every whole field from `start` to the end
+
+**Returns:** A list of integers
+
+Raises `E_RANGE` if the fields asked for run past the end of `data`.
+
+### `binary_field`
+
+**Description**: Reads one fixed-width field from a binary value.\
+**Arguments**:
+
+- `data`: The binary value
+- `width`: The bits in each field, from 1 to 32
+- `index`: The field to read, counting from 1
+
+**Returns:** The field's value
+
+### `binary_set_field`
+
+**Description**: Changes one fixed-width field of a binary value.\
+**Arguments**:
+
+- `data`: The binary value
+- `width`: The bits in each field, from 1 to 32
+- `index`: The field to change, counting from 1
+- `value`: The new value, from 0 to 2<sup> `width`</sup> − 1
+
+**Returns:** A copy of `data` with the field changed. `data` itself is unchanged.
+
+### `binary_set_fields`
+
+**Description**: Changes many fixed-width fields of a binary value at once.\
+**Arguments**:
+
+- `data`: The binary value
+- `width`: The bits in each field, from 1 to 32
+- `changes`: A list of `{index, value}` pairs, applied in order, so a later pair for the same index
+  wins
+
+**Returns:** A copy of `data` with the fields changed
+
+This copies `data` once, so it is much cheaper than calling `binary_set_field()` for each change.
+
+The packed-field functions raise `E_INVARG` when `width` is outside 1 to 32 or a value does not fit
+in `width` bits, `E_RANGE` when an index is outside the fields `data` holds, and `E_TYPE` for
+arguments of the wrong type. Packing, unpacking or changing many fields costs one tick for every 256
+fields.
+
 ### `object_bytes`
 
 **Description**: Returns the size of an object in bytes.\

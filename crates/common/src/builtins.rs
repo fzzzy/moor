@@ -462,6 +462,51 @@ fn mk_builtin_table() -> Vec<Builtin> {
             vec![Any, Any, Any, Typed(TYPE_MAP)],
             true,
         ),
+        mk_builtin(
+            "binary_pack",
+            Q(2),
+            Q(2),
+            vec![Typed(TYPE_LIST), Typed(TYPE_INT)],
+            true,
+        ),
+        mk_builtin(
+            "binary_unpack",
+            Q(2),
+            Q(4),
+            vec![
+                Typed(TYPE_BINARY),
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+            ],
+            true,
+        ),
+        mk_builtin(
+            "binary_field",
+            Q(3),
+            Q(3),
+            vec![Typed(TYPE_BINARY), Typed(TYPE_INT), Typed(TYPE_INT)],
+            true,
+        ),
+        mk_builtin(
+            "binary_set_field",
+            Q(4),
+            Q(4),
+            vec![
+                Typed(TYPE_BINARY),
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+                Typed(TYPE_INT),
+            ],
+            true,
+        ),
+        mk_builtin(
+            "binary_set_fields",
+            Q(3),
+            Q(3),
+            vec![Typed(TYPE_BINARY), Typed(TYPE_INT), Typed(TYPE_LIST)],
+            true,
+        ),
     ]);
     // IMPORTANT: ALWAYS APPEND NEW BUILTINS ABOVE THIS LINE
     pad_group(&mut builtins, start, "value conversion/introspection");
