@@ -748,4 +748,24 @@ mod tests {
             vec![v_int(-3), v_int(1), v_float(1.0), v_float(2.5)]
         );
     }
+
+    #[test]
+    fn test_errors_order_as_they_compare() {
+        // == compares an error's code and value, never its message; ordering must agree.
+        use crate::{E_DIV, E_PERM, E_TYPE, v_err, v_error};
+        let bare = v_err(E_PERM);
+        let explained = v_error(E_PERM.msg("not yours"));
+        assert_eq!(bare, explained);
+        assert_eq!(bare.cmp(&explained), std::cmp::Ordering::Equal);
+
+        let m = Var::mk_map(&[(bare, v_str("denied"))]);
+        let Variant::Map(map) = m.variant() else {
+            panic!("not a map");
+        };
+        assert_eq!(map.get(&explained).unwrap(), v_str("denied"));
+
+        // A message no longer moves an error past other codes.
+        let div = v_error(E_DIV.msg("by zero"));
+        assert_eq!(div.cmp(&v_err(E_TYPE)), E_DIV.cmp(&E_TYPE));
+    }
 }
