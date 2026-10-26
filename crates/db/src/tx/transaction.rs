@@ -784,14 +784,18 @@ where
     where
         F: FnMut(&Domain),
     {
-        self.index
-            .master_entries
-            .for_each_by_codomain(codomain, &mut |domain| {
-                // Any local op shadows base state for this domain.
-                if !self.index.local_operations.contains_key(domain) {
-                    f(domain);
-                }
-            });
+        if self.index.provider_fully_loaded {
+            self.index
+                .master_entries
+                .for_each_by_codomain(codomain, &mut |domain| {
+                    // Any local op shadows base state for this domain.
+                    if !self.index.local_operations.contains_key(domain) {
+                        f(domain);
+                    }
+                });
+        } else {
+            self.for_each_unloaded_by_codomain(codomain, &mut f);
+        }
 
         if self.index.local_operations.is_empty() {
             return;
@@ -800,6 +804,45 @@ where
         self.index
             .local_operations
             .for_each_by_codomain(codomain, f);
+    }
+
+    /// The base half of `for_each_by_codomain` while the master entries hold only part of the
+    /// provider's rows: the provider's rows with that codomain, unless the master entries hold a
+    /// newer value for the domain, then the master entries' own matches.
+    fn for_each_unloaded_by_codomain<F>(&self, codomain: &Codomain, f: &mut F)
+    where
+        F: FnMut(&Domain),
+    {
+        let mut seen = HashSet::new();
+        match self.backing_source.scan(&|_, value| value == codomain) {
+            Ok(rows) => {
+                for (ts, domain, _) in rows {
+                    let superseded = self
+                        .index
+                        .master_entries
+                        .index_lookup(&domain)
+                        .is_some_and(|entry| entry.value != *codomain);
+                    if ts <= self.visible_ts()
+                        && !superseded
+                        && !self.index.local_operations.contains_key(&domain)
+                        && seen.insert(domain.clone())
+                    {
+                        f(&domain);
+                    }
+                }
+            }
+            Err(error) => {
+                tracing::error!(?error, "Unable to scan a relation's provider by codomain");
+            }
+        }
+        self.index
+            .master_entries
+            .for_each_by_codomain(codomain, &mut |domain| {
+                if !self.index.local_operations.contains_key(domain) && seen.insert(domain.clone())
+                {
+                    f(domain);
+                }
+            });
     }
 
     pub fn get(&self, domain: &Domain) -> Result<Option<Codomain>, Error> {

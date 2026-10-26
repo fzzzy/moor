@@ -359,6 +359,33 @@ mod tests {
     }
 
     #[test]
+    fn codomain_lookups_reach_rows_not_yet_loaded() {
+        let mut backing = HashMap::new();
+        backing.insert(TestDomain(0), TestCodomain(7));
+        backing.insert(TestDomain(1), TestCodomain(7));
+        backing.insert(TestDomain(2), TestCodomain(8));
+        let data = Arc::new(Mutex::new(backing));
+        let provider = Arc::new(TestProvider { data });
+        let relation = Arc::new(Relation::new_with_secondary(Symbol::mk("test"), provider));
+
+        let tx = Tx {
+            ts: Timestamp(1),
+            visible_ts: Timestamp(1),
+            snapshot_version: 0,
+        };
+        let mut lc = relation.clone().start(&tx);
+        lc.insert(TestDomain(3), TestCodomain(7)).unwrap();
+        lc.update(&TestDomain(1), TestCodomain(9)).unwrap();
+        let mut found = lc.get_by_codomain(&TestCodomain(7));
+        found.sort_by_key(|domain| domain.0);
+        assert_eq!(
+            found,
+            vec![TestDomain(0), TestDomain(3)],
+            "stored rows, minus the one this transaction changed, plus its own"
+        );
+    }
+
+    #[test]
     fn test_basic() {
         let mut backing = HashMap::new();
         backing.insert(TestDomain(0), TestCodomain(0));
