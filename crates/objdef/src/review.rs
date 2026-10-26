@@ -26,6 +26,8 @@
 
 #[path = "review_additions.rs"]
 mod additions;
+#[path = "review_attributes.rs"]
+mod attributes;
 #[path = "review_inspection.rs"]
 pub(crate) mod inspection;
 #[path = "review_objects.rs"]
@@ -316,9 +318,22 @@ pub(crate) enum ChangeTarget {
     Existing(uuid::Uuid),
     AddVerb(moor_compiler::ObjVerbDef),
     AddProperty(moor_compiler::ObjPropDef),
-    RetainProperty { accepted: String },
+    RetainProperty {
+        accepted: String,
+    },
     AddObject(Box<moor_compiler::ObjectDefinition>),
-    RetainObject { accepted: String },
+    RetainObject {
+        accepted: String,
+    },
+    /// A parent or location change on an installed object. `removed` names the properties a
+    /// parent change stops the object inheriting; `apply` is false when the live value is kept
+    /// and only the incoming one acknowledged.
+    Attribute {
+        name: &'static str,
+        value: moor_var::Obj,
+        removed: BTreeSet<Symbol>,
+        apply: bool,
+    },
 }
 
 pub(crate) struct ChangeRow {
@@ -487,13 +502,18 @@ pub(crate) fn analyze(
             );
         }
     } else if selected_fields.is_empty()
-        || selected_fields
-            .iter()
-            .any(|field| !matches!(field.as_string(), Some("program" | "property" | "object")))
+        || selected_fields.iter().any(|field| {
+            !matches!(
+                field.as_string(),
+                Some("program" | "property" | "object" | "attribute")
+            )
+        })
     {
-        return Err("update fields must be program, property, or object"
-            .to_owned()
-            .into());
+        return Err(
+            "update fields must be program, property, object, or attribute"
+                .to_owned()
+                .into(),
+        );
     }
     let actor_flags = world.flags_of(&permissions.principal())?;
     if !actor_flags.contains(ObjFlag::Wizard)
@@ -740,6 +760,51 @@ pub(crate) fn analyze(
         ]));
         let mut object_context = member_context.clone();
         object_context.push(guards.last().unwrap().clone());
+        // Parent and location rows come first: a parent change decides which properties the
+        // object inherits, and so whether a property addition collides.
+        let mut reparent: Option<(moor_var::Obj, BTreeSet<Symbol>)> = None;
+        if !adoption
+            && selected_fields
+                .iter()
+                .any(|field| field.as_string() == Some("attribute"))
+            && (world.parent_of(permissions, &object)? != incoming.parent
+                || world.location_of(permissions, &object)? != incoming.location)
+        {
+            let local = crate::collect_object_definitions(world, permissions, &[object])
+                .map_err(|error| error.to_string())?
+                .remove(0);
+            let context = attributes::Context {
+                world,
+                permissions,
+                object,
+                trusted,
+                identity_matches,
+                local: &local,
+                incoming,
+            };
+            for name in attributes::NAMES {
+                let guard_start = guards.len();
+                if let Some((row, report)) = context.analyze(label, name, &mut guards)? {
+                    if let ChangeTarget::Attribute {
+                        name: "parent",
+                        value,
+                        removed,
+                        ..
+                    } = &row.target
+                        && row.eligible
+                    {
+                        reparent = Some((*value, removed.clone()));
+                    }
+                    rows.push(row);
+                    report_rows.push(member_revision(
+                        report,
+                        &guards[guard_start..],
+                        &object_context,
+                        for_preview,
+                    )?);
+                }
+            }
+        }
         let verbs = world.verbs(permissions, &object)?;
         let definitions = verbs.iter().collect::<Vec<_>>();
         let mut matched = BTreeSet::new();
@@ -1118,6 +1183,9 @@ pub(crate) fn analyze(
                     trusted_owners: &trusted_owners,
                     policy: &policy,
                     local: local.as_ref().unwrap(),
+                    reparent: reparent
+                        .as_ref()
+                        .map(|(parent, removed)| (*parent, removed)),
                 };
                 let guard_start = guards.len();
                 let (row, report) = context.analyze(
@@ -1540,7 +1608,21 @@ pub fn apply(
         .clone();
         actions.push(ChangeAction {
             object: row.object,
-            target: row.target,
+            target: match row.target {
+                // Keeping the live value acknowledges the incoming one without changing it.
+                ChangeTarget::Attribute {
+                    name,
+                    value,
+                    removed,
+                    ..
+                } => ChangeTarget::Attribute {
+                    name,
+                    value,
+                    removed,
+                    apply: kind == "incoming",
+                },
+                target => target,
+            },
             program,
             baseline: record(&baseline),
         });
@@ -1606,9 +1688,40 @@ fn write_actions(
     )
     .map_err(ApplyError::Mutation)?;
     objects::initialize(world, permissions, &objects).map_err(ApplyError::Mutation)?;
+    // Parents and locations change before properties are added, so an addition can take the
+    // place of a property the old parent provided.
+    for action in &members {
+        if let ChangeTarget::Attribute {
+            name, value, apply, ..
+        } = &action.target
+        {
+            let accepted = action
+                .baseline
+                .as_map()
+                .and_then(|map| map.get(&v_str("program")).ok())
+                .and_then(|hash| hash.as_string().map(str::to_owned))
+                .ok_or_else(|| {
+                    ApplyError::Mutation(WorldStateError::DatabaseError(
+                        "attribute action without an accepted hash".into(),
+                    ))
+                })?;
+            attributes::write(
+                world,
+                permissions,
+                action.object,
+                name,
+                *value,
+                *apply,
+                &accepted,
+            )
+            .map_err(ApplyError::Mutation)?;
+        }
+    }
     for action in members {
         let uuid = match action.target {
-            ChangeTarget::RetainProperty { .. } | ChangeTarget::RetainObject { .. } => continue,
+            ChangeTarget::RetainProperty { .. }
+            | ChangeTarget::RetainObject { .. }
+            | ChangeTarget::Attribute { .. } => continue,
             ChangeTarget::AddObject(_) => {
                 unreachable!("object actions were partitioned before member writes")
             }

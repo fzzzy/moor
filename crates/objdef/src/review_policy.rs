@@ -450,6 +450,57 @@ impl Policy {
                 }
             }
         }
+        // A parent change and the additions of the properties it stops the object inheriting
+        // apply together: the addition alone collides, and the change alone drops their values.
+        let choice_of = |row: &super::ChangeRow| {
+            choices
+                .and_then(Var::as_map)
+                .and_then(|map| map.get(&v_str(&row.id)).ok())
+                .and_then(|value| {
+                    value
+                        .as_map()
+                        .and_then(|map| map.get(&v_str("choice")).ok())
+                })
+                .and_then(|value| value.as_string().map(str::to_owned))
+                .unwrap_or_else(|| row.default.to_owned())
+        };
+        for parent in &analysis.rows {
+            let super::ChangeTarget::Attribute {
+                name: "parent",
+                removed,
+                ..
+            } = &parent.target
+            else {
+                continue;
+            };
+            let changing = parent.pending && choice_of(parent) == "incoming";
+            for property in analysis
+                .rows
+                .iter()
+                .filter(|row| row.object == parent.object)
+            {
+                let super::ChangeTarget::AddProperty(definition) = &property.target else {
+                    continue;
+                };
+                if !removed.contains(&definition.name) {
+                    continue;
+                }
+                let adding = selected.contains(&property.member);
+                if adding != changing {
+                    issues.push(record(&[
+                        ("code", v_str("parent_change_pairing")),
+                        (
+                            "message",
+                            v_str(&format!(
+                                "Changing the parent of {} and adding its property {} go together. Select both, or neither.",
+                                parent.object,
+                                definition.name
+                            )),
+                        ),
+                    ]));
+                }
+            }
+        }
         for name in &selected_groups {
             let group = &self.groups[*name];
             if !group

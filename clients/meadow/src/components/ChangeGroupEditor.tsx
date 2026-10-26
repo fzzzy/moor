@@ -143,6 +143,10 @@ export function ChangeGroupEditor({ client, generation, groups, group, onSaved, 
                                 ? " — new object and contents"
                                 : row.operation === "retain_object"
                                 ? " — keep existing object"
+                                : row.operation === "set_parent"
+                                ? " — new parent"
+                                : row.operation === "move_object"
+                                ? " — new location"
                                 : " — existing program"}
                             {row.group && row.group !== group && ` (belongs to ${row.group})`}
                         </label>

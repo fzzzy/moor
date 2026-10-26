@@ -543,6 +543,10 @@ export function ChangeReview({ target, authToken, onClose, connectionRevision = 
                     ? "Create object"
                     : item.operation === "add_property"
                     ? "Create property"
+                    : item.operation === "set_parent"
+                    ? "Change parent"
+                    : item.operation === "move_object"
+                    ? "Move object"
                     : "Keep live contents";
             }
             if (selected === "local") return "Keep live contents";

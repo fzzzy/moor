@@ -125,6 +125,7 @@ export const effectLabels: Record<string, string> = {
     add_verb: "Add verb",
     add_property: "Create property with its initial value",
     add_object: "Create object",
+    attribute: "Change parent or location",
     baseline: "Acknowledge upstream; keep live contents",
     retained: "Keep live contents",
     deferred: "Skip; keep code and recorded upstream version",
@@ -215,7 +216,7 @@ export function decodeChangeRow(value: unknown, details = false): ChangeRow {
     }
     const label = text(row.label);
     const field = typeof row.field === "string" ? row.field : "program";
-    const separator = field === "program" ? ":" : ".";
+    const separator = field === "program" ? ":" : field === "attribute" ? " " : ".";
     const member = field === "object" ? "" : typeof row.name === "string"
         ? field === "program" ? row.name.replace(/^\d+:/, "") : row.name
         : field === "program" && Array.isArray(row.names) && row.names.length
