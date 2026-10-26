@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `objects_with_metadata(key, value)` answers from an index of metadata values rather than scanning
+  every metadata row, so tagging objects with metadata and finding them by tag stays fast as a world
+  grows. The index is built in memory at startup; the database format is unchanged.
 - Errors order by code, then by attached value, as `==` compares them; the message never counts. A
   map keyed by `E_PERM` now finds an `E_PERM` that carries a message, and `<` on errors no longer
   puts one with a message after other codes.
