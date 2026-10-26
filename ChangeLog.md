@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Maps treat `-0.0` and `0.0` as the same key, as `==` already does. Before, a map keyed by `0.0`
+  did not find `-0.0`, and a map could hold both. A stored map with both keys loads with one,
+  keeping the later entry.
 - Objdef reviews leave locations that changed in the world alone: a location row appears only when
   source moved an object that has not moved since, and never for a player. Players walking around no
   longer show up in every update.
