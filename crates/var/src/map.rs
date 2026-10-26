@@ -719,4 +719,33 @@ mod tests {
         assert_eq!(both.len(), 1);
         assert_eq!(both.get(&v_float(0.0)).unwrap(), v_int(2));
     }
+
+    #[test]
+    fn test_int_and_float_are_different_keys() {
+        // 1 == 1.0 is false, so a map must keep them apart.
+        assert_ne!(v_int(1), v_float(1.0));
+        assert_ne!(v_int(1).cmp(&v_float(1.0)), std::cmp::Ordering::Equal);
+
+        let m = Var::mk_map(&[(v_int(1), v_str("int"))]);
+        let Variant::Map(map) = m.variant() else {
+            panic!("not a map");
+        };
+        assert!(map.get(&v_float(1.0)).is_err());
+        assert!(!map.contains_key(&v_float(1.0), false).unwrap());
+
+        let both = Var::mk_map(&[(v_int(1), v_str("int")), (v_float(1.0), v_str("float"))]);
+        let Variant::Map(both) = both.variant() else {
+            panic!("not a map");
+        };
+        assert_eq!(both.len(), 2);
+        assert_eq!(both.get(&v_float(1.0)).unwrap(), v_str("float"));
+
+        // Mixed numbers still sort by value, the int first on a tie.
+        let mut sorted = vec![v_float(2.5), v_int(1), v_float(1.0), v_int(-3)];
+        sorted.sort();
+        assert_eq!(
+            sorted,
+            vec![v_int(-3), v_int(1), v_float(1.0), v_float(2.5)]
+        );
+    }
 }
