@@ -1,16 +1,13 @@
 object LIST_PROTO [
-  import_export_id -> "list_proto",
-  import_export_hierarchy -> {"types"}
+  import_export_id -> "list_proto"
 ]
   name: "List Utilities"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: HACKER
+  owner: core::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Prototype object for list utility methods and functional programming operations.";
+  property description (owner: core::HACKER, flags: "rc") = "Prototype object for list utility methods and functional programming operations.";
 
-  method append owner: HACKER
+  method append owner: core::HACKER
     "Return a single list containing every element from each argument list, in order.";
     "Example: append({a, b, c}, {d, e}, {}, {f, g, h}) => {a, b, c, d, e, f, g, h}.";
     const n = length(args);
@@ -24,7 +21,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method assoc owner: HACKER
+  method assoc owner: core::HACKER
     "Return the first list element whose index-th value equals target; index defaults to 1.";
     "Returns {} when no matching nested list is found.";
     const {lst, target, ?indx = 1} = args;
@@ -39,7 +36,7 @@ object LIST_PROTO [
     return {};
   endmethod
 
-  method assoc_prefix owner: HACKER
+  method assoc_prefix owner: core::HACKER
     "Return the first list element whose index-th string value starts with target; index defaults to 1.";
     "Returns {} when no matching nested list is found.";
     const {lst, target, ?indx = 1} = args;
@@ -54,7 +51,7 @@ object LIST_PROTO [
     return {};
   endmethod
 
-  method check_type owner: HACKER
+  method check_type owner: core::HACKER
     "Return true if every list element has one of the requested MOO type constants.";
     "The type argument may be a single type constant or a list of type constants.";
     const {items, types} = args;
@@ -67,7 +64,7 @@ object LIST_PROTO [
     return true;
   endmethod
 
-  method compress owner: HACKER
+  method compress owner: core::HACKER
     "Return a list with consecutive repeated elements collapsed to one occurrence.";
     "Example: compress({a, b, b, c, b, b, b, d, d, e}) => {a, b, c, b, d, e}.";
     const {items} = args;
@@ -81,7 +78,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method join owner: HACKER
+  method join owner: core::HACKER
     "Return the list elements converted to strings and joined by separator, which defaults to a space.";
     const {l, ?separator = " "} = args;
     typeof(separator) == TYPE_STR || raise(E_TYPE("join() separator must be string; got " + toliteral(separator)));
@@ -94,7 +91,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method english_list owner: HACKER
+  method english_list owner: core::HACKER
     "Return a human-readable English list such as \"a, b, and c\" or \"a and b\".";
     "Optional arguments customize the empty-list text, conjunction, comma separator, and final comma separator.";
     const {things, ?nothingstr = "nothing", ?andstr = " and ", ?commastr = ", ", ?finalcommastr = ","} = args;
@@ -110,7 +107,7 @@ object LIST_PROTO [
     return tostr(ret, andstr, things[nthings]);
   endmethod
 
-  method map owner: ARCH_WIZARD
+  method map owner: core::ARCH_WIZARD
     "Return a new list containing func(item) for each item in the input list.";
     "Example: {1, 2, 3}:map({x} => x * 2) => {2, 4, 6}.";
     set_task_perms(caller_perms());
@@ -122,7 +119,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method filter owner: ARCH_WIZARD
+  method filter owner: core::ARCH_WIZARD
     "Return a new list containing only items for which pred(item) is true.";
     "Example: {1, 2, 3, 4, 5}:filter({x} => x % 2 == 0) => {2, 4}.";
     set_task_perms(caller_perms());
@@ -136,7 +133,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method reduce owner: ARCH_WIZARD
+  method reduce owner: core::ARCH_WIZARD
     "Fold the list from left to right by repeatedly calling func(accumulator, item).";
     "Returns initial when the input list is empty.";
     set_task_perms(caller_perms());
@@ -148,7 +145,7 @@ object LIST_PROTO [
     return accumulator;
   endmethod
 
-  method find owner: ARCH_WIZARD
+  method find owner: core::ARCH_WIZARD
     "Return the first item for which pred(item) is true, or 0 when no item matches.";
     "Use find_index() to distinguish a matching zero from no match.";
     set_task_perms(caller_perms());
@@ -161,7 +158,7 @@ object LIST_PROTO [
     return 0;
   endmethod
 
-  method find_index owner: ARCH_WIZARD
+  method find_index owner: core::ARCH_WIZARD
     "Return the 1-based index of the first matching item, or 0 when none match.";
     "Call pred(item) in order with the caller's permissions. Stop at the first match.";
     set_task_perms(caller_perms());
@@ -172,7 +169,7 @@ object LIST_PROTO [
     return 0;
   endmethod
 
-  method any owner: ARCH_WIZARD
+  method any owner: core::ARCH_WIZARD
     "Return true if pred(item) is true for at least one item in the list.";
     set_task_perms(caller_perms());
     const {lst, pred} = args;
@@ -184,7 +181,7 @@ object LIST_PROTO [
     return false;
   endmethod
 
-  method all owner: ARCH_WIZARD
+  method all owner: core::ARCH_WIZARD
     "Return true if pred(item) is true for every item in the list.";
     "The empty list returns true.";
     set_task_perms(caller_perms());
@@ -197,7 +194,7 @@ object LIST_PROTO [
     return true;
   endmethod
 
-  method unique owner: HACKER
+  method unique owner: core::HACKER
     "Return a list with duplicate elements removed while preserving first-seen order.";
     "Example: {1, 2, 2, 3, 1, 4}:unique() => {1, 2, 3, 4}.";
     const {lst} = args;
@@ -208,7 +205,7 @@ object LIST_PROTO [
     return result;
   endmethod
 
-  method group_by owner: ARCH_WIZARD
+  method group_by owner: core::ARCH_WIZARD
     "Return a map from key_func(item) to the list of items with that key.";
     "Each group preserves the original item order. Keys must be valid map keys.";
     set_task_perms(caller_perms());
@@ -225,7 +222,7 @@ object LIST_PROTO [
     return groups;
   endmethod
 
-  method test_core_list_helpers owner: HACKER
+  method test_core_list_helpers owner: core::HACKER
     "Cover append, assoc, assoc_prefix, check_type, join, and english_list.";
     $test_utils:assert_eq(this:append({"a", "b"}, {"c"}, {}, {"d", "e"}), {"a", "b", "c", "d", "e"}, "append concatenates argument lists");
     const nested = {{"id", 1}, {"name", "cowbell"}, "skip", {"name", "moor"}};
@@ -248,7 +245,7 @@ object LIST_PROTO [
     return true;
   endmethod
 
-  method test_functional_list_helpers owner: HACKER
+  method test_functional_list_helpers owner: core::HACKER
     "Cover map, filter, reduce, find, any, and all.";
     $test_utils:assert_eq({1, 2, 3}:map({x} => x * 2), {2, 4, 6}, "map transforms every item");
     $test_utils:assert_eq({}:map({x} => x + 1), {}, "map preserves empty lists");
@@ -280,7 +277,7 @@ object LIST_PROTO [
     return true;
   endmethod
 
-  method test_set_and_group_helpers owner: HACKER
+  method test_set_and_group_helpers owner: core::HACKER
     "Cover unique, group_by, and compress.";
     $test_utils:assert_eq({1, 2, 2, 3, 1, 4}:unique(), {1, 2, 3, 4}, "unique preserves first-seen order");
     $test_utils:assert_eq({}:unique(), {}, "unique preserves empty list");
@@ -297,7 +294,7 @@ object LIST_PROTO [
     return true;
   endmethod
 
-  method test_callback_control_flow owner: HACKER
+  method test_callback_control_flow owner: core::HACKER
     "Callbacks stop at the promised boundary and propagate errors.";
     const fail = {item} => raise(E_INVARG, "callback failure");
     for operation in ({"map", "filter", "find", "find_index", "any", "all", "group_by"})

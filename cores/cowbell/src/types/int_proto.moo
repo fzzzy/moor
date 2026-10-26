@@ -1,16 +1,13 @@
 object INT_PROTO [
-  import_export_id -> "int_proto",
-  import_export_hierarchy -> {"types"}
+  import_export_id -> "int_proto"
 ]
   name: "Integer Prototype"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: HACKER
+  owner: core::HACKER
   readable: true
 
-  override description (owner: HACKER, flags: "rc") = "Prototype object for integer utility methods.";
+  property description (owner: core::HACKER, flags: "rc") = "Prototype object for integer utility methods.";
 
-  method format_time_seconds owner: HACKER
+  method format_time_seconds owner: core::HACKER
     "Convert integer seconds to human-readable time format";
     "Usage: seconds_value:format_time_seconds()";
     {seconds} = args;
@@ -28,7 +25,7 @@ object INT_PROTO [
     return tostr(days, "d", remaining_hours, "h");
   endmethod
 
-  method test_format_time_seconds_basic owner: HACKER
+  method test_format_time_seconds_basic owner: core::HACKER
     "Test basic time formatting for seconds, minutes, hours";
     "Test seconds only";
     30:format_time_seconds() != "30s" && return E_ASSERT;
@@ -44,7 +41,7 @@ object INT_PROTO [
     return true;
   endmethod
 
-  method test_format_time_seconds_edge_cases owner: HACKER
+  method test_format_time_seconds_edge_cases owner: core::HACKER
     "Test edge cases and error conditions";
     "Test days";
     86400:format_time_seconds() != "1d0h" && return E_ASSERT;
@@ -59,7 +56,7 @@ object INT_PROTO [
     return true;
   endmethod
 
-  method test_format_time_seconds_realistic owner: HACKER
+  method test_format_time_seconds_realistic owner: core::HACKER
     "Test realistic idle/connection times";
     "Test typical idle times";
     180:format_time_seconds() != "3m0s" && return E_ASSERT;
@@ -71,7 +68,7 @@ object INT_PROTO [
     return true;
   endmethod
 
-  method format_bytes owner: HACKER
+  method format_bytes owner: core::HACKER
     "Format bytes as human-readable size string";
     "Usage: bytes_value:format_bytes()";
     {bytes} = args;
@@ -83,7 +80,7 @@ object INT_PROTO [
     return tostr(kb) + "K";
   endmethod
 
-  method test_format_bytes owner: HACKER
+  method test_format_bytes owner: core::HACKER
     "Test byte formatting";
     "Test less than 1KB";
     0:format_bytes() != "<1K" && return E_ASSERT;

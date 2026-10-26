@@ -126,6 +126,13 @@ Cowbell entries.
 
 ### Changed
 
+- The value prototypes (`$str_proto`, `$list_proto`, `$int_proto`, `$sym_proto`) are a `types`
+  package, and the Git client objects (`$git` and its repository, snapshot and entry classes) a
+  `git` package. Each depends only on the base package; `core` depends on both. These objects no
+  longer descend from `$root`, so `$root`'s verbs and properties are not available on strings,
+  lists and other values, or on Git objects.
+- `parse_curie()` is a verb of `$match`, not of strings: `$match:parse_curie("oid:1")` replaces
+  `"oid:1":parse_curie()`.
 - Cowbell's source is a world of two packages: `core` in `src/core/`, holding all of Cowbell so far,
   and a small base package in `src/package/` that every package depends on. `cores/cowbell/src` still imports as
   before.

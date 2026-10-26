@@ -1,15 +1,12 @@
 object STR_PROTO [
-  import_export_id -> "str_proto",
-  import_export_hierarchy -> {"types"}
+  import_export_id -> "str_proto"
 ]
   name: "String Utilities"
-  parent: ROOT
-  location: PROTOTYPE_BOX
-  owner: HACKER
+  owner: core::HACKER
   readable: true
 
-  property _character_set (owner: HACKER, flags: "rc") = "\t !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-  property _character_set_in_ascii (owner: HACKER, flags: "rc") = {
+  property _character_set (owner: core::HACKER, flags: "rc") = "\t !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  property _character_set_in_ascii (owner: core::HACKER, flags: "rc") = {
     8,
     32,
     33,
@@ -107,7 +104,7 @@ object STR_PROTO [
     125,
     126
   };
-  property _character_set_in_hex_ascii (owner: HACKER, flags: "rc") = {
+  property _character_set_in_hex_ascii (owner: core::HACKER, flags: "rc") = {
     "08",
     "20",
     "21",
@@ -205,14 +202,13 @@ object STR_PROTO [
     "7D",
     "7E"
   };
-  property alphabet (owner: HACKER, flags: "rc") = "abcdefghijklmnopqrstuvwxyz";
-  property ascii (owner: HACKER, flags: "rc") = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-  property digits (owner: HACKER, flags: "rc") = "0123456789";
-  property tab (owner: HACKER, flags: "rc") = "\t";
+  property alphabet (owner: core::HACKER, flags: "rc") = "abcdefghijklmnopqrstuvwxyz";
+  property ascii (owner: core::HACKER, flags: "rc") = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  property description (owner: core::HACKER, flags: "rc") = "Prototype object for string utility methods and text manipulation operations.";
+  property digits (owner: core::HACKER, flags: "rc") = "0123456789";
+  property tab (owner: core::HACKER, flags: "rc") = "\t";
 
-  override description (owner: HACKER, flags: "rc") = "Prototype object for string utility methods and text manipulation operations.";
-
-  method "capitalize capitalise" owner: HACKER
+  method "capitalize capitalise" owner: core::HACKER
     "Uppercase the first Unicode character and leave the remaining text unchanged.";
     const {string} = args;
     typeof(string) == TYPE_STR || raise(E_TYPE);
@@ -221,7 +217,7 @@ object STR_PROTO [
     return strtr("A", "a", string[1], 0) + string[2..$];
   endmethod
 
-  method initial_lowercase owner: HACKER
+  method initial_lowercase owner: core::HACKER
     "Lowercase the first Unicode character and leave the remaining text unchanged.";
     const {string} = args;
     typeof(string) == TYPE_STR || raise(E_TYPE);
@@ -229,7 +225,7 @@ object STR_PROTO [
     return strtr("a", "a", string[1], 0) + string[2..$];
   endmethod
 
-  method test_unicode_initial_case owner: HACKER
+  method test_unicode_initial_case owner: core::HACKER
     "Initial case conversion preserves name spelling and supports expanding Unicode mappings.";
     for example in ({{"éloïse", "Éloïse"}, {"σάρα", "Σάρα"}, {"ßeta", "SSeta"}, {"McDonald", "McDonald"}, {"猫", "猫"}, {"", ""}, {"!é", "!é"}})
       $test_utils:assert_eq(strcmp(this:capitalize(example[1]), example[2]), 0, example[1]);
@@ -238,7 +234,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method "centre center" owner: HACKER
+  method "centre center" owner: core::HACKER
     "Center text in abs(len) characters using optional left and right fill strings.";
     "A negative length truncates text that exceeds the field width.";
     const {text, len, ?lfill = " ", ?rfill = lfill} = args;
@@ -251,13 +247,13 @@ object STR_PROTO [
     endif
   endmethod
 
-  method is_numeric owner: HACKER
+  method is_numeric owner: core::HACKER
     "Return true for an integer string with an optional sign and surrounding spaces.";
     const {string} = args;
     return !!match(string, "^ *[-+]?[0-9]+ *$");
   endmethod
 
-  method literal_object owner: HACKER
+  method literal_object owner: core::HACKER
     "Resolve numbered object strings, @player names, or $sysobj property paths.";
     "Return $failed_match when resolution fails, or $nothing for empty input.";
     let {string} = args;
@@ -297,7 +293,7 @@ object STR_PROTO [
     endif
   endmethod
 
-  method space owner: HACKER
+  method space owner: core::HACKER
     "Return abs(width) characters of repeated fill, up to 100,000 characters.";
     "Negative widths anchor fill on the right. A string width uses its length.";
     "Empty fill raises E_INVARG when padding is required.";
@@ -316,20 +312,20 @@ object STR_PROTO [
     return signed_width < 0 ? padding[length(padding) - size + 1..$] | padding[1..size];
   endmethod
 
-  method to_list owner: HACKER
+  method to_list owner: core::HACKER
     "Split on separator, retaining empty fields and ignoring case by default.";
     "An empty separator returns {subject}. Pass true as case_matters for exact matching.";
     const {subject, ?separator = " ", ?case_matters = false} = args;
     return this:split(subject, separator, case_matters);
   endmethod
 
-  method toobj owner: HACKER
+  method toobj owner: core::HACKER
     ":toobj(objectid as string) => objectid";
     const {s} = args;
     return match(s, "^ *#[-+]?[0-9]+ *$") ? toobj(s) | E_TYPE;
   endmethod
 
-  method match_objid owner: HACKER
+  method match_objid owner: core::HACKER
     "Find the first numbered or UUID object identifier in a string.";
     "Return a map of text, type, and 1-based inclusive start/end offsets, or false.";
     "With anchored set, allow only whitespace around the identifier.";
@@ -390,7 +386,7 @@ object STR_PROTO [
     return false;
   endmethod
 
-  method match_uuobjid_at owner: HACKER
+  method match_uuobjid_at owner: core::HACKER
     "Check for a UUID object identifier at start_index. Return {start, end} or false.";
     const {s, start_index} = args;
     typeof(s) == TYPE_STR || raise(E_TYPE, "Source must be string");
@@ -423,7 +419,7 @@ object STR_PROTO [
     return {start_index, end_index};
   endmethod
 
-  method name_issues owner: HACKER
+  method name_issues owner: core::HACKER
     "Return review reasons for a stored name or alias; Unicode text is not inherently suspect.";
     const {value} = args;
     typeof(value) == TYPE_STR || return {"not a string"};
@@ -451,7 +447,7 @@ object STR_PROTO [
     return issues;
   endmethod
 
-  method validate_name owner: HACKER
+  method validate_name owner: core::HACKER
     "Reject blank or misleading names with E_INVARG. Joiners in visible Unicode names are allowed.";
     const {value} = args;
     const issues = { issue for issue in ($str_proto:name_issues(value)) if issue != "format characters (review context)" };
@@ -459,7 +455,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method validate_aliases owner: HACKER
+  method validate_aliases owner: core::HACKER
     "Validate an entire alias list before a caller changes any name or alias.";
     const {aliases} = args;
     typeof(aliases) == TYPE_LIST || raise(E_TYPE, "Aliases must be a list of names.");
@@ -469,7 +465,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method validate_description owner: HACKER
+  method validate_description owner: core::HACKER
     "Validate stored text without running content callbacks. Empty text, tabs, and newlines are allowed.";
     "Traverse lists, maps, and flyweights so structured descriptions receive the same checks.";
     "One scan accepts clean text; only a failing string is classified for the error message.";
@@ -501,7 +497,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_name_audit_unicode owner: ARCH_WIZARD
+  method test_name_audit_unicode owner: core::ARCH_WIZARD
     "Report invisible and control names without rejecting ordinary multilingual text.";
     for value in ({"", "  ", "\u200F", "\u200B", "́", "️", "ㅤ", "⠀"})
       $test_utils:assert_true(length($str_proto:name_issues(value)) > 0, "invisible name: " + toliteral(value));
@@ -516,7 +512,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_text_validation owner: ARCH_WIZARD
+  method test_text_validation owner: core::ARCH_WIZARD
     "Names reject hidden controls while descriptions retain multiline and structured content.";
     for name in ({"", "\u200F", "\u200B", "a\nb", "x\u202Ey", " name", "️"})
       $test_utils:assert_raises(E_INVARG, $str_proto, "validate_name", {name}, "reject suspect name " + toliteral(name));
@@ -535,7 +531,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method parse_name_aliases owner: HACKER
+  method parse_name_aliases owner: core::HACKER
     "Parse name,alias,alias or name:alias,alias, respecting command quotes and escapes.";
     const {spec} = args;
     let rest = spec:trim();
@@ -561,7 +557,7 @@ object STR_PROTO [
     return {primary, aliases};
   endmethod
 
-  method trim owner: HACKER
+  method trim owner: core::HACKER
     "Remove leading and trailing characters from chars.";
     "The default chars are space, tab, and newline.";
     const {string, ?chars = " \t\n"} = args;
@@ -579,19 +575,19 @@ object STR_PROTO [
     return string[start..finish];
   endmethod
 
-  method triml owner: HACKER
+  method triml owner: core::HACKER
     "Remove leading copies of space, a single character that defaults to a space.";
     const {string, ?space = " "} = args;
     return string[match(string, tostr("[^", space, "]%|$"))[1]..length(string)];
   endmethod
 
-  method trimr owner: HACKER
+  method trimr owner: core::HACKER
     "Remove trailing copies of space, a single character that defaults to a space.";
     const {string, ?space = " "} = args;
     return string[1..rmatch(string, tostr("[^", space, "]%|^"))[2]];
   endmethod
 
-  method "uppercase lowercase" owner: HACKER
+  method "uppercase lowercase" owner: core::HACKER
     "Convert ASCII letters to uppercase or lowercase according to the called alias.";
     const {string} = args;
     const caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -602,18 +598,18 @@ object STR_PROTO [
     return strtr(string, caps, lower, 1);
   endmethod
 
-  method word_start owner: HACKER
+  method word_start owner: core::HACKER
     "Return 1-based inclusive source ranges, including quotes and backslash escapes.";
     return { word[2..3] for word in (command_words(args[1])) };
   endmethod
 
-  method raw_words owner: HACKER
+  method raw_words owner: core::HACKER
     "Return source words with their quotes and escapes intact.";
     const {text} = args;
     return { text[word[2]..word[3]] for word in (command_words(text)) };
   endmethod
 
-  method first_word owner: HACKER
+  method first_word owner: core::HACKER
     "Return {decoded first word, untouched remainder}, or {} for empty input.";
     const {text} = args;
     const words = command_words(text);
@@ -621,13 +617,13 @@ object STR_PROTO [
     return {words[1][1], text[words[1][3] + 1..$]:trim()};
   endmethod
 
-  method reference_text owner: HACKER
+  method reference_text owner: core::HACKER
     "Decode command quoting around a reference, preserving unquoted multiword names.";
     const {text} = args;
     return text:words():join(" ");
   endmethod
 
-  method unquoted_index owner: HACKER
+  method unquoted_index owner: core::HACKER
     "Find the first character in delimiters outside command quotes and escapes.";
     const {text, delimiters} = args;
     let quoted = false;
@@ -647,19 +643,19 @@ object STR_PROTO [
     return 0;
   endmethod
 
-  method raw_arguments owner: HACKER
+  method raw_arguments owner: core::HACKER
     "Return raw direct and indirect argument text, without matching or dispatch.";
     const {text} = args;
     const parsed = parse_command("command " + text, {});
     return {parsed['dobj_raw], parsed['iobj_raw]};
   endmethod
 
-  method words owner: HACKER
+  method words owner: core::HACKER
     "Return decoded command words using the native command scanner.";
     return { word[1] for word in (command_words(args[1])) };
   endmethod
 
-  method append_to_paragraph owner: HACKER
+  method append_to_paragraph owner: core::HACKER
     "Append the first argument to the last remaining argument and return the lines.";
     "With no remaining arguments, return a list containing the first argument.";
     length(args) == 1 && return args;
@@ -669,7 +665,7 @@ object STR_PROTO [
     return {@head, tail};
   endmethod
 
-  method parse_verbref owner: HACKER
+  method parse_verbref owner: core::HACKER
     "Split object:verb at an unquoted colon; keep object quoting for the matcher.";
     const {reference} = args;
     const colon = reference:unquoted_index(":");
@@ -680,7 +676,7 @@ object STR_PROTO [
     return {object, verbname};
   endmethod
 
-  method split owner: HACKER
+  method split owner: core::HACKER
     "Split on delimiter, retaining empty fields. Matching is case-sensitive by default.";
     "An empty delimiter returns {string}. Pass false as case_matters to ignore case.";
     const {string, delimiter, ?case_matters = true} = args;
@@ -700,39 +696,39 @@ object STR_PROTO [
     endwhile
   endmethod
 
-  method join_list owner: HACKER
+  method join_list owner: core::HACKER
     "Compatibility entry point for $str_proto:join_list(list, separator).";
     "Prefer list:join(separator) for primitive dispatch.";
     const {items, separator} = args;
     return items:join(separator);
   endmethod
 
-  method starts_with owner: HACKER
+  method starts_with owner: core::HACKER
     "Return true if string starts with prefix, ignoring case.";
     const {string, prefix} = args;
     return length(prefix) <= length(string) && string[1..length(prefix)] == prefix;
   endmethod
 
-  method ends_with owner: HACKER
+  method ends_with owner: core::HACKER
     "Return true if string ends with suffix, ignoring case.";
     const {string, suffix} = args;
     return length(suffix) <= length(string) && string[length(string) - length(suffix) + 1..$] == suffix;
   endmethod
 
-  method contains owner: HACKER
+  method contains owner: core::HACKER
     "Return true if string contains substring, ignoring case.";
     const {string, substring} = args;
     return index(string, substring) != 0;
   endmethod
 
-  method replace_all owner: HACKER
+  method replace_all owner: core::HACKER
     "Replace all occurrences of old with new. Matching is case-sensitive by default.";
     "An empty old string leaves the input unchanged. Pass false to ignore case.";
     const {string, old, new, ?case_matters = true} = args;
     return strsub(string, old, new, case_matters);
   endmethod
 
-  method reverse owner: HACKER
+  method reverse owner: core::HACKER
     "reverse(string) => string with characters in reverse order";
     "Example: \"hello\":reverse() => \"olleh\"";
     const {instr} = args;
@@ -743,7 +739,7 @@ object STR_PROTO [
     return out;
   endmethod
 
-  method repeat owner: HACKER
+  method repeat owner: core::HACKER
     "repeat(string, count) => string repeated count times";
     "Example: \"ab\":repeat(3) => \"ababab\"";
     const {string, count} = args;
@@ -766,7 +762,7 @@ object STR_PROTO [
     return result;
   endmethod
 
-  method char_count owner: HACKER
+  method char_count owner: core::HACKER
     "char_count(string, character) => count of character occurrences in string";
     "Example: \"hello\":char_count(\"l\") => 2";
     const {string, char} = args;
@@ -779,14 +775,14 @@ object STR_PROTO [
     return count;
   endmethod
 
-  method substring owner: HACKER
+  method substring owner: core::HACKER
     "substring(string, start, length) => substring starting at start for length characters";
     "Example: \"hello world\":substring(7, 5) => \"world\"";
     const {string, start, len} = args;
     return string[start..start + len - 1];
   endmethod
 
-  method pad_left owner: HACKER
+  method pad_left owner: core::HACKER
     "pad_left(string, width, fill) => string padded on left to width with fill character";
     "Example: \"hello\":pad_left(10, \"*\") => \"*****hello\"";
     const {string, width, ?fill = " "} = args;
@@ -797,7 +793,7 @@ object STR_PROTO [
     return this:space(padding_needed, fill) + string;
   endmethod
 
-  method pad_right owner: HACKER
+  method pad_right owner: core::HACKER
     "pad_right(string, width, fill) => string padded on right to width with fill character";
     "Example: \"hello\":pad_right(10, \"*\") => \"hello*****\"";
     const {string, width, ?fill = " "} = args;
@@ -808,13 +804,13 @@ object STR_PROTO [
     return string + this:space(padding_needed, fill);
   endmethod
 
-  method words_list owner: ARCH_WIZARD
+  method words_list owner: core::ARCH_WIZARD
     "Split on spaces, tabs, carriage returns, and newlines. Ignore empty fields.";
     const {string} = args;
     return explode(strtr(string, "\t\r\n", "   ", 1), " ");
   endmethod
 
-  method map_chars owner: ARCH_WIZARD
+  method map_chars owner: core::ARCH_WIZARD
     "Apply func(character) in order and concatenate its string results.";
     "Callbacks use the incoming caller permissions. Callback errors propagate.";
     set_task_perms(caller_perms());
@@ -826,7 +822,7 @@ object STR_PROTO [
     return result;
   endmethod
 
-  method filter_chars owner: ARCH_WIZARD
+  method filter_chars owner: core::ARCH_WIZARD
     "Keep characters for which pred(character) is true, preserving their order.";
     "Callbacks use the incoming caller permissions. Callback errors propagate.";
     set_task_perms(caller_perms());
@@ -840,13 +836,13 @@ object STR_PROTO [
     return result;
   endmethod
 
-  method title_case owner: HACKER
+  method title_case owner: core::HACKER
     "Capitalize each whitespace-separated word and join the words with spaces.";
     const {string} = args;
     return { this:capitalize(word) for word in (this:words_list(string)) }:join(" ");
   endmethod
 
-  method from_seconds owner: HACKER
+  method from_seconds owner: core::HACKER
     "Describe seconds in the largest applicable unit: days, hours, minutes, or seconds.";
     const {seconds} = args;
     fn describe(count, unit, article)
@@ -862,7 +858,7 @@ object STR_PROTO [
     return describe(seconds, "second", "a");
   endmethod
 
-  method parse_time_of_day owner: HACKER
+  method parse_time_of_day owner: core::HACKER
     "Parse HH:MM:SS time string and return next occurrence as Unix timestamp.";
     "Example: \"14:30:00\":parse_time_of_day() returns timestamp for next 2:30 PM.";
     const {time_str} = args;
@@ -889,7 +885,7 @@ object STR_PROTO [
     endif
   endmethod
 
-  method indefinite_article owner: HACKER
+  method indefinite_article owner: core::HACKER
     "Guess an English indefinite article. Object grammar supplies overrides for ambiguous names.";
     const {word} = args;
     typeof(word) == TYPE_STR || raise(E_TYPE, "Article lookup needs a string.");
@@ -904,7 +900,7 @@ object STR_PROTO [
     return index("aeiou", lower[1], 1) ? "an" | "a";
   endmethod
 
-  method with_indefinite_article owner: HACKER
+  method with_indefinite_article owner: core::HACKER
     "Return this string prefixed with the appropriate indefinite article.";
     const {s} = args;
     typeof(s) == TYPE_STR || raise(E_TYPE("Expected string"));
@@ -912,55 +908,7 @@ object STR_PROTO [
     return s:indefinite_article() + " " + s;
   endmethod
 
-  method parse_curie owner: ARCH_WIZARD
-    "Resolve oid:N, uuid:ID, sysobj:name.path, or match(\"name\") to an object.";
-    "The optional context defaults to player. Return false when parsing fails.";
-    set_task_perms(caller_perms());
-    const {curie_str, ?context = player} = args;
-    typeof(curie_str) == TYPE_STR || raise(E_TYPE, "CURIE must be a string");
-    if (curie_str:starts_with("oid:"))
-      const oid_part = curie_str[5..$];
-      if (oid_part:is_numeric())
-        return toobj("#" + oid_part);
-      endif
-      return false;
-    endif
-    if (curie_str:starts_with("uuid:"))
-      const uuid_part = curie_str[6..$];
-      try
-        return toobj("#" + uuid_part);
-      except (ANY)
-        return false;
-      endtry
-    endif
-    if (curie_str:starts_with("sysobj:"))
-      const sysobj_part = curie_str[8..$];
-      try
-        let target = #0;
-        const parts = sysobj_part:split(".");
-        for part in (parts)
-          target = target.(part);
-        endfor
-        return typeof(target) == TYPE_OBJ ? target | false;
-      except (ANY)
-        return false;
-      endtry
-    endif
-    if (curie_str:starts_with("match(\"") && curie_str:ends_with("\")"))
-      const match_str = curie_str[8..length(curie_str) - 2];
-      if (!valid(context))
-        return false;
-      endif
-      try
-        return $match:match_object(match_str, context);
-      except (ANY)
-        return false;
-      endtry
-    endif
-    return false;
-  endmethod
-
-  method test_case_whitespace_and_padding owner: HACKER
+  method test_case_whitespace_and_padding owner: core::HACKER
     "Cover case, trimming, spacing, and padding helpers.";
     $test_utils:assert_true(equal("cowbell":capitalize(), "Cowbell"), "capitalize lowercase word");
     $test_utils:assert_true(equal("Cowbell":initial_lowercase(), "cowbell"), "initial_lowercase uppercase word");
@@ -979,7 +927,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_list_word_and_paragraph_helpers owner: HACKER
+  method test_list_word_and_paragraph_helpers owner: core::HACKER
     "Cover list conversion, word parsing, and paragraph append helpers.";
     $test_utils:assert_true(equal("a::b::":to_list("::"), {"a", "b", ""}), "to_list preserves trailing empty part");
     $test_utils:assert_true(equal(this:join_list({"a", "b", "c"}, "|"), "a|b|c"), "join_list joins with separator");
@@ -995,7 +943,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_object_reference_helpers owner: HACKER
+  method test_object_reference_helpers owner: core::HACKER
     "Cover object-reference parsing helpers.";
     $test_utils:assert_true(equal("#1":toobj(), #1), "toobj numbered object");
     $test_utils:assert_true(equal("not an object":toobj(), E_TYPE), "toobj rejects non-object strings");
@@ -1006,7 +954,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_parse_verbref owner: HACKER
+  method test_parse_verbref owner: core::HACKER
     "Cover MOO verb-reference parsing.";
     $test_utils:assert_true(equal("#1":parse_verbref(), false), "missing colon should fail");
     $test_utils:assert_true(equal(":":parse_verbref(), false), "empty object and verb should fail");
@@ -1019,7 +967,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_split_search_and_transform_helpers owner: HACKER
+  method test_split_search_and_transform_helpers owner: core::HACKER
     "Cover split/search/replace and string transforms.";
     $test_utils:assert_true(equal("a,b,c":split(","), {"a", "b", "c"}), "split basic delimiter");
     $test_utils:assert_true(equal("a,,c":split(","), {"a", "", "c"}), "split preserves empty parts");
@@ -1045,7 +993,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_repeat owner: HACKER
+  method test_repeat owner: core::HACKER
     "Repeating preserves the complete string, including case and Unicode.";
     for example in ({{"Ab", -1, ""}, {"Ab", 0, ""}, {"Ab", 1, "Ab"}, {"Ab", 3, "AbAbAb"}, {"Ab", 4, "AbAbAbAb"}, {"é🐄", 3, "é🐄é🐄é🐄"}, {"", 9, ""}})
       const {text, count, expected} = example;
@@ -1054,7 +1002,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_match_objid_helpers owner: HACKER
+  method test_match_objid_helpers owner: core::HACKER
     "Cover numeric and UUID object-id matching helpers.";
     let result = this:match_objid("#42");
     $test_utils:assert_true(result, "match_objid should find bare numbered object ids");
@@ -1084,7 +1032,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_parse_name_aliases owner: HACKER
+  method test_parse_name_aliases owner: core::HACKER
     "Cover colon and comma name/alias specifications.";
     $test_utils:assert_true(equal(this:parse_name_aliases("lamp:light, lamp,shiny"), {"lamp", {"light", "shiny"}}), "colon aliases trim and dedupe");
     $test_utils:assert_true(equal(this:parse_name_aliases(":alpha,beta"), {"alpha", {"beta"}}), "missing colon primary promotes first alias");
@@ -1096,7 +1044,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_time_article_and_curie_helpers owner: HACKER
+  method test_time_and_article_helpers owner: core::HACKER
     "Cover numeric, time, article, and CURIE helpers.";
     $test_utils:assert_true("  -42 ":is_numeric(), "is_numeric accepts signed integers with whitespace");
     $test_utils:assert_type("42":is_numeric(), TYPE_BOOL, "Numeric success is boolean");
@@ -1119,16 +1067,10 @@ object STR_PROTO [
     $test_utils:assert_true(equal("cowbell":indefinite_article(), "a"), "indefinite_article consonant");
     $test_utils:assert_true(equal("apple":with_indefinite_article(), "an apple"), "with_indefinite_article vowel");
     $test_utils:assert_true(equal("cowbell":with_indefinite_article(), "a cowbell"), "with_indefinite_article consonant");
-    $test_utils:assert_true(equal("oid:1":parse_curie(), #1), "parse_curie oid");
-    $test_utils:assert_true(equal("oid:abc":parse_curie(), false), "parse_curie rejects invalid oid");
-    $test_utils:assert_true(equal("sysobj:root":parse_curie(), $root), "parse_curie sysobj");
-    $test_utils:assert_true(equal("sysobj:nonexistent_property":parse_curie(), false), "parse_curie rejects invalid sysobj");
-    $test_utils:assert_true(equal("match(\"anything\")":parse_curie(#-1), false), "parse_curie rejects invalid match context");
-    $test_utils:assert_true(equal("invalid":parse_curie(), false), "parse_curie rejects unknown prefix");
     return true;
   endmethod
 
-  method test_split_boundaries owner: HACKER
+  method test_split_boundaries owner: core::HACKER
     "Splitting preserves empty fields and applies the selected case policy at every length.";
     for example in ({{"", ",", {""}}, {"abc", "", {"abc"}}, {"", "", {""}}, {",a,,b,", ",", {"", "a", "", "b", ""}}, {"::a::::b::", "::", {"", "a", "", "b", ""}}, {"AxB", "X", {"AxB"}}, {"AxyB", "XY", {"AxyB"}}})
       const {source, delimiter, expected} = example;
@@ -1145,7 +1087,7 @@ object STR_PROTO [
     return true;
   endmethod
 
-  method test_padding_boundaries owner: HACKER
+  method test_padding_boundaries owner: core::HACKER
     "Padding preserves fill alignment and rejects unusable fill strings.";
     $test_utils:assert_true(equal(this:space(5, "ab"), "ababa"), "Left-aligned fill");
     $test_utils:assert_true(equal(this:space(-5, "ab"), "babab"), "Right-aligned fill");
