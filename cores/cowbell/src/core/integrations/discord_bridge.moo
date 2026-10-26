@@ -15,8 +15,12 @@ object DISCORD_BRIDGE [
   property cursor (owner: ARCH_WIZARD, flags: "") = "";
   property enabled (owner: ARCH_WIZARD, flags: "") = false;
   property flush_schedule (owner: ARCH_WIZARD, flags: "") = 0;
+  property guild_id (owner: ARCH_WIZARD, flags: "") = "";
+  property guild_lookups (owner: ARCH_WIZARD, flags: "") = [];
+  property guild_names (owner: ARCH_WIZARD, flags: "") = [];
   property inbound (owner: ARCH_WIZARD, flags: "") = {};
   property inbound_per_minute (owner: ARCH_WIZARD, flags: "") = 20;
+  property lookup_seconds (owner: ARCH_WIZARD, flags: "") = 300;
   property max_length (owner: ARCH_WIZARD, flags: "") = 400;
   property outbox (owner: ARCH_WIZARD, flags: "") = {};
   property poll_schedule (owner: ARCH_WIZARD, flags: "") = 0;
@@ -40,7 +44,12 @@ object DISCORD_BRIDGE [
     typeof(world_name) == TYPE_STR && length(world_name) || raise(E_INVARG);
     this.webhook_url = webhook_url;
     this.bot_token = bot_token;
-    channel_id == this.channel_id || (this.cursor = "");
+    if (channel_id != this.channel_id)
+      this.cursor = "";
+      this.guild_id = "";
+      this.guild_names = [];
+      this.guild_lookups = [];
+    endif
     this.channel_id = channel_id;
     this.world_name = world_name;
     this in $presence_listeners || ($presence_listeners = {@$presence_listeners, this});
@@ -161,7 +170,7 @@ object DISCORD_BRIDGE [
     const discord_id = `author["id"] ! E_RANGE => ""';
     const global_name = `author["global_name"] ! E_RANGE => ""';
     const display_name = this:_clean(typeof(global_name) == TYPE_STR && length(global_name) ? global_name | `author["username"] ! E_RANGE => ""', 64);
-    const content = this:_mentions_to_names(`message["content"] ! E_RANGE => ""', `message["mentions"] ! E_RANGE => {}');
+    const content = this:_markup_to_text(`message["content"] ! E_RANGE => ""', `message["mentions"] ! E_RANGE => {}');
     const text = this:_clean(content, this.max_length);
     typeof(discord_id) == TYPE_STR && length(display_name) && length(text) || return 0;
     this:_admit() || return 0;
@@ -188,30 +197,91 @@ object DISCORD_BRIDGE [
     return "";
   endmethod
 
-  method _mentions_to_names owner: ARCH_WIZARD
-    "Replace user mentions in a channel message with the linked player's name, or the @name Discord gave for the user.";
+  method _markup_to_text owner: ARCH_WIZARD
+    "Replace Discord's markup for users, roles, channels, emoji, commands and times in a channel message with readable text.";
     caller == this || raise(E_PERM);
     const {content, mentions} = args;
     typeof(content) == TYPE_STR || return "";
-    let names = [];
+    let users = [];
     for user in (typeof(mentions) == TYPE_LIST ? mentions | {})
       const id = `user["id"] ! ANY => ""';
       const global_name = `user["global_name"] ! ANY => ""';
       const name = typeof(global_name) == TYPE_STR && length(global_name) ? global_name | `user["username"] ! ANY => ""';
-      typeof(id) == TYPE_STR && typeof(name) == TYPE_STR && length(name) && (names[id] = "@" + name);
+      typeof(id) == TYPE_STR && typeof(name) == TYPE_STR && length(name) && (users[id] = "@" + name);
     endfor
-    let rest = content;
     let result = "";
-    let found = match(rest, "<@!?%([0-9]+%)>");
-    while (found)
-      const id = rest[found[3][1][1]..found[3][1][2]];
-      const linked = $login:find_by_oauth2("discord", id);
-      const name = valid(linked) && is_player(linked) ? linked:name() | `names[id] ! E_RANGE => "@someone"';
-      result = result + rest[1..found[1] - 1] + name;
-      rest = rest[found[2] + 1..$];
-      found = match(rest, "<@!?%([0-9]+%)>");
-    endwhile
-    return result + rest;
+    let last = 0;
+    for found in (pcre_match(content, "<(@!?|@&|#|a?:[A-Za-z0-9_~]+:|/[^:<>]+:|t:)([0-9]{1,20})(?::[tTdDfFR])?>"))
+      const {start, finish} = found["0"]["position"];
+      result = result + content[last + 1..start - 1] + this:_markup_name(found["1"]["match"], found["2"]["match"], users);
+      last = finish;
+    endfor
+    return result + content[last + 1..$];
+  endmethod
+
+  method _markup_name owner: ARCH_WIZARD
+    "Readable text for one piece of Discord markup, given its kind and id.";
+    caller == this || raise(E_PERM);
+    const {kind, id, users} = args;
+    if (kind in {"@", "@!"})
+      const linked = `$login:find_by_oauth2("discord", id) ! ANY => #-1';
+      return valid(linked) && is_player(linked) ? linked:name() | `users[id] ! E_RANGE => "@someone"';
+    elseif (kind == "@&")
+      const role = this:_guild_name("role", id);
+      return "@" + (length(role) ? role | "role");
+    elseif (kind == "#")
+      const channel = this:_guild_name("channel", id);
+      return "#" + (length(channel) ? channel | "channel");
+    elseif (kind == "t:")
+      return `ctime(toint(id)) ! ANY => "a time"';
+    elseif (kind[1] == "/")
+      return kind[1..$ - 1];
+    endif
+    "A custom emoji, animated or not, reads as its :name:.";
+    return kind[1] == "a" ? kind[2..$] | kind;
+  endmethod
+
+  method _guild_name owner: ARCH_WIZARD
+    "The name of a role or channel in the channel's server, fetching the server's list when the id is new, at most once per lookup period.";
+    caller == this || raise(E_PERM);
+    const {kind, id} = args;
+    const key = kind + ":" + id;
+    maphaskey(this.guild_names, key) && return this.guild_names[key];
+    const now = time();
+    now - `this.guild_lookups[kind] ! E_RANGE => 0' < this.lookup_seconds && return "";
+    this.guild_lookups[kind] = now;
+    if (!length(this.guild_id))
+      const guild_id = `this:_api_get("/channels/" + this.channel_id)["guild_id"] ! ANY => ""';
+      typeof(guild_id) == TYPE_STR && pcre_match(guild_id, "^[0-9]{1,20}$") || return "";
+      this.guild_id = guild_id;
+    endif
+    const items = this:_api_get("/guilds/" + this.guild_id + (kind == "role" ? "/roles" | "/channels"));
+    typeof(items) == TYPE_LIST || return "";
+    let names = [];
+    for other in (mapkeys(this.guild_names))
+      other:starts_with(kind + ":") || (names[other] = this.guild_names[other]);
+    endfor
+    for item in (items)
+      const item_id = `item["id"] ! ANY => ""';
+      const name = `item["name"] ! ANY => ""';
+      typeof(item_id) == TYPE_STR && typeof(name) == TYPE_STR && length(name) && (names[kind + ":" + item_id] = name);
+    endfor
+    this.guild_names = names;
+    return `names[key] ! E_RANGE => ""';
+  endmethod
+
+  method _api_get owner: ARCH_WIZARD
+    "Read a path of Discord's API as the bot, returning the parsed body, or 0 when the read fails.";
+    caller == this || raise(E_PERM);
+    const {path} = args;
+    try
+      const response = this:_request("GET", this.api_base + path, "", {{"Authorization", "Bot " + this.bot_token}});
+      response[1] == 200 || return 0;
+      return parse_json(response[3]);
+    except error (ANY)
+      server_log(tostr("Discord bridge read of ", path, " failed: ", toliteral(error[1])));
+      return 0;
+    endtry
   endmethod
 
   method _request owner: ARCH_WIZARD
