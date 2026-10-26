@@ -31,9 +31,9 @@ Cowbell entries.
   speaker's name. Mentions of users, roles and channels read as names, and custom emoji, commands
   and timestamps as text. Authors whose Discord account is linked to a player appear as that
   player, and in Discord that player's name becomes a mention of the account once it has posted in
-  the channel.
-  Players can `listen to` a speaker for its latest lines. The webhook URL and bot token are stored
-  in wizard-only properties, so database exports contain them.
+  the channel. Messages beyond 20 a minute wait for a later poll, and messages more than five
+  minutes old when read are skipped. Players can `listen to` a speaker for its latest lines. The
+  webhook URL and bot token are stored in wizard-only properties, so database exports contain them.
 
 - `#0.presence_listeners` lists objects whose `presence_event(user, kind)` is called, each in its
   own task, when a player is created, first connects, or last disconnects.

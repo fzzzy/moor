@@ -8,6 +8,7 @@ object DISCORD_BRIDGE [
   readable: true
 
   property api_base (owner: ARCH_WIZARD, flags: "") = "https://discord.com/api/v10";
+  property backlog_seconds (owner: ARCH_WIZARD, flags: "") = 300;
   property batch_seconds (owner: ARCH_WIZARD, flags: "") = 5;
   property bot_token (owner: ARCH_WIZARD, flags: "") = "";
   property channel_id (owner: ARCH_WIZARD, flags: "") = "";
@@ -146,18 +147,36 @@ object DISCORD_BRIDGE [
     first && !length(messages) && (this.cursor = "0");
     const ids = { `message["id"] ! ANY => "0"' for message in (messages) };
     let spoken = 0;
+    let stale = 0;
     for message in (sort(messages, ids, true))
       const id = `message["id"] ! ANY => ""';
       if (typeof(id) == TYPE_STR && pcre_match(id, "^[0-9]{1,20}$"))
+        if (!first && this.backlog_seconds > 0 && time() - this:_posted_at(id) > this.backlog_seconds)
+          stale = stale + 1;
+        elseif (!first)
+          const result = this:_receive(message);
+          "The rate limit leaves the cursor here, so the next poll speaks this message.";
+          if (result < 0)
+            break;
+          endif
+          spoken = spoken + result;
+        endif
         this.cursor = id;
-        first || (spoken = spoken + this:_receive(message));
       endif
     endfor
+    stale && server_log(tostr("Discord bridge skipped ", stale, " channel messages older than ", this.backlog_seconds, " seconds"));
     return spoken;
   endmethod
 
+  method _posted_at owner: ARCH_WIZARD
+    "The time a Discord id was made, in seconds, from the milliseconds since 2015 in its upper bits.";
+    caller == this || raise(E_PERM);
+    const {id} = args;
+    return (toint(id) / 4194304 + 1420070400000) / 1000;
+  endmethod
+
   method _receive owner: ARCH_WIZARD
-    "Speak one channel message in every speaker's room; bots, webhooks and system messages are skipped.";
+    "Speak one channel message in every speaker's room, returning 1, or 0 for bots, webhooks and system messages, or -1 when over the rate limit.";
     caller == this || raise(E_PERM);
     const {message} = args;
     typeof(message) == TYPE_MAP || return 0;
@@ -173,7 +192,7 @@ object DISCORD_BRIDGE [
     const content = this:_markup_to_text(`message["content"] ! E_RANGE => ""', `message["mentions"] ! E_RANGE => {}');
     const text = this:_clean(content, this.max_length);
     typeof(discord_id) == TYPE_STR && length(display_name) && length(text) || return 0;
-    this:_admit() || return 0;
+    this:_admit() || return -1;
     "Whoever posts here is a member of the channel's server, so a mention of them will resolve.";
     this.channel_members = setadd(this.channel_members, discord_id);
     const linked = $login:find_by_oauth2("discord", discord_id);
