@@ -10,6 +10,7 @@ object DISCORD_SCENARIOS [
   property heard (owner: core::ARCH_WIZARD, flags: "r") = {};
   property posts (owner: core::ARCH_WIZARD, flags: "r") = {};
   property reads (owner: core::ARCH_WIZARD, flags: "r") = {};
+  property responses (owner: core::ARCH_WIZARD, flags: "r") = [];
 
   method request owner: core::ARCH_WIZARD
     "Stand in for the curl worker: record webhook posts and answer channel reads.";
@@ -19,6 +20,7 @@ object DISCORD_SCENARIOS [
       return {204, {}, ""};
     endif
     this.reads = {@this.reads, {url, headers}};
+    maphaskey(this.responses, url) && return {200, {}, generate_json(this.responses[url])};
     return {200, {}, generate_json(this.channel)};
   endmethod
 
@@ -32,7 +34,7 @@ object DISCORD_SCENARIOS [
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
     let saved = ["listeners" -> $presence_listeners, "location" -> this.location];
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "poll_schedule"})
       saved[key] = bridge.(key);
     endfor
     bridge:configure("https://discord.example/api/webhooks/1/token", "bot-token-0123456789abcdef0123456789", "5", "Test World");
@@ -44,6 +46,7 @@ object DISCORD_SCENARIOS [
     bridge.channel_members = {};
     bridge.speakers = {};
     this.channel = {};
+    this.responses = [];
     this.posts = {};
     this.reads = {};
     this.heard = {};
@@ -57,7 +60,7 @@ object DISCORD_SCENARIOS [
     schedule_stop(bridge.poll_schedule);
     schedule_stop(bridge.flush_schedule);
     bridge.flush_schedule = 0;
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "poll_schedule"})
       bridge.(key) = saved[key];
     endfor
     $presence_listeners = saved["listeners"];
@@ -201,6 +204,36 @@ object DISCORD_SCENARIOS [
     finally
       #90102.oauth2_identities = player_ids;
       #90102.name = old_name;
+      this:_teardown(saved);
+      recycle(speaker);
+      recycle(room);
+    endtry
+    return true;
+  endmethod
+
+  method test_discord_markup_reads_as_text owner: core::ARCH_WIZARD
+    "Roles and channels read by name from the server's lists, fetched once; emoji, commands and times read as text.";
+    const saved = this:_setup();
+    const room = create($room);
+    const speaker = create($discord_speaker);
+    speaker.name = "Bakelite radio";
+    try
+      move(speaker, room);
+      move(this, room);
+      $discord_bridge:add_speaker(speaker);
+      $discord_bridge.cursor = "100";
+      const api = "https://discord.com/api/v10";
+      this.responses = [api + "/channels/5" -> ["id" -> "5", "guild_id" -> "9"], api + "/guilds/9/roles" -> {["id" -> "21", "name" -> "Staff"]}, api + "/guilds/9/channels" -> {["id" -> "5", "name" -> "lobby"], ["id" -> "6", "name" -> "ooc"]}];
+      this.channel = {this:_message("101", "43", "alice", "Café <@&21> see <#6> <a:wave:31> </look here:7> <t:0:R> <@&22> <#5>")};
+      $discord_bridge:_poll();
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): Café @Staff see #ooc :wave: /look here " + ctime(0) + " @role #lobby"}, "markup reads as text");
+      $test_utils:assert_eq(length(this.reads), 4, "the channel, its server and each list are read once");
+      this.heard = {};
+      this.channel = {this:_message("102", "43", "alice", "<@&23>")};
+      $discord_bridge:_poll();
+      $test_utils:assert_eq(this.heard, {"Bakelite radio: alice (Discord): @role"}, "an unknown role reads generically");
+      $test_utils:assert_eq(length(this.reads), 5, "and does not refetch within the lookup period");
+    finally
       this:_teardown(saved);
       recycle(speaker);
       recycle(room);
