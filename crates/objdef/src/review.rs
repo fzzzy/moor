@@ -205,11 +205,12 @@ const PACKAGE_FILE: &str = "package.moo";
 /// Parse source units as one world. A unit labelled `<dir>/package.moo` declares the package the
 /// units under `<dir>/` belong to, so their bare constant names mean that package's constants. It
 /// is not an object file, and its `define`s are not bindings: the request's constants are.
+/// Returns the set and the names of the packages the units declare.
 fn parse_units(
     options: &CompileOptions,
     constants: Option<&Constants>,
     units: Vec<ObjDefSource>,
-) -> Result<ObjDefSet, ReviewError> {
+) -> Result<(ObjDefSet, Vec<String>), ReviewError> {
     let (declarations, mut units): (Vec<_>, Vec<_>) = units.into_iter().partition(|unit| {
         unit.label == PACKAGE_FILE || unit.label.ends_with(&format!("/{PACKAGE_FILE}"))
     });
@@ -247,12 +248,31 @@ fn parse_units(
         }
         other => other.cloned(),
     };
-    Ok(ObjDefSet::parse_sources(
-        options,
-        None,
-        constants.as_ref(),
-        units,
-    )?)
+    let set = ObjDefSet::parse_sources(options, None, constants.as_ref(), units)?;
+    Ok((set, packages.into_iter().map(|(_, name, _)| name).collect()))
+}
+
+/// The bindings a source provides to sources that depend on it: the constants of the packages it
+/// declares, qualified, or for a source without packages, all of its bindings.
+fn provided_bindings(set: &ObjDefSet, packages: &[String]) -> Var {
+    let prefixes: Vec<String> = packages
+        .iter()
+        .map(|name| format!("{name}{NAMESPACE_SEPARATOR}"))
+        .collect();
+    let bindings: BTreeMap<String, Var> = set
+        .constants()
+        .iter()
+        .map(|(name, value)| (name.as_string(), value.clone()))
+        .filter(|(name, _)| {
+            prefixes.is_empty() || prefixes.iter().any(|prefix| name.starts_with(prefix))
+        })
+        .collect();
+    v_map(
+        &bindings
+            .into_iter()
+            .map(|(name, value)| (v_str(&name), value))
+            .collect::<Vec<_>>(),
+    )
 }
 
 /// Bindings recorded under a bare name, as a package record made before its source was split into
@@ -605,11 +625,11 @@ pub(crate) fn analyze(
                     "base_sources requires selected program details".into(),
                 ));
             }
-            parse_units(options, constants.as_ref(), decode_sources(sources)?)
+            parse_units(options, constants.as_ref(), decode_sources(sources)?).map(|(set, _)| set)
         })
         .transpose()?;
     let units = decode_sources(sources)?;
-    let set = parse_units(options, constants.as_ref(), units)?;
+    let (set, packages) = parse_units(options, constants.as_ref(), units)?;
     let work = set
         .graph()
         .object_definitions()
@@ -1275,6 +1295,7 @@ pub(crate) fn analyze(
         ("rows", v_list(&report_rows)),
         ("groups", policy.report(&rows)),
         ("diagnostics", v_list(&diagnostics)),
+        ("bindings", provided_bindings(&set, &packages)),
     ]);
     Ok(Analysis {
         report,

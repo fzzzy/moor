@@ -3930,3 +3930,104 @@ fn a_location_change_moves_the_object() {
             .any(|blocker| blocker == v_str("invalid_object_location"))
     );
 }
+
+#[test]
+fn a_source_tree_builds_on_another_trees_bindings() {
+    // A tree of its own, holding only a games package. It names core's objects through bindings
+    // the request supplies qualified, reports its own bindings for trees that depend on it, and
+    // the objects it creates belong to its package.
+    let db = database();
+    let mut world = db.new_world_state().unwrap();
+    let board = Obj::mk_id(2);
+    let incoming = v_list(&[
+        record(&[
+            ("label", v_str("games/package.moo")),
+            (
+                "text",
+                v_str(
+                    "package \"games\" [objdef_version -> 2, depends -> {\"core\"}];\ndefine BOARD = #2;",
+                ),
+            ),
+        ]),
+        record(&[
+            ("label", v_str("games/board.moo")),
+            (
+                "text",
+                v_str(
+                    "object BOARD\nowner: core::ROOT\nname: core::TITLE\nproperty counter (owner: core::ROOT, flags: \"r\") = 42;\nendobject",
+                ),
+            ),
+        ]),
+    ]);
+    let req = record(&[
+        ("schema", v_int(1)),
+        ("operation", v_str("update")),
+        ("objects", v_list(&[v_obj(board)])),
+        (
+            "fields",
+            v_list(&[v_str("program"), v_str("property"), v_str("object")]),
+        ),
+        (
+            "constants",
+            record(&[
+                ("BOARD", v_obj(board)),
+                ("core::ROOT", v_obj(ROOT)),
+                ("core::TITLE", v_str("Board")),
+            ]),
+        ),
+        (
+            "policy",
+            record(&[
+                ("schema", v_int(1)),
+                ("groups", v_list(&[])),
+                (
+                    "creations",
+                    v_list(&[record(&[
+                        ("object", v_obj(board)),
+                        ("mode", v_str("absent")),
+                    ])]),
+                ),
+            ]),
+        ),
+    ]);
+    let first = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        get(&first, "bindings"),
+        record(&[("games::BOARD", v_obj(board))])
+    );
+    let req = group_object_request(&req, &first);
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        None,
+    )
+    .unwrap();
+    apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &req,
+        &get(&report, "evidence"),
+        &all_incoming(&report),
+    )
+    .unwrap();
+    assert_eq!(world.name_of(&permissions(), &board).unwrap(), "Board");
+    assert_eq!(
+        world
+            .get_object_metadata(&permissions(), &board, crate::package::package_key())
+            .unwrap(),
+        Some(v_str("games"))
+    );
+}

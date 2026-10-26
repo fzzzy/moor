@@ -48,7 +48,8 @@ pub struct ObjDefSource {
     /// Filesystem path, when the source came from disk.
     pub path: Option<PathBuf>,
     /// For an in-memory source, the package whose files it belongs to, which decides what its
-    /// bare constant names mean. A source from disk takes its package from its directory instead.
+    /// bare constant names mean and is recorded on its objects. A source from disk takes its
+    /// package from its directory instead.
     pub package: Option<String>,
 }
 
@@ -475,8 +476,16 @@ impl ObjDefSet {
                 ObjdefLoaderError::ObjectDefParseError(source.label.clone(), Box::new(e))
             })?;
 
-            for compiled_def in compiled_defs {
+            for mut compiled_def in compiled_defs {
                 let oid = compiled_def.oid;
+                if source.path.is_none()
+                    && let Some(package) = &source.package
+                {
+                    compiled_def
+                        .metadata
+                        .retain(|(name, _)| *name != package_key());
+                    compiled_def.metadata.push((package_key(), v_str(package)));
+                }
                 if let Some((first_source, _)) = object_definitions.get(&oid) {
                     return Err(ObjdefLoaderError::DuplicateObjectDefinition(
                         source.label.clone(),
