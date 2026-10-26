@@ -50,6 +50,19 @@ E_VERBNF
 ; return objects_with_metadata("nobody_sets_this");
 {}
 
+// The value index sees writes made earlier in the same task.
+; set_object_metadata($metadata_other, "spot", {1, 2, 3}); return objects_with_metadata("spot", {1, 2, 3}) == {$metadata_other};
+1
+
+; set_object_metadata($metadata_other, "spot", {4, 5, 6}); return {objects_with_metadata("spot", {1, 2, 3}), objects_with_metadata("spot", {4, 5, 6}) == {$metadata_other}};
+{{}, 1}
+
+; clear_object_metadata($metadata_other, "spot"); return objects_with_metadata("spot", {4, 5, 6});
+{}
+
+; set_object_metadata($metadata_obj, "spot", 7); set_object_metadata($metadata_other, "spot", 7); return objects_with_metadata("spot", 7) == {$metadata_obj, $metadata_other};
+1
+
 ; recycle($metadata_other);
 ; delete_property($system, "metadata_other");
 ; return objects_with_metadata("package", "mail");

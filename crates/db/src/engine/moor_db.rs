@@ -74,7 +74,7 @@ define_relations! {
     object_propdefs => Obj, PropDefs,
     object_propvalues => ObjAndUUIDHolder, Var,
     object_propflags => ObjAndUUIDHolder, PropPerms,
-    entity_metadata => EntityMetadataKey, Var,
+    entity_metadata == EntityMetadataKey, Var,
     object_last_move => Obj, Var,
     anonymous_object_metadata => Obj, AnonymousObjectMetadata,
 }

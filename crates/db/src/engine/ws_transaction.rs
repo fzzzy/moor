@@ -1310,22 +1310,33 @@ impl WorldStateTransaction {
     }
 
     /// The objects with object metadata `key`, optionally only those whose value equals `value`.
+    /// With a value, the answer comes from the metadata's value index; without one, from a scan.
     pub fn objects_with_metadata(
         &self,
         key: Symbol,
         value: Option<&Var>,
     ) -> Result<Vec<Obj>, WorldStateError> {
-        let mut objects = self
-            .entity_metadata
-            .scan(&|metadata_key, found| {
-                metadata_key.is_object()
-                    && metadata_key.key() == key
-                    && value.is_none_or(|value| found == value)
-            })
-            .map_err(|e| WorldStateError::DatabaseError(format!("Error scanning metadata: {e:?}")))?
-            .into_iter()
-            .map(|(metadata_key, _)| metadata_key.obj())
-            .collect::<Vec<_>>();
+        let mut objects = match value {
+            Some(value) => {
+                let mut objects = Vec::new();
+                self.entity_metadata
+                    .for_each_by_codomain(value, |metadata_key| {
+                        if metadata_key.is_object() && metadata_key.key() == key {
+                            objects.push(metadata_key.obj());
+                        }
+                    });
+                objects
+            }
+            None => self
+                .entity_metadata
+                .scan(&|metadata_key, _| metadata_key.is_object() && metadata_key.key() == key)
+                .map_err(|e| {
+                    WorldStateError::DatabaseError(format!("Error scanning metadata: {e:?}"))
+                })?
+                .into_iter()
+                .map(|(metadata_key, _)| metadata_key.obj())
+                .collect::<Vec<_>>(),
+        };
         objects.sort();
         objects.dedup();
         Ok(objects)
