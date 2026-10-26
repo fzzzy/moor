@@ -3485,3 +3485,102 @@ fn new_object_review_rejects_invalid_relationships_owners_and_aliases() {
         assert!(!world.valid(&Obj::mk_id(2)).unwrap());
     }
 }
+
+fn preview_units(units: &[(&str, &str)], constants: &[(&str, Var)]) -> Result<Var, ReviewError> {
+    let db = database();
+    let world = db.new_world_state().unwrap();
+    let sources = v_list(
+        &units
+            .iter()
+            .map(|(label, text)| record(&[("label", v_str(label)), ("text", v_str(text))]))
+            .collect::<Vec<_>>(),
+    );
+    let bindings = v_map(
+        &constants
+            .iter()
+            .map(|(name, value)| (v_str(name), value.clone()))
+            .collect::<Vec<_>>(),
+    );
+    let request = record(&[
+        ("schema", v_int(1)),
+        ("operation", v_str("adopt")),
+        ("objects", v_list(&[v_obj(ROOT)])),
+        ("fields", v_list(&[v_str("program")])),
+        ("constants", bindings),
+    ]);
+    preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &sources,
+        &request,
+        None,
+    )
+}
+
+const PACKAGED_ROOT: &str = r#"object ROOT [import_export_id -> "review_root"]
+name: TITLE
+owner: ROOT
+wizard: true
+verb test (this none this) owner: ROOT flags: "rxd"
+return "Base";
+endverb
+endobject"#;
+
+#[test]
+fn units_belong_to_the_package_declared_in_their_directory() {
+    // A lone package, as Cowbell's source is: package.moo is read for its declaration, not as an
+    // object file, and the record's flat bindings serve the package's bare names.
+    let report = preview_units(
+        &[
+            (
+                "package.moo",
+                "package \"cowbell\" [objdef_version -> 2];\ndefine ROOT = #1;\ndefine TITLE = \"Root\";",
+            ),
+            ("root.moo", PACKAGED_ROOT),
+        ],
+        &[("ROOT", v_obj(ROOT)), ("TITLE", v_str("Root"))],
+    )
+    .unwrap();
+    assert_eq!(get(&row(&report), "classification"), v_str("unbased"));
+
+    // Split into packages: a file in core names help's constant qualified, and flat bindings
+    // still resolve, each moved to the package that defines it.
+    let split_root = PACKAGED_ROOT.replace("name: TITLE", "name: help::TITLE");
+    let report = preview_units(
+        &[
+            ("core/package.moo", "package \"core\" [objdef_version -> 2];\ndefine ROOT = #1;"),
+            ("core/root.moo", &split_root),
+            (
+                "help/package.moo",
+                "package \"help\" [objdef_version -> 2, depends -> {\"core\"}];\ndefine TITLE = \"Root\";",
+            ),
+        ],
+        &[("ROOT", v_obj(ROOT)), ("TITLE", v_str("Root"))],
+    )
+    .unwrap();
+    assert_eq!(get(&row(&report), "classification"), v_str("unbased"));
+}
+
+#[test]
+fn a_flat_binding_two_packages_define_is_refused() {
+    let error = preview_units(
+        &[
+            (
+                "a/package.moo",
+                "package \"a\" [objdef_version -> 2];\ndefine TITLE = \"A\";",
+            ),
+            (
+                "b/package.moo",
+                "package \"b\" [objdef_version -> 2];\ndefine TITLE = \"B\";",
+            ),
+            ("a/root.moo", PACKAGED_ROOT),
+        ],
+        &[("ROOT", v_obj(ROOT)), ("TITLE", v_str("Root"))],
+    )
+    .unwrap_err();
+    assert!(
+        error.to_string().contains("defined by packages a and b"),
+        "{error}"
+    );
+}
