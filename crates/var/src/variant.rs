@@ -1777,7 +1777,9 @@ impl Hash for Var {
             Variant::Flyweight(f) => f.hash(state),
             Variant::Sym(s) => s.hash(state),
             Variant::Binary(b) => b.hash(state),
-            Variant::Lambda(l) => std::ptr::hash(&*l.0.body.0, state),
+            // Lambdas compare by structure, not identity, so two equal lambdas must hash alike. They
+            // share one hash: lambdas are rarely used as keys, and a correct hash matters more.
+            Variant::Lambda(_) => "lambda".hash(state),
         }
     }
 }

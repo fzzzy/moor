@@ -750,6 +750,29 @@ mod tests {
     }
 
     #[test]
+    fn test_equal_lambdas_hash_alike() {
+        // Lambdas compare by structure, so two equal ones in separate allocations, as a value
+        // loaded twice from the database is, must hash alike for hash lookups to find each other.
+        use crate::program::{labels::Label, opcode::ScatterArgs, program::Program};
+        use std::hash::{BuildHasher, RandomState};
+        let lambda = || {
+            Var::mk_lambda(
+                ScatterArgs {
+                    labels: vec![],
+                    done: Label(0),
+                },
+                Program::new(),
+                vec![],
+                None,
+            )
+        };
+        let (first, second) = (lambda(), lambda());
+        assert_eq!(first, second);
+        let hasher = RandomState::new();
+        assert_eq!(hasher.hash_one(&first), hasher.hash_one(&second));
+    }
+
+    #[test]
     fn test_errors_order_as_they_compare() {
         // == compares an error's code and value, never its message; ordering must agree.
         use crate::{E_DIV, E_PERM, E_TYPE, v_err, v_error};
