@@ -45,7 +45,7 @@ gen.objdir: check-sources
 	@test -n "$$(find "$(OUTPUT_DIRECTORY)/gen.objdir" -type f -name '*.moo' -print -quit)" || { \
 		echo "FAIL: compiler did not produce an objdef export" >&2; exit 1; }
 ifneq ($(strip $(EXPORT_FORBIDDEN_IDS)),)
-	@! grep -qsE '$(EXPORT_FORBIDDEN_IDS)' "$(OUTPUT_DIRECTORY)/gen.objdir/constants.moo" "$(OUTPUT_DIRECTORY)/gen.objdir/package.moo" || { \
+	@! grep -rqsE --include=constants.moo --include=package.moo '$(EXPORT_FORBIDDEN_IDS)' "$(OUTPUT_DIRECTORY)/gen.objdir" || { \
 		echo "FAIL: test fixtures entered shipped export" >&2; exit 1; }
 endif
 

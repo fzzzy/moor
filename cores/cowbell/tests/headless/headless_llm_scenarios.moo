@@ -2,11 +2,11 @@ object HEADLESS_LLM_SCENARIOS [
   import_export_id -> "headless_llm_scenarios"
 ]
   name: "Headless LLM and Tool Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::HACKER
+  parent: core::ROOT
+  owner: core::HACKER
   readable: true
 
-  method test_rule_tool_uses_supplied_inputs_and_actor owner: cowbell::ARCH_WIZARD
+  method test_rule_tool_uses_supplied_inputs_and_actor owner: core::ARCH_WIZARD
     "Rule tools preserve literal text, report invalid conditions, and cannot read private facts.";
     const target = create($thing, #90100, 2);
     try
@@ -29,7 +29,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_rule_tool_input_limits owner: cowbell::ARCH_WIZARD
+  method test_rule_tool_input_limits owner: core::ARCH_WIZARD
     "LLM rule inputs are bounded JSON values with explicit names and object literals.";
     let too_many = [];
     for i in [1..65]
@@ -48,7 +48,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_wearable_token_usage owner: cowbell::ARCH_WIZARD
+  method test_headless_wearable_token_usage owner: core::ARCH_WIZARD
     "Token displays accept integer limits and float thresholds for fresh and used contexts.";
     const wearer = create($player, $hacker, 2);
     const wearable = create($llm_wearable, $hacker, 2);
@@ -91,7 +91,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_building_tool_rejects_actor_spoof owner: cowbell::ARCH_WIZARD
+  method test_headless_building_tool_rejects_actor_spoof owner: core::ARCH_WIZARD
     "A direct non-wizard tool caller cannot claim a wizard actor.";
     const target = create($thing, $hacker, 2);
     try
@@ -117,7 +117,7 @@ object HEADLESS_LLM_SCENARIOS [
     return $llm_building_tools:rename_object(["object" -> target, "name" -> "spoofed"], $arch_wizard);
   endmethod
 
-  method test_headless_agent_tool_rejects_hostile_descendant owner: cowbell::ARCH_WIZARD
+  method test_headless_agent_tool_rejects_hostile_descendant owner: core::ARCH_WIZARD
     "Agent ancestry and gifted ownership cannot authorize a claimed wizard actor.";
     const target = create($thing, $hacker, 2);
     try
@@ -157,7 +157,7 @@ object HEADLESS_LLM_SCENARIOS [
     return agent:set_owner($hacker);
   endmethod
 
-  method test_headless_agent_public_context_denies_foreign_principal owner: cowbell::ARCH_WIZARD
+  method test_headless_agent_public_context_denies_foreign_principal owner: core::ARCH_WIZARD
     "A public state wrapper must check the invoking principal before calling its wizard helper.";
     const agent = create($llm_agent, $hacker, 2);
     try
@@ -183,7 +183,7 @@ object HEADLESS_LLM_SCENARIOS [
     return agent:add_message("user", "untrusted appended message");
   endmethod
 
-  method test_headless_tools_deny_foreign_private_access owner: cowbell::ARCH_WIZARD
+  method test_headless_tools_deny_foreign_private_access owner: core::ARCH_WIZARD
     "A real non-wizard actor receives no private read or write grants merely by invoking tools.";
     const target = create($thing, $hacker, 2);
     try
@@ -208,7 +208,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_tools_allow_own_and_public_access owner: cowbell::ARCH_WIZARD
+  method test_headless_tools_allow_own_and_public_access owner: core::ARCH_WIZARD
     "Own private data and public foreign data remain available to ordinary actor tools.";
     const own_target = create($thing, #90102, 2);
     const public_target = create($thing, $hacker, 2);
@@ -236,7 +236,7 @@ object HEADLESS_LLM_SCENARIOS [
     return provider:(endpoint)(values, #90102);
   endmethod
 
-  method test_headless_fake_model_preserves_requester_across_callbacks owner: cowbell::ARCH_WIZARD
+  method test_headless_fake_model_preserves_requester_across_callbacks owner: core::ARCH_WIZARD
     "Local model replies exercise the common agent, successful tools, denied tools, and a suspending metadata mutation.";
     for specification in ({{$llm_agent, $llm_agent_tool}})
       const {prototype, delegate} = specification;
@@ -293,7 +293,7 @@ object HEADLESS_LLM_SCENARIOS [
     return agent:send_message(prompt);
   endmethod
 
-  method test_headless_room_owner_cannot_forge_wizard_requester owner: cowbell::ARCH_WIZARD
+  method test_headless_room_owner_cannot_forge_wizard_requester owner: core::ARCH_WIZARD
     "Owning a room and its task state cannot authorize a forged foreign requester.";
     const room = create($agent_room, #90102, 2);
     const client = create($root, #90102, 2);
@@ -326,14 +326,14 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_no_rlm_runtime owner: cowbell::ARCH_WIZARD
+  method test_headless_no_rlm_runtime owner: core::ARCH_WIZARD
     "The experimental runtime and its system registration are absent from a fresh core.";
     $test_utils:assert_false(valid(#100), "No RLM prototype remains");
     $test_utils:assert_false("rlm_agent" in properties($sysobj), "No RLM system registration remains");
     return true;
   endmethod
 
-  method test_headless_signed_room_visitor_tamper_and_replay owner: cowbell::ARCH_WIZARD
+  method test_headless_signed_room_visitor_tamper_and_replay owner: core::ARCH_WIZARD
     "A visitor's bounded signed request executes once; actor, query, context, and room changes fail.";
     const room = create($agent_room, $hacker, 2);
     const other_room = create($agent_room, $hacker, 2);
@@ -395,7 +395,7 @@ object HEADLESS_LLM_SCENARIOS [
     return $agent_room:_authorize_task(room, task);
   endmethod
 
-  method test_headless_authorization_overrides_cannot_bypass_boundary owner: cowbell::ARCH_WIZARD
+  method test_headless_authorization_overrides_cannot_bypass_boundary owner: core::ARCH_WIZARD
     "Ordinary descendants cannot override the permission decision used by inherited wizard entry points.";
     const tools = create($llm_building_tools, #90102, 2);
     const agent = create($llm_agent, #90102, 2);
@@ -434,7 +434,7 @@ object HEADLESS_LLM_SCENARIOS [
     return true;
   endmethod
 
-  method test_headless_observer_preserves_npc_tool_actor owner: cowbell::ARCH_WIZARD
+  method test_headless_observer_preserves_npc_tool_actor owner: core::ARCH_WIZARD
     "A verified observer dispatch keeps the NPC actor instead of inheriting its owner's permissions.";
     const observer = create($llm_room_observer, #90102, 2);
     const agent = create($llm_agent, #90102, 1);
@@ -484,7 +484,7 @@ object HEADLESS_LLM_SCENARIOS [
     return observer:request_response(prompt);
   endmethod
 
-  method test_headless_shared_agent_foreign_configuration_denied owner: cowbell::ARCH_WIZARD
+  method test_headless_shared_agent_foreign_configuration_denied owner: core::ARCH_WIZARD
     "Foreign callers cannot replace tools on the maintained agent.";
     const agent = create($llm_agent, $hacker, 1);
     const original = agent.tools;
@@ -506,7 +506,7 @@ object HEADLESS_LLM_SCENARIOS [
     return agent:add_tool("foreign", $llm_agent_tool:mk("foreign", "No authority", ["type" -> "object"], this, "noop"));
   endmethod
 
-  method test_headless_source_snapshot_cannot_spoof_actor owner: cowbell::ARCH_WIZARD
+  method test_headless_source_snapshot_cannot_spoof_actor owner: core::ARCH_WIZARD
     "Shared source snapshots validate the principal before reading private code.";
     const reader = create($root, #90102, 2);
     const foreign = create($thing, $hacker, 2);

@@ -4,6 +4,6 @@ object HEADLESS_WORLD_AREA [
   import_export_id -> "headless_world_area"
 ]
   name: "Runtime World Area"
-  parent: cowbell::AREA
+  parent: core::AREA
   owner: fixtures::RUNTIME_WIZARD
 endobject

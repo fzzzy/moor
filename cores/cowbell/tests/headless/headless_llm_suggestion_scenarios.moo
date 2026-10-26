@@ -2,11 +2,11 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
   import_export_id -> "headless_llm_suggestion_scenarios"
 ]
   name: "LLM Suggestion Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method fixture owner: cowbell::ARCH_WIZARD
+  method fixture owner: core::ARCH_WIZARD
     "Install a deterministic suggestion client for isolated session tests; only a wizard may configure it.";
     caller_perms().wizard || raise(E_PERM);
     const client = create($root, #90100, 1);
@@ -22,7 +22,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return client;
   endmethod
 
-  method command_fixture owner: cowbell::ARCH_WIZARD
+  method command_fixture owner: core::ARCH_WIZARD
     "Configure controlled command metadata and callbacks for connected LLM suggestion tests.";
     caller_perms().wizard || raise(E_PERM);
     const client = this:fixture();
@@ -44,7 +44,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return client;
   endmethod
 
-  method close_command_fixture owner: cowbell::ARCH_WIZARD
+  method close_command_fixture owner: core::ARCH_WIZARD
     "Restore the player's location and release anonymous command fixture references.";
     caller_perms().wizard || raise(E_PERM);
     const {original, room, item} = #90100.command_fixture;
@@ -56,7 +56,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method help_fixture owner: cowbell::ARCH_WIZARD
+  method help_fixture owner: core::ARCH_WIZARD
     "Install a readable help provider that records incoming authority and can suspend or change its catalog.";
     caller_perms().wizard || raise(E_PERM);
     const client = this:fixture();
@@ -77,7 +77,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return client;
   endmethod
 
-  method wait_requests owner: cowbell::ARCH_WIZARD
+  method wait_requests owner: core::ARCH_WIZARD
     "Wait for a fake request barrier without assuming transaction scheduling order.";
     caller_perms().wizard || raise(E_PERM);
     const {client, count} = args;
@@ -88,7 +88,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     raise(E_ASSERT, "Suggestion did not reach the fake provider.");
   endmethod
 
-  method wait_closed owner: cowbell::ARCH_WIZARD
+  method wait_closed owner: core::ARCH_WIZARD
     "Wait for job retirement and verify its task and retained-reference cleanup.";
     caller_perms().wizard || raise(E_PERM);
     const {job, ?tasks = {job.worker_task, job.monitor_task}} = args;
@@ -125,7 +125,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return #90102.llm_assist_contexts;
   endmethod
 
-  method test_command_metadata_respects_native_permissions owner: cowbell::ARCH_WIZARD
+  method test_command_metadata_respects_native_permissions owner: core::ARCH_WIZARD
     "Command metadata cannot expose a foreign private object or private ancestor definitions.";
     const ancestor = create($root, #90101, 2);
     const target = create(ancestor, #90102, 2);
@@ -147,7 +147,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_command_context_visible_state_and_authentication owner: cowbell::ARCH_WIZARD
+  method test_command_context_visible_state_and_authentication owner: core::ARCH_WIZARD
     "State collection preserves readable container state and authenticates the caller before any target hook.";
     const target = create($container, #90102, 1);
     target.open = false;
@@ -164,7 +164,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_command_context_custom_exits owner: cowbell::ARCH_WIZARD
+  method test_command_context_custom_exits owner: core::ARCH_WIZARD
     "Custom exit commands use the maintained provider API, retain requester authority, and never execute travel.";
     const room = create($room, #90102, 1);
     const provider = create($root, #90102, 2);
@@ -191,7 +191,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_command_object_metadata_and_scope owner: cowbell::ARCH_WIZARD
+  method test_command_object_metadata_and_scope owner: core::ARCH_WIZARD
     "Command context preserves inherited syntax, names, aliases, and the shipped player environment.";
     const target = create($thing, #90102, 1);
     target.name = "Command Probe";
@@ -210,7 +210,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_assist_contexts_are_private owner: cowbell::ARCH_WIZARD
+  method test_assist_contexts_are_private owner: core::ARCH_WIZARD
     "A foreign programmer cannot inspect retained LLM input or its connection.";
     let denied = false;
     try
@@ -229,7 +229,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_environment_callbacks_use_requester owner: cowbell::ARCH_WIZARD
+  method test_help_environment_callbacks_use_requester owner: core::ARCH_WIZARD
     "Administrative feature probes cannot receive wizard authority during LLM help context collection.";
     const features = #90102.admin_features;
     const provider = create($root, #90102, 1);
@@ -246,7 +246,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_lookup_callbacks_use_requester owner: cowbell::ARCH_WIZARD
+  method test_help_lookup_callbacks_use_requester owner: core::ARCH_WIZARD
     "Targeted help tools and ordinary help enumeration must not lend their helper's wizard authority.";
     const features = #90102.features;
     const provider = create($root, #90102, 1);
@@ -267,7 +267,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_catalog_shipped_environment owner: cowbell::ARCH_WIZARD
+  method test_help_catalog_shipped_environment owner: core::ARCH_WIZARD
     "The ordinary player's shipped help environment fits the shared catalog and model context bounds.";
     const environment = this:_as_player(#90102, "help_environment", {});
     const catalog = this:_as_player($llm_help_tools, "catalog", {#90102, environment});
@@ -277,7 +277,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_catalog_authentication_and_bounds owner: cowbell::ARCH_WIZARD
+  method test_help_catalog_authentication_and_bounds owner: core::ARCH_WIZARD
     "Catalogs authenticate the incoming actor and reject oversized provider collections before callbacks.";
     let denied = false;
     try
@@ -296,7 +296,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_help_catalog_rejects_malformed_topics owner: cowbell::ARCH_WIZARD
+  method test_help_catalog_rejects_malformed_topics owner: core::ARCH_WIZARD
     "Help providers cannot inject arbitrary flyweights or oversized topic lists into LLM context.";
     const provider = create($root, #90102, 1);
     provider.r = 1;
@@ -324,7 +324,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_doc_metadata_uses_native_permissions owner: cowbell::ARCH_WIZARD
+  method test_doc_metadata_uses_native_permissions owner: core::ARCH_WIZARD
     "Foreign private object names remain unavailable; owned names are bounded and readable.";
     const target = create($root, #90101, 2);
     try
@@ -344,7 +344,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_doc_admission_rejects_spoofed_actor owner: cowbell::ARCH_WIZARD
+  method test_doc_admission_rejects_spoofed_actor owner: core::ARCH_WIZARD
     "A caller cannot create another programmer's suggestion by supplying their identity.";
     const request = ['kind -> 'builtin, 'spec -> "missing", 'target -> #-1, 'member -> ""];
     let denied = false;
@@ -357,7 +357,7 @@ object HEADLESS_LLM_SUGGESTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_suggestion_event_rejects_foreign_actor owner: cowbell::ARCH_WIZARD
+  method test_suggestion_event_rejects_foreign_actor owner: core::ARCH_WIZARD
     "Structured placeholder delivery cannot bypass the presenter's actor authentication.";
     const presenter = $llm_presenter:new(#90101, 0, $prog_features);
     try

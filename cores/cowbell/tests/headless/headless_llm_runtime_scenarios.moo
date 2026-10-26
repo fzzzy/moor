@@ -2,11 +2,11 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
   import_export_id -> "headless_llm_runtime_scenarios"
 ]
   name: "LLM Runtime Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method _client owner: cowbell::ARCH_WIZARD
+  method _client owner: core::ARCH_WIZARD
     "Create a deterministic provider fixture; the caller must recycle it.";
     caller == this && this == #90031 || raise(E_PERM);
     const {replies} = args;
@@ -19,7 +19,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return client;
   endmethod
 
-  method _tool_reply owner: cowbell::ARCH_WIZARD
+  method _tool_reply owner: core::ARCH_WIZARD
     "Build one provider reply from ordered tool names.";
     const {names} = args;
     let calls = {};
@@ -29,7 +29,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return ["choices" -> {["message" -> ["role" -> "assistant", "tool_calls" -> calls]]}];
   endmethod
 
-  method _sink owner: cowbell::ARCH_WIZARD
+  method _sink owner: core::ARCH_WIZARD
     "Create an actor-owned effect recorder; the caller must recycle it.";
     caller == this && this == #90031 || raise(E_PERM);
     const {agent} = args;
@@ -57,7 +57,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return target:(name)(@values);
   endmethod
 
-  method test_iteration_limit owner: cowbell::ARCH_WIZARD
+  method test_iteration_limit owner: core::ARCH_WIZARD
     "The common agent stop before requesting more than their configured turn limit.";
     const tool_reply = this:_tool_reply({"mark"});
     const final_reply = ["choices" -> {["message" -> ["role" -> "assistant", "content" -> "done"]]}];
@@ -84,7 +84,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_exhausted_budget owner: cowbell::ARCH_WIZARD
+  method test_exhausted_budget owner: core::ARCH_WIZARD
     "An exhausted budget prevents the provider request and clears active status.";
     const previous_budget = #90102.llm_token_budget;
     const previous_used = #90102.llm_tokens_used;
@@ -112,7 +112,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_invalid_response owner: cowbell::ARCH_WIZARD
+  method test_invalid_response owner: core::ARCH_WIZARD
     "Malformed provider replies cannot become empty successful assistant messages.";
     for prototype in ({$llm_agent})
       const agent = create(prototype, #90102, 2);
@@ -131,7 +131,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_cancellation_between_tools owner: cowbell::ARCH_WIZARD
+  method test_cancellation_between_tools owner: core::ARCH_WIZARD
     "A cancelled interaction prevents later mutations in the same provider batch.";
     for spec in ({{$llm_agent, $llm_agent_tool}})
       const {prototype, delegate} = spec;
@@ -154,7 +154,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_compaction_preserves_tool_exchange owner: cowbell::ARCH_WIZARD
+  method test_compaction_preserves_tool_exchange owner: core::ARCH_WIZARD
     "Compaction retains the assistant call for every retained tool response.";
     for prototype in ({$llm_agent})
       const agent = create(prototype, #90102, 2);
@@ -183,7 +183,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_compaction_preserves_concurrent_append owner: cowbell::ARCH_WIZARD
+  method test_compaction_preserves_concurrent_append owner: core::ARCH_WIZARD
     "A summary based on an older conversation cannot overwrite a newly appended message.";
     for prototype in ({$llm_agent})
       const agent = create(prototype, #90102, 2);
@@ -206,7 +206,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_task_initialization_authority owner: cowbell::ARCH_WIZARD
+  method test_task_initialization_authority owner: core::ARCH_WIZARD
     "Foreign callers cannot create tasks in another agent's project or alter its task status.";
     const agent = create($llm_agent, #90101, 2);
     try
@@ -229,7 +229,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_fact_compaction_rejects_invalid_proposals owner: cowbell::ARCH_WIZARD
+  method test_fact_compaction_rejects_invalid_proposals owner: core::ARCH_WIZARD
     "A malformed provider fact cannot erase memory, including through the complete model path.";
     const observer = create($llm_room_observer, #90102, 2);
     const memory = $llm_memory:new(observer);
@@ -259,7 +259,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_project_ownership_and_descendants owner: cowbell::ARCH_WIZARD
+  method test_project_ownership_and_descendants owner: core::ARCH_WIZARD
     "Project state is private, isolated for descendants, and follows current subject ownership.";
     const agent = create($llm_agent, #90102, 2);
     try
@@ -294,7 +294,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_project_task_tree_release owner: cowbell::ARCH_WIZARD
+  method test_project_task_tree_release owner: core::ARCH_WIZARD
     "Removing a task releases descendants and findings and revokes retained handles.";
     const agent = create($llm_agent, #90102, 1);
     const project = agent:get_project();
@@ -331,7 +331,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_stored_rule_frontend_tools owner: cowbell::ARCH_WIZARD
+  method test_stored_rule_frontend_tools owner: core::ARCH_WIZARD
     "Both LLM wearables evaluate stored rules with optional JSON inputs under the captured actor.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -397,7 +397,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_missing_tasks owner: cowbell::ARCH_WIZARD
+  method test_wearable_missing_tasks owner: core::ARCH_WIZARD
     "Wearable task selection follows project removal and agent replacement without stale IDs.";
     for spec in ({{$data_visor, "complete_investigation"}, {$architects_compass, "complete_building"}})
       const {prototype, operation} = spec;
@@ -429,7 +429,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _job_room owner: cowbell::ARCH_WIZARD
+  method _job_room owner: core::ARCH_WIZARD
     "Create an explicit room caller for job lifecycle tests; caller must recycle it.";
     caller == this && this == #90031 || raise(E_PERM);
     const room = create($agent_room, #90100, 2);
@@ -438,7 +438,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return room;
   endmethod
 
-  method _job owner: cowbell::ARCH_WIZARD
+  method _job owner: core::ARCH_WIZARD
     "Create a job through the same signed request contract as room execution.";
     caller == this && this == #90031 || raise(E_PERM);
     const {room, actor, query} = args;
@@ -447,7 +447,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return $llm_job:new(room, task);
   endmethod
 
-  method test_jobs_isolate_requesters owner: cowbell::ARCH_WIZARD
+  method test_jobs_isolate_requesters owner: core::ARCH_WIZARD
     "Anonymous jobs capture separate requesters and cannot cancel or expose each other's state.";
     const room = this:_job_room();
     const first = this:_job(room, #90102, "first query");
@@ -483,7 +483,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _run_job_background owner: cowbell::ARCH_WIZARD
+  method _run_job_background owner: core::ARCH_WIZARD
     "Start the room task from a separate activation without an enclosing finally scope.";
     caller == this && this == #90031 || raise(E_PERM);
     const {room, job} = args;
@@ -493,7 +493,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return tid;
   endmethod
 
-  method test_job_cancellation_owns_model_child owner: cowbell::ARCH_WIZARD
+  method test_job_cancellation_owns_model_child owner: core::ARCH_WIZARD
     "Cancelling a running job stops its recorded child before the delayed effect.";
     const room = this:_job_room();
     const job = this:_job(room, #90102, "delayed effect");
@@ -536,7 +536,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_typed_tool_outcomes owner: cowbell::ARCH_WIZARD
+  method test_typed_tool_outcomes owner: core::ARCH_WIZARD
     "Error-looking success text is data; explicit envelopes and cancelled outcomes drive control flow.";
     const literal = $llm_tool_result:normalize("ERROR: is part of this quoted example");
     $test_utils:assert_true(literal:is_success(), "Do not infer failure from prose");
@@ -548,7 +548,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_tool_results_cannot_retain_live_values owner: cowbell::ARCH_WIZARD
+  method test_tool_results_cannot_retain_live_values owner: core::ARCH_WIZARD
     "Invalid LLM tool results become bounded outcomes without retaining object graphs or losing mutation recovery.";
     const actor = #90102;
     const retained = create($root, actor, 1);
@@ -584,7 +584,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_tool_intent_precedes_committed_mutation owner: cowbell::ARCH_WIZARD
+  method test_tool_intent_precedes_committed_mutation owner: core::ARCH_WIZARD
     "A handler that commits then throws leaves an intent, unknown outcome, and a recovery barrier.";
     const agent = create($llm_agent, #90102, 2);
     const client = this:_client({this:_tool_reply({"mutate", "mark"})});
@@ -619,7 +619,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_provider_content_and_call_validation owner: cowbell::ARCH_WIZARD
+  method test_provider_content_and_call_validation owner: core::ARCH_WIZARD
     "Malformed later calls reject the complete batch before any tool can mutate state.";
     $test_utils:assert_true($llm_response:test_flyweight(), "Literal provider content survives normalization");
     const agent = create($llm_agent, #90102, 2);
@@ -642,7 +642,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_room_lifecycle_authority owner: cowbell::ARCH_WIZARD
+  method test_room_lifecycle_authority owner: core::ARCH_WIZARD
     "Foreign callers cannot stop, restart, or clear another owner's agent room.";
     const room = create($agent_room, #90101, 2);
     try
@@ -664,7 +664,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_latest_room_history owner: cowbell::ARCH_WIZARD
+  method test_latest_room_history owner: core::ARCH_WIZARD
     "History selection uses newest-first order and the actual request actor.";
     const room = create($agent_room, #90101, 2);
     try
@@ -689,7 +689,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_verb_inspection_argspec owner: cowbell::ARCH_WIZARD
+  method test_verb_inspection_argspec owner: core::ARCH_WIZARD
     "Code inspection reports argument specifications independently from verb names.";
     const target = create($thing, #90102, 2);
     try
@@ -703,7 +703,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_catalog_collision owner: cowbell::ARCH_WIZARD
+  method test_catalog_collision owner: core::ARCH_WIZARD
     "A conflicting definition cannot replace a registered tool; exact repeats are harmless.";
     const schema = ["type" -> "object", "properties" -> []];
     const first = $llm_agent_tool:mk("probe", "Inspect", schema, this, "probe", 'inspection);
@@ -729,7 +729,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_room_views_filter_private_state owner: cowbell::ARCH_WIZARD
+  method test_room_views_filter_private_state owner: core::ARCH_WIZARD
     "Room snapshots disclose only the authenticated requester's work unless the actor administers the room.";
     const room = create($agent_room, #90101, 2);
     const own = this:_job(room, #90102, "own active request");
@@ -779,7 +779,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_tool_schema_constraints owner: cowbell::ARCH_WIZARD
+  method test_tool_schema_constraints owner: core::ARCH_WIZARD
     "Shared validation checks nested fields, exact names, enums, and bounds without coercion.";
     const schema = ["type" -> "object", "properties" -> ["items" -> ["type" -> "array", "minItems" -> 1, "maxItems" -> 2, "items" -> ["type" -> "object", "properties" -> ["name" -> ["type" -> "string", "enum" -> {"Keep"}], "count" -> ["type" -> "number", "minimum" -> 1, "maximum" -> 3]], "required" -> {"name", "count"}, "additionalProperties" -> false]]], "required" -> {"items"}, "additionalProperties" -> false];
     const good = ["items" -> {["name" -> "Keep", "count" -> 2.5]}];
@@ -807,7 +807,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_invalid_tool_arguments_have_no_effects owner: cowbell::ARCH_WIZARD
+  method test_invalid_tool_arguments_have_no_effects owner: core::ARCH_WIZARD
     "Invalid mutation arguments fail before callbacks or dispatch and leave no uncertain outcome.";
     const agent = create($llm_agent, #90102, 1);
     const client = this:_client({this:_tool_reply({"mark"})});
@@ -839,7 +839,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_provider_credentials_and_setter_authority owner: cowbell::ARCH_WIZARD
+  method test_provider_credentials_and_setter_authority owner: core::ARCH_WIZARD
     "Keys do not follow prototype inheritance, and key setters never trust target authorization overrides.";
     const parent = create($llm_client, #90100, 2);
     const child = create(parent, #90102, 2);
@@ -890,7 +890,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_provider_options_are_inert owner: cowbell::ARCH_WIZARD
+  method test_provider_options_are_inert owner: core::ARCH_WIZARD
     "Options are validated slots, not an opportunity to invoke attacker-supplied code as wizard.";
     const hostile = create($llm_chat_opts, #90102, 2);
     try
@@ -918,7 +918,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_provider_account_reservations owner: cowbell::ARCH_WIZARD
+  method test_provider_account_reservations owner: core::ARCH_WIZARD
     "Reservations prevent concurrent overspend, settle once, and retain unknown charges after expiry.";
     const actor = create($thing, #90102, 2);
     add_verb($llm_provider, {$arch_wizard, "rxd", "fixture_account"}, {"this", "none", "this"});
@@ -962,7 +962,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_progress_uses_current_arguments owner: cowbell::ARCH_WIZARD
+  method test_wearable_progress_uses_current_arguments owner: core::ARCH_WIZARD
     "LLM wearable progress uses canonical object arguments and accepts partial source ranges.";
     for prototype in ({$data_visor, $architects_compass})
       const device = create(prototype, #90101, 2);
@@ -987,7 +987,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_inspection_structured_descriptions owner: cowbell::ARCH_WIZARD
+  method test_inspection_structured_descriptions owner: core::ARCH_WIZARD
     "LLM object and social inspection resolve structured descriptions as the requester before JSON output.";
     const actor = #90102;
     const target = create($thing, #90101, 2);
@@ -1024,7 +1024,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_code_search_pages owner: cowbell::ARCH_WIZARD
+  method test_code_search_pages owner: core::ARCH_WIZARD
     "LLM source pages preserve alias definitions, literal matching, and every match across cursors.";
     const actor = #90102;
     const target = create($root, actor, 2);
@@ -1062,7 +1062,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_code_search_authority owner: cowbell::ARCH_WIZARD
+  method test_code_search_authority owner: core::ARCH_WIZARD
     "LLM search rejects forged actors and private explicit targets and reports unreadable verb omissions.";
     const actor = #90102;
     const target = create($root, #90101, 2);
@@ -1114,7 +1114,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_shared_verb_source_snapshots owner: cowbell::ARCH_WIZARD
+  method test_shared_verb_source_snapshots owner: core::ARCH_WIZARD
     "LLM source snapshots share native lookup, immutable ranges, rendering, and bounded selection.";
     const actor = #90102;
     const parent = create($thing, actor, 2);
@@ -1170,7 +1170,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method presentation_case owner: cowbell::ARCH_WIZARD
+  method presentation_case owner: core::ARCH_WIZARD
     "Run real room job presentation with deterministic model replies and a supplied session endpoint.";
     caller_perms().wizard || raise(E_PERM);
     const {actor, destination} = args;
@@ -1191,7 +1191,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _delayed_room owner: cowbell::ARCH_WIZARD
+  method _delayed_room owner: core::ARCH_WIZARD
     "Create a room with a model barrier; tests must reset the room and recycle both objects.";
     caller == this && this == #90031 || raise(E_PERM);
     const room = this:_job_room();
@@ -1202,7 +1202,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return {room, client};
   endmethod
 
-  method test_room_concurrent_admission_and_cancellation owner: cowbell::ARCH_WIZARD
+  method test_room_concurrent_admission_and_cancellation owner: core::ARCH_WIZARD
     "Queued work counts immediately; two actors run independently and cancellation kills only selected children.";
     const {room, client} = this:_delayed_room();
     room.max_workers = 2;
@@ -1266,7 +1266,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_room_worker_loss_and_monitor_recovery owner: cowbell::ARCH_WIZARD
+  method test_room_worker_loss_and_monitor_recovery owner: core::ARCH_WIZARD
     "A replacement monitor finds admitted jobs and cancels a dead parent's model child without replay.";
     const {room, client} = this:_delayed_room();
     try
@@ -1297,7 +1297,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_room_prototypes_do_not_share_live_state owner: cowbell::ARCH_WIZARD
+  method test_room_prototypes_do_not_share_live_state owner: core::ARCH_WIZARD
     "A room inherits configuration and behavior, but never its parent's jobs, history, or task IDs.";
     const {parent_room, client} = this:_delayed_room();
     let child = #-1;
@@ -1327,7 +1327,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_memory_isolation_and_authority owner: cowbell::ARCH_WIZARD
+  method test_memory_isolation_and_authority owner: core::ARCH_WIZARD
     "Observer descendants receive independent memory; copied references grant no authority.";
     const observer = create($llm_room_observer, #90102, 2);
     let child = #-1;
@@ -1381,7 +1381,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _compact_memory_background owner: cowbell::ARCH_WIZARD
+  method _compact_memory_background owner: core::ARCH_WIZARD
     "Start compaction outside the test's finally scope and record the public outcome.";
     caller == this && this == #90031 || raise(E_PERM);
     const {memory, client, result} = args;
@@ -1395,7 +1395,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return tid;
   endmethod
 
-  method test_memory_compaction_rechecks_after_io owner: cowbell::ARCH_WIZARD
+  method test_memory_compaction_rechecks_after_io owner: core::ARCH_WIZARD
     "Intervening facts and ownership changes during a model wait cannot be overwritten.";
     const observer = create($llm_room_observer, #90102, 2);
     const memory = $llm_memory:new(observer);
@@ -1439,7 +1439,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _wearable owner: cowbell::ARCH_WIZARD
+  method _wearable owner: core::ARCH_WIZARD
     "Make an anonymous device with a minimal frontend for interaction lifecycle tests.";
     const {actor, ?kind = 1} = args;
     const device = create($llm_wearable, actor, kind);
@@ -1448,7 +1448,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return device;
   endmethod
 
-  method wearable_fixture owner: cowbell::ARCH_WIZARD
+  method wearable_fixture owner: core::ARCH_WIZARD
     "Create a deterministic connected wearable; the session scenario recycles the device and client.";
     caller_perms().wizard || raise(E_PERM);
     const {actor} = args;
@@ -1465,7 +1465,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return device;
   endmethod
 
-  method test_wearable_interaction_admission owner: cowbell::ARCH_WIZARD
+  method test_wearable_interaction_admission owner: core::ARCH_WIZARD
     "Admission precedes input, active configuration is immutable, and descendants isolate collaborators.";
     const actor = #90102;
     const previous = actor.wearing;
@@ -1542,7 +1542,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_confirmation_scope owner: cowbell::ARCH_WIZARD
+  method test_wearable_confirmation_scope owner: core::ARCH_WIZARD
     "Approvals are per effect, target, and interaction; stale previews and alternatives stop effects.";
     const actor = #90102;
     const previous = actor.wearing;
@@ -1595,7 +1595,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_programming_provider owner: cowbell::ARCH_WIZARD
+  method test_wearable_programming_provider owner: core::ARCH_WIZARD
     "Shared mutations require captured approvals and reject stale targets, foreign actors, and released sessions.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -1679,7 +1679,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_building_provider owner: cowbell::ARCH_WIZARD
+  method test_wearable_building_provider owner: core::ARCH_WIZARD
     "Every compass mutation waits for approval; accepted operations share the ordinary building services.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -1759,7 +1759,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_building_stale_preview owner: cowbell::ARCH_WIZARD
+  method test_wearable_building_stale_preview owner: core::ARCH_WIZARD
     "A changed connection cannot be overwritten or removed through a stale approval.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -1805,7 +1805,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_building_creation_cleanup owner: cowbell::ARCH_WIZARD
+  method test_building_creation_cleanup owner: core::ARCH_WIZARD
     "Failed object placement releases its allocation; a no-op destroy callback cannot report success.";
     const actor = #90101;
     const prototype = create($thing, actor, 1);
@@ -1843,7 +1843,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_explicit_eval owner: cowbell::ARCH_WIZARD
+  method test_wearable_explicit_eval owner: core::ARCH_WIZARD
     "Raw eval is opt-in, programmer-only, and requires a fresh confirmation for every execution.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -1879,7 +1879,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_message_edit_authority owner: cowbell::ARCH_WIZARD
+  method test_message_edit_authority owner: core::ARCH_WIZARD
     "Message helpers authenticate actors and cannot turn a reference into write authority.";
     const actor = #90101;
     const target = create($thing, actor, 1);
@@ -1935,7 +1935,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_wearable_behavior_stale_preview owner: cowbell::ARCH_WIZARD
+  method test_wearable_behavior_stale_preview owner: core::ARCH_WIZARD
     "Message contents and authoring state remain stable across compilation and confirmation.";
     const actor = #90101;
     const previous = actor.wearing;
@@ -1984,7 +1984,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_triage_provider_and_decision owner: cowbell::ARCH_WIZARD
+  method test_observer_triage_provider_and_decision owner: core::ARCH_WIZARD
     "Triage uses the dedicated provider, visible decisions, current authority, and an unchanged snapshot.";
     const observer = create($llm_room_observer, #90102, 2);
     const agent = create($llm_agent, #90102, 2);
@@ -2044,7 +2044,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_speech_policy owner: cowbell::ARCH_WIZARD
+  method test_observer_speech_policy owner: core::ARCH_WIZARD
     "Speech preserves ordinary text, suppresses tool markup, and remains in its captured room.";
     const observer = create($llm_room_observer, #90102, 2);
     const destination = create($room, #90102, 2);
@@ -2102,7 +2102,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_event_admission owner: cowbell::ARCH_WIZARD
+  method test_observer_event_admission owner: core::ARCH_WIZARD
     "Capture canonical events and render attributed input only in an owned observer job.";
     const {observer, room, client, agent} = this:_observer_fixture();
     const sibling = create($llm_room_observer, #90102, 2);
@@ -2170,7 +2170,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method _observer_fixture owner: cowbell::ARCH_WIZARD
+  method _observer_fixture owner: core::ARCH_WIZARD
     "Create an isolated observer with a blocking provider and a captured public event sink.";
     caller == this && this == #90031 || raise(E_PERM);
     const {?prototype = $llm_room_observer} = args;
@@ -2194,7 +2194,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return {observer, room, client, agent};
   endmethod
 
-  method _await_observer owner: cowbell::ARCH_WIZARD
+  method _await_observer owner: core::ARCH_WIZARD
     "Wait for bounded runtime retirement and fail if the lifecycle stalls.";
     caller == this && this == #90031 || raise(E_PERM);
     const {job} = args;
@@ -2205,7 +2205,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     raise(E_ASSERT, "Observer job did not retire.");
   endmethod
 
-  method test_observer_serializes_asks_and_events owner: cowbell::ARCH_WIZARD
+  method test_observer_serializes_asks_and_events owner: core::ARCH_WIZARD
     "Room events and direct questions share one execution order and the NPC principal.";
     const {observer, room, client, agent} = this:_observer_fixture();
     try
@@ -2240,7 +2240,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_cancel_rebind_and_dead_worker owner: cowbell::ARCH_WIZARD
+  method test_observer_cancel_rebind_and_dead_worker owner: core::ARCH_WIZARD
     "Cancellation and invalidated bindings kill owned model tasks without retrying effects.";
     for change in ({'stop, 'move, 'owner, 'agent, 'client, 'model, 'role, 'recycle, 'worker})
       const {observer, room, client, agent} = this:_observer_fixture();
@@ -2294,7 +2294,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_configuration owner: cowbell::ARCH_WIZARD
+  method test_observer_configuration owner: core::ARCH_WIZARD
     "Observer configuration preserves its owner and selects the client model unless explicitly overridden.";
     const {observer, room, client, agent} = this:_observer_fixture();
     let persona = #-1;
@@ -2324,7 +2324,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_partial_effect_requires_recovery owner: cowbell::ARCH_WIZARD
+  method test_observer_partial_effect_requires_recovery owner: core::ARCH_WIZARD
     "Cancelling a suspended mutation retains its unknown outcome and prevents automatic replay.";
     const {observer, room, client, agent} = this:_observer_fixture();
     try
@@ -2357,7 +2357,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_tool_speech_is_not_repeated owner: cowbell::ARCH_WIZARD
+  method test_observer_tool_speech_is_not_repeated owner: core::ARCH_WIZARD
     "A reply already delivered by a presentation tool is not announced again; a different reply is.";
     for case in ({{"Good evening.", 1}, {"What brings you here?", 2}})
       const {reply, spoken} = case;
@@ -2380,7 +2380,7 @@ object HEADLESS_LLM_RUNTIME_SCENARIOS [
     return true;
   endmethod
 
-  method test_observer_shared_social_model_loop owner: cowbell::ARCH_WIZARD
+  method test_observer_shared_social_model_loop owner: core::ARCH_WIZARD
     "The real observer tool loop dispatches shared social and memory tools as the NPC.";
     const {observer, room, client, agent} = this:_observer_fixture($mr_welcome);
     try

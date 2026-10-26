@@ -4,7 +4,7 @@ object HEADLESS_RULE_AUTHORITY_SCENARIOS [
   import_export_id -> "headless_rule_authority_scenarios"
 ]
   name: "Rule Authority Scenarios"
-  parent: cowbell::ROOT
+  parent: core::ROOT
   owner: fixtures::RUNTIME_WIZARD
   readable: true
 

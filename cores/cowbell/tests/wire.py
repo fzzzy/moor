@@ -75,7 +75,7 @@ def run(server, core_dir):
         root = Path(directory)
         core = root / "src"
         shutil.copytree(core_dir, core)
-        arch = core / "arch_wizard.moo"
+        arch = core / "core" / "arch_wizard.moo"
         source, replacements = re.subn(
             r'(override password(?:\s*\([^;\n]*\))?\s*=\s*).*?;',
             lambda match: match[1] + "<PASSWORD, {" + json.dumps(PASSWORD_HASH) + "}>;",
@@ -84,7 +84,7 @@ def run(server, core_dir):
         assert replacements == 1, "Expected exactly one ArchWizard password fixture"
         arch.write_text(source)
         # Request checkpoints explicitly so startup snapshots cannot satisfy the assertion.
-        sysobj = core / "sysobj.moo"
+        sysobj = core / "core" / "sysobj.moo"
         source, replacements = re.subn(
             r"(?m)^  property dump_interval\b[^\n]*;\n", "", sysobj.read_text())
         assert replacements == 1, "Expected exactly one periodic checkpoint setting"

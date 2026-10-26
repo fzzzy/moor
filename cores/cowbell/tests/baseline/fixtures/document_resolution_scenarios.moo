@@ -2,14 +2,14 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
   import_export_id -> "document_resolution_scenarios"
 ]
   name: "Document Resolution Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property calls (owner: cowbell::ARCH_WIZARD, flags: "r") = 0;
-  property secret (owner: cowbell::ARCH_WIZARD, flags: "") = "private fixture content";
+  property calls (owner: core::ARCH_WIZARD, flags: "r") = 0;
+  property secret (owner: core::ARCH_WIZARD, flags: "") = "private fixture content";
 
-  method resolve_inline owner: cowbell::ARCH_WIZARD
+  method resolve_inline owner: core::ARCH_WIZARD
     "Fixture hooks expose call count, authority, invalid results, and recursive expansion.";
     const {context} = args;
     const principal = caller_perms();
@@ -29,25 +29,25 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return {$format.annotation:command("look", "Look"), $format.text:mk(" *literal*")};
   endmethod
 
-  method resolve_blocks owner: cowbell::ARCH_WIZARD
+  method resolve_blocks owner: core::ARCH_WIZARD
     "A block producer returns block templates that contain nested inline producers.";
     const {context} = args;
     return {$format.title:mk("Report", 2), $format.paragraph:mk($format:producer_inline(<#90122, .mode = 'count>))};
   endmethod
 
-  method _resolve_as owner: cowbell::ARCH_WIZARD
+  method _resolve_as owner: core::ARCH_WIZARD
     "Invoke resolution with a real reduced principal, without accepting a context map.";
     const {event, principal, viewer} = args;
     set_task_perms(principal);
     return event:resolve(viewer);
   endmethod
 
-  method _plain owner: cowbell::ARCH_WIZARD
+  method _plain owner: core::ARCH_WIZARD
     "Read the plain serialization of a resolved document.";
     return $document:render(args[1], 'text_plain)['body];
   endmethod
 
-  method test_literal_constructors owner: cowbell::ARCH_WIZARD
+  method test_literal_constructors owner: core::ARCH_WIZARD
     "Authoring splits literal paragraphs and hard breaks, while interpolation never becomes markup.";
     const blocks = $format:literal_blocks("First *literal*.\ncontinued\n\nSecond.");
     const event = $event:mk_info(#90102, $document_template:mk('blocks, blocks));
@@ -61,7 +61,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_perspective_and_captured_location owner: cowbell::ARCH_WIZARD
+  method test_perspective_and_captured_location owner: core::ARCH_WIZARD
     "Movement after creation cannot change the action location; resolved labels no longer read objects.";
     const room = create($room);
     const elsewhere = create($room);
@@ -104,7 +104,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_selected_branch_and_typed_bindings owner: cowbell::ARCH_WIZARD
+  method test_selected_branch_and_typed_bindings owner: core::ARCH_WIZARD
     "Only the selected alternative runs. Text and structured bindings have separate operations.";
     const bomb = $format:producer_inline(<#90122, .mode = 'fail>);
     const event = $event:mk_info(#90102, $sub:self_altc($format.paragraph:inline("safe ", $format.code:inline("branch")), bomb));
@@ -117,7 +117,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_hooks_run_before_rendering owner: cowbell::ARCH_WIZARD
+  method test_hooks_run_before_rendering owner: core::ARCH_WIZARD
     "A resolved document contains only canonical values and never calls its producer during rendering.";
     this.calls = 0;
     const event = $event:mk_info(#90102, $format:producer_blocks(this));
@@ -133,7 +133,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_resolution_authority owner: cowbell::ARCH_WIZARD
+  method test_resolution_authority owner: core::ARCH_WIZARD
     "Hooks see the actual principal. A different viewer does not grant access to private content.";
     const probe = $event:mk_info(#90102, $format:producer_inline(<#90122, .mode = 'authority>));
     const document = this:_resolve_as(probe, #90102, #90100);
@@ -144,7 +144,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_public_content_without_viewer owner: cowbell::ARCH_WIZARD
+  method test_public_content_without_viewer owner: core::ARCH_WIZARD
     "Public pre-authentication content needs no synthetic actor or viewer.";
     const public = $event:mk_welcome(false, $format.title:mk("Welcome"), "Public text.");
     $test_utils:assert_eq(this:_plain(public:resolve(false)), "Welcome\n\nPublic text.", "Public document");
@@ -153,7 +153,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_invalid_and_recursive_hooks owner: cowbell::ARCH_WIZARD
+  method test_invalid_and_recursive_hooks owner: core::ARCH_WIZARD
     "Invalid hook results and recursive producers fail during resolution with an explicit path.";
     for mode in ({'invalid, 'recursive})
       const event = $event:mk_info(#90102, $format:producer_inline(<#90122, .mode = mode>));
@@ -168,7 +168,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_structured_factories owner: cowbell::ARCH_WIZARD
+  method test_structured_factories owner: core::ARCH_WIZARD
     "Factory output preserves multi-block list items, definitions, table cells, and opaque source.";
     const cell = $format.block:mk($format.paragraph:mk("First."), $format.paragraph:mk("Second."));
     const event = $event:mk_info(#90102, $format.list:mk({cell}, true, 4), $format.deflist:mk({{"Term", cell}}), $format.table:mk({"Header"}, {{cell}}), $format.code:mk("line\n```", "moo", 21));
@@ -191,7 +191,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_random_choice_is_resolved owner: cowbell::ARCH_WIZARD
+  method test_random_choice_is_resolved owner: core::ARCH_WIZARD
     "A message bag chooses its template once before several serializers consume the document.";
     const bag = $msg_bag:mk({"One"}, {"Two"});
     const document = $event:mk_info(#90102, $format:producer_inline(bag)):resolve(#90102);
@@ -203,7 +203,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_private_message_documents owner: cowbell::ARCH_WIZARD
+  method test_private_message_documents owner: core::ARCH_WIZARD
     "DM attribution retains references and body paragraphs without interpreting literal punctuation.";
     const message = $dm:mk(#90102, #90101, "First *literal*.\n\nSecond <literal>.");
     const received = message:display_event(#90101):resolve(#90101);
@@ -224,7 +224,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_agent_report_documents owner: cowbell::ARCH_WIZARD
+  method test_agent_report_documents owner: core::ARCH_WIZARD
     "Agent report tools emit code, tables, and literal prose through the captured connection event path.";
     const recipient = create($root, player, 2);
     const presenter = $llm_presenter:new(recipient, #1, #1);
@@ -268,7 +268,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_programmatic_description_blocks owner: cowbell::ARCH_WIZARD
+  method test_programmatic_description_blocks owner: core::ARCH_WIZARD
     "Both agent room descriptions retain headings and lists through the ordinary look producer.";
     for prototype in ({$agent_room, $llm_coding_room})
       const room = create(prototype, player, 2);
@@ -290,7 +290,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_source_listing_documents owner: cowbell::ARCH_WIZARD
+  method test_source_listing_documents owner: core::ARCH_WIZARD
     "Shared LLM source ranges retain exact text and line origins; documentation display preserves explicit code blocks.";
     const target = create($thing);
     try
@@ -318,7 +318,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_container_description_documents owner: cowbell::ARCH_WIZARD
+  method test_container_description_documents owner: core::ARCH_WIZARD
     "Container looks preserve blocks and references, and closed containers resolve denial substitutions without revealing contents.";
     const container = create($container);
     const item = create($thing);
@@ -343,7 +343,7 @@ object DOCUMENT_RESOLUTION_SCENARIOS [
     return true;
   endmethod
 
-  method test_generated_help_document owner: cowbell::ARCH_WIZARD
+  method test_generated_help_document owner: core::ARCH_WIZARD
     "A HINT-generated help topic carries its command as a reference without reparsing markup.";
     const topic = $help_utils:verb_help_from_hint($prog_features, "@doc");
     const event = $event:mk_info(player, $format.block:mk(@topic:render_prose()));

@@ -101,15 +101,15 @@ export class ChangesFixture {
             const base = resolve(this.directory, "base");
             const live = resolve(this.directory, "live");
             await cp(resolve(workspace, "cores/cowbell/src"), base, { recursive: true });
-            const administrator = (await readFile(resolve(base, "arch_wizard.moo"), "utf8"))
+            const administrator = (await readFile(resolve(base, "core", "arch_wizard.moo"), "utf8"))
                 .replaceAll("ARCH_WIZARD", "#9502").replace("\"arch_wizard\"", "\"acceptance_admin\"").replace(
                     "\"ArchWizard\"",
                     "\"AcceptanceAdmin\"",
                 );
-            await writeFile(resolve(base, "acceptance_admin.moo"), administrator);
-            await writeFile(resolve(base, "changes_acceptance.moo"), source("base", this.extraMembers));
+            await writeFile(resolve(base, "core", "acceptance_admin.moo"), administrator);
+            await writeFile(resolve(base, "core", "changes_acceptance.moo"), source("base", this.extraMembers));
             await cp(base, live, { recursive: true });
-            await writeFile(resolve(live, "changes_acceptance.moo"), source("live", this.extraMembers));
+            await writeFile(resolve(live, "core", "changes_acceptance.moo"), source("live", this.extraMembers));
             const repo = resolve(this.directory, "repo.git");
             await mkdir(resolve(repo, "cores/sample/src"), { recursive: true });
             const git = (...args: string[]) =>

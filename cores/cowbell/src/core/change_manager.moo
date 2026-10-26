@@ -140,6 +140,7 @@ object CHANGE_MANAGER [
         "MSG_BAG" -> MSG_BAG,
         "NOTE" -> NOTE,
         "OBJ_UTILS" -> OBJ_UTILS,
+        "PACKAGE_CLASS" -> package::PACKAGE_CLASS,
         "PASSAGE" -> PASSAGE,
         "PASSWORD" -> PASSWORD,
         "PLAYER" -> PLAYER,
@@ -341,7 +342,8 @@ object CHANGE_MANAGER [
         PASSAGE,
         ROOM,
         DISCORD_BRIDGE,
-        DISCORD_SPEAKER
+        DISCORD_SPEAKER,
+        package::PACKAGE_CLASS
       },
       "schema" -> 1,
       "trusted_owners" -> {HACKER, LOGIN},
@@ -1538,6 +1540,10 @@ object CHANGE_MANAGER [
       else
         this:_store_receipt(receipt);
       endif
+      "Packages whose version changed set themselves up now; a failure there cannot undo the update.";
+      fork (0)
+        $package:sync();
+      endfork
     except failure (ANY)
       if (wrote)
         rollback();

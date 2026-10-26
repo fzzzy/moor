@@ -2,20 +2,20 @@ object NAMING_SCENARIOS [
   import_export_id -> "naming_scenarios"
 ]
   name: "Naming Scenarios"
-  parent: cowbell::THING
-  owner: cowbell::ARCH_WIZARD
+  parent: core::THING
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property collective (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
-  property count_phrases (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
-  property extra_match_name (owner: cowbell::ARCH_WIZARD, flags: "rc") = "";
-  property keeper (owner: cowbell::ARCH_WIZARD, flags: "rc") = #-1;
-  property keeper_phrase (owner: cowbell::ARCH_WIZARD, flags: "rc") = "the box you left here";
-  property phrase_calls (owner: cowbell::ARCH_WIZARD, flags: "rc") = [];
-  property require_secret (owner: cowbell::ARCH_WIZARD, flags: "rc") = false;
-  property secret_label (owner: cowbell::ARCH_WIZARD, flags: "") = "private";
+  property collective (owner: core::ARCH_WIZARD, flags: "rc") = false;
+  property count_phrases (owner: core::ARCH_WIZARD, flags: "rc") = false;
+  property extra_match_name (owner: core::ARCH_WIZARD, flags: "rc") = "";
+  property keeper (owner: core::ARCH_WIZARD, flags: "rc") = #-1;
+  property keeper_phrase (owner: core::ARCH_WIZARD, flags: "rc") = "the box you left here";
+  property phrase_calls (owner: core::ARCH_WIZARD, flags: "rc") = [];
+  property require_secret (owner: core::ARCH_WIZARD, flags: "rc") = false;
+  property secret_label (owner: core::ARCH_WIZARD, flags: "") = "private";
 
-  method noun_phrase owner: cowbell::ARCH_WIZARD
+  method noun_phrase owner: core::ARCH_WIZARD
     "Customize one phrase while retaining the inherited forms and listing dispatch.";
     set_task_perms(caller_perms());
     if (this.require_secret)
@@ -34,7 +34,7 @@ object NAMING_SCENARIOS [
     return pass(@args);
   endmethod
 
-  method noun_grammar owner: cowbell::ARCH_WIZARD
+  method noun_grammar owner: core::ARCH_WIZARD
     "A prototype can compute number without changing its stored settings.";
     set_task_perms(caller_perms());
     if (this.require_secret)
@@ -45,7 +45,7 @@ object NAMING_SCENARIOS [
     return grammar;
   endmethod
 
-  method match_names owner: cowbell::ARCH_WIZARD
+  method match_names owner: core::ARCH_WIZARD
     "Contribute a computed name through the matching interface.";
     set_task_perms(caller_perms());
     if (this.require_secret)
@@ -55,14 +55,14 @@ object NAMING_SCENARIOS [
     return this.extra_match_name ? {@names, this.extra_match_name} | names;
   endmethod
 
-  method _set_as owner: cowbell::ARCH_WIZARD
+  method _set_as owner: core::ARCH_WIZARD
     "Exercise the public setter with the specified caller authority.";
     const {target, principal, changes} = args;
     set_task_perms(principal);
     return target:set_grammar(changes);
   endmethod
 
-  method test_noun_forms owner: cowbell::ARCH_WIZARD
+  method test_noun_forms owner: core::ARCH_WIZARD
     "Count, mass, complete names, and pronunciation overrides produce the intended phrases.";
     const item = create($thing);
     try
@@ -87,7 +87,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_prototype_naming_overrides owner: cowbell::ARCH_WIZARD
+  method test_prototype_naming_overrides owner: core::ARCH_WIZARD
     "Listing dispatch honors phrase overrides and grammar can be computed on a prototype.";
     const item = create(this);
     const utility = create($root);
@@ -112,7 +112,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_grammar_edits_and_authority owner: cowbell::ARCH_WIZARD
+  method test_grammar_edits_and_authority owner: core::ARCH_WIZARD
     "Invalid edits are atomic; owner and explicit bearer grants can edit and restore inheritance.";
     const prototype = create($thing, #90101);
     const item = create(prototype, #90101);
@@ -137,7 +137,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_message_capture_and_real_previews owner: cowbell::ARCH_WIZARD
+  method test_message_capture_and_real_previews owner: core::ARCH_WIZARD
     "Templates call overrides once per form and previews retain the real host's computed grammar.";
     const item = create(this);
     try
@@ -169,7 +169,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_article_matching_and_command_structure owner: cowbell::ARCH_WIZARD
+  method test_article_matching_and_command_structure owner: core::ARCH_WIZARD
     "Shared matching preserves exact names, ordinals, explicit scopes, and raw command spans.";
     const box = create(this);
     const second = create($thing);
@@ -222,7 +222,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_world_lists_and_stock_messages owner: cowbell::ARCH_WIZARD
+  method test_world_lists_and_stock_messages owner: core::ARCH_WIZARD
     "Room, clothing, and action prose use phrases, plural agreement, and complete reference nodes.";
     const room = create($room);
     const item = create(this);
@@ -280,7 +280,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method test_legacy_naming_conversion owner: cowbell::ARCH_WIZARD
+  method test_legacy_naming_conversion owner: core::ARCH_WIZARD
     "Conversion retains inheritance and letter subjects, reports custom code, and rejects stale records.";
     const prototype = create($thing);
     const child = create(prototype);
@@ -321,7 +321,7 @@ object NAMING_SCENARIOS [
     return true;
   endmethod
 
-  method _query_as owner: cowbell::ARCH_WIZARD
+  method _query_as owner: core::ARCH_WIZARD
     "Exercise naming queries with a principal different from the viewer.";
     const {principal, target, query} = args;
     set_task_perms(principal);
@@ -331,7 +331,7 @@ object NAMING_SCENARIOS [
     return $event:mk_info(principal, $sub:reference(target)):resolve(#90100);
   endmethod
 
-  method test_naming_queries_preserve_authority owner: cowbell::ARCH_WIZARD
+  method test_naming_queries_preserve_authority owner: core::ARCH_WIZARD
     "Rendering and parsing cannot borrow the viewer's or utility owner's access to naming data.";
     const item = create(this, #90101);
     try

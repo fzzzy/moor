@@ -4,7 +4,7 @@ object HEADLESS_MATCHING_UUID_PROBE [
   import_export_id -> "headless_matching_uuid_probe"
 ]
   name: "UUID matching probe"
-  parent: cowbell::THING
+  parent: core::THING
   location: fixtures::RUNTIME_ROOM
   owner: fixtures::RUNTIME_WIZARD
 

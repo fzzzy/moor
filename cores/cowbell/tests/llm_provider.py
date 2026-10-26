@@ -287,8 +287,8 @@ def world(server, core_dir):
         root = Path(directory)
         core = root / "src"
         shutil.copytree(core_dir, core)
-        shutil.copy(Path(__file__).parent / "llm/provider_scenarios.moo", core)
-        arch = core / "arch_wizard.moo"
+        shutil.copy(Path(__file__).parent / "llm/provider_scenarios.moo", core / "core")
+        arch = core / "core" / "arch_wizard.moo"
         source, count = re.subn(
             r'(override password(?:\s*\([^;\n]*\))?\s*=\s*).*?;',
             lambda match: match[1] + "<PASSWORD, {" + json.dumps(PASSWORD_HASH) + "}>;",

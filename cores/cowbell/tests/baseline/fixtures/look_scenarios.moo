@@ -2,14 +2,14 @@ object LOOK_SCENARIOS [
   import_export_id -> "look_scenarios"
 ]
   name: "Captured Look Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property calls (owner: cowbell::ARCH_WIZARD, flags: "r") = 0;
-  property secret (owner: cowbell::ARCH_WIZARD, flags: "") = "private room prose";
+  property calls (owner: core::ARCH_WIZARD, flags: "r") = 0;
+  property secret (owner: core::ARCH_WIZARD, flags: "") = "private room prose";
 
-  method resolve_blocks owner: cowbell::ARCH_WIZARD
+  method resolve_blocks owner: core::ARCH_WIZARD
     "Count description resolution and exercise explicit viewer perspective and authority.";
     const {context} = args;
     if (this.mode == 'private)
@@ -20,14 +20,14 @@ object LOOK_SCENARIOS [
     return {$format.paragraph:mk("Hello ", $sub:n(), "."), $format.paragraph:mk($document_node:mk('strong, $format:literal_inline("brass")), " bell.")};
   endmethod
 
-  method _capture_as owner: cowbell::ARCH_WIZARD
+  method _capture_as owner: core::ARCH_WIZARD
     "Run look collection and resolution as an explicit principal.";
     const {target, viewer} = args;
     set_task_perms(viewer);
     return target:look_self():capture(viewer);
   endmethod
 
-  method test_capture_is_shared_and_inert owner: cowbell::ARCH_WIZARD
+  method test_capture_is_shared_and_inert owner: core::ARCH_WIZARD
     "A captured view retains content, labels, and identities across edits and object recycling.";
     const room = create($room);
     const item = create($thing);
@@ -77,7 +77,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_narrative_keeps_authored_paragraphs_and_groups_room_details owner: cowbell::ARCH_WIZARD
+  method test_narrative_keeps_authored_paragraphs_and_groups_room_details owner: core::ARCH_WIZARD
     "Room summaries use single line breaks without collapsing the author's paragraphs.";
     const room = create($room);
     const item = create($thing);
@@ -105,7 +105,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_long_actor_lists_are_summarized owner: cowbell::ARCH_WIZARD
+  method test_long_actor_lists_are_summarized owner: core::ARCH_WIZARD
     "Past the listing limit a room names the first few actors and counts the rest.";
     const room = create($room);
     let actors = {};
@@ -139,7 +139,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_capture_preserves_authority owner: cowbell::ARCH_WIZARD
+  method test_capture_preserves_authority owner: core::ARCH_WIZARD
     "Public capture cannot elevate the caller through private description producers.";
     const room = create($room);
     try
@@ -154,7 +154,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_ambient_and_integrated_content owner: cowbell::ARCH_WIZARD
+  method test_ambient_and_integrated_content owner: core::ARCH_WIZARD
     "Ambient passage links, integrated prose, and action labels are shared by both layouts.";
     const room = create($room);
     const item = create($thing);
@@ -190,7 +190,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_player_names_keep_their_case owner: cowbell::ARCH_WIZARD
+  method test_player_names_keep_their_case owner: core::ARCH_WIZARD
     "A listing that starts with a player's name keeps the name as the player wrote it.";
     const room = create($room);
     const sleeper = create($player);
@@ -208,7 +208,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_fixed_objects_do_not_offer_get_and_drop owner: cowbell::ARCH_WIZARD
+  method test_fixed_objects_do_not_offer_get_and_drop owner: core::ARCH_WIZARD
     "Command help omits $thing's get and drop for objects that cannot be carried.";
     const fixture = create($thing);
     try
@@ -232,7 +232,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_locked_way_is_open_to_a_key_holder owner: cowbell::ARCH_WIZARD
+  method test_locked_way_is_open_to_a_key_holder owner: core::ARCH_WIZARD
     "A locked passage reads as locked to most viewers and as open to one who carries its key.";
     const area = create($area);
     const room = create($room);
@@ -256,7 +256,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_travel_sentence_uses_captured_names_and_commands owner: cowbell::ARCH_WIZARD
+  method test_travel_sentence_uses_captured_names_and_commands owner: core::ARCH_WIZARD
     "Describe named destinations while preserving the exit command and captured wording.";
     const area = create($area);
     const room = create($room);
@@ -291,7 +291,7 @@ object LOOK_SCENARIOS [
     return true;
   endmethod
 
-  method test_passage_description_formats_and_references owner: cowbell::ARCH_WIZARD
+  method test_passage_description_formats_and_references owner: core::ARCH_WIZARD
     "All supported source formats render for one viewer without inferring links from direction words.";
     const area = create($area);
     const room = create($room);

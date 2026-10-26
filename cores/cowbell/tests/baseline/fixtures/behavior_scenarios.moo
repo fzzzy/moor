@@ -2,21 +2,21 @@ object BEHAVIOR_SCENARIOS [
   import_export_id -> "behavior_scenarios"
 ]
   name: "Behavior Contract Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method vocabulary owner: cowbell::HACKER
+  method vocabulary owner: core::HACKER
     "An explicit cupboard vocabulary for pure validation, without installed provider authority.";
     return ['triggers -> ['opened -> ['description -> "A successful opening.", 'inputs -> ['Self -> 'object, 'Actor -> 'object, 'Location -> 'object]]], 'predicates -> ['nearby -> ['description -> "Check an object's current location.", 'inputs -> ['object -> 'object, 'location -> 'object], 'outputs -> []], 'occupants -> ['description -> "Select occupants of a location.", 'inputs -> ['location -> 'object], 'outputs -> ['object -> 'object]]], 'actions -> ['stand -> ['description -> "Ask an actor to leave its seat.", 'inputs -> ['actor -> 'object]], 'announce -> ['description -> "Send a literal message to a location.", 'inputs -> ['location -> 'object, 'text -> 'string]]]];
   endmethod
 
-  method cupboard owner: cowbell::HACKER
+  method cupboard owner: core::HACKER
     "A complete definition: a nearby parameterized cat responds to the cupboard opening.";
     return ['name -> "Cupboard attracts a cat", 'parameters -> ['cat -> 'object], 'state -> ['openings -> ['type -> 'integer, 'initial -> 0]], 'reactions -> {['name -> 'greet, 'trigger -> 'opened, 'enabled -> true, 'condition -> ['kind -> 'predicate, 'name -> 'nearby, 'arguments -> ['object -> ['kind -> 'parameter, 'name -> 'cat], 'location -> ['kind -> 'input, 'name -> 'Location]], 'bind -> []], 'selection -> ['mode -> 'once, 'limit -> 1, 'order -> {}], 'effects -> {['kind -> 'state, 'name -> 'openings, 'op -> 'increment, 'value -> ['kind -> 'literal, 'value -> 1]], ['kind -> 'action, 'name -> 'stand, 'arguments -> ['actor -> ['kind -> 'parameter, 'name -> 'cat]]], ['kind -> 'action, 'name -> 'announce, 'arguments -> ['location -> ['kind -> 'input, 'name -> 'Location], 'text -> ['kind -> 'literal, 'value -> "The cat looks interested."]]]}]}];
   endmethod
 
-  method _invalid owner: cowbell::HACKER
+  method _invalid owner: core::HACKER
     "Require a definition error with the field or rule that failed.";
     const {definition, fragment, ?error_code = E_INVARG} = args;
     try
@@ -29,7 +29,7 @@ object BEHAVIOR_SCENARIOS [
     raise(E_ASSERT, "Expected invalid behavior: " + fragment);
   endmethod
 
-  method test_cupboard_definition_and_instances owner: cowbell::HACKER
+  method test_cupboard_definition_and_instances owner: core::HACKER
     "Definitions are inert data; instances have separate typed parameters and state.";
     const definition = this:cupboard();
     const vocabulary = this:vocabulary();
@@ -44,7 +44,7 @@ object BEHAVIOR_SCENARIOS [
     return true;
   endmethod
 
-  method test_definition_errors_identify_fields owner: cowbell::HACKER
+  method test_definition_errors_identify_fields owner: core::HACKER
     "Misspelled fields, operations, and undeclared references must fail during authoring.";
     let definition = this:cupboard();
     definition['authority] = #2;
@@ -67,7 +67,7 @@ object BEHAVIOR_SCENARIOS [
     return true;
   endmethod
 
-  method test_bindings_selection_and_negation owner: cowbell::HACKER
+  method test_bindings_selection_and_negation owner: core::HACKER
     "Only definite outputs reach effects; negation cannot introduce hidden outputs.";
     let definition = this:cupboard();
     const query = ['kind -> 'predicate, 'name -> 'occupants, 'arguments -> ['location -> ['kind -> 'input, 'name -> 'Location]], 'bind -> ['object -> 'Visitor]];
@@ -86,7 +86,7 @@ object BEHAVIOR_SCENARIOS [
     return true;
   endmethod
 
-  method test_state_timers_and_limits owner: cowbell::HACKER
+  method test_state_timers_and_limits owner: core::HACKER
     "Timers retain declared effects and input types; definitions have finite structural limits.";
     let definition = this:cupboard();
     definition['reactions][1]['effects] = {['kind -> 'schedule, 'name -> 'reset, 'seconds -> ['kind -> 'literal, 'value -> 5], 'effects -> {['kind -> 'state, 'name -> 'openings, 'op -> 'set, 'value -> ['kind -> 'literal, 'value -> 0]]}], ['kind -> 'cancel, 'name -> 'reset]};

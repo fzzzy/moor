@@ -1,5 +1,6 @@
-package "cowbell" [
-  objdef_version -> 2
+package "core" [
+  objdef_version -> 2,
+  depends -> {"package"}
 ];
 
 define SYSOBJ = #0;

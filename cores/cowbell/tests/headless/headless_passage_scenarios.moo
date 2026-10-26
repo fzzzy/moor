@@ -4,11 +4,11 @@ object HEADLESS_PASSAGE_SCENARIOS [
   import_export_id -> "headless_passage_scenarios"
 ]
   name: "Passage Boundaries"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  property policy_probe (owner: cowbell::ARCH_WIZARD, flags: "r") = [];
+  property policy_probe (owner: core::ARCH_WIZARD, flags: "r") = [];
 
   method _as_programmer owner: fixtures::RUNTIME_PROGRAMMER
     "Call an operation as the fixture programmer, without granting wizard authority.";
@@ -24,7 +24,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return target:(operation)(@arguments);
   endmethod
 
-  method test_nonowner_can_use_programmer_owned_portal owner: cowbell::ARCH_WIZARD
+  method test_nonowner_can_use_programmer_owned_portal owner: core::ARCH_WIZARD
     "The core performs the checked move; a provider never needs authority over the visitor.";
     const source = create($room, #90101, 2);
     const destination = create($room, #90101, 2);
@@ -48,7 +48,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_go_keeps_actor_checks_and_local_scope owner: cowbell::ARCH_WIZARD
+  method test_go_keeps_actor_checks_and_local_scope owner: core::ARCH_WIZARD
     "Destination lookup uses only local approved exits and cannot authorize another actor.";
     const source = create($room, #90101, 2);
     const destination = create($room, #90101, 2);
@@ -79,7 +79,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method _make_exit_provider owner: cowbell::ARCH_WIZARD
+  method _make_exit_provider owner: core::ARCH_WIZARD
     "Create a programmer-owned portal fixture with the public provider interface.";
     caller == this || raise(E_PERM);
     const {destination} = args;
@@ -94,7 +94,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return provider;
   endmethod
 
-  method test_custom_exits_share_discovery_and_routes owner: cowbell::ARCH_WIZARD
+  method test_custom_exits_share_discovery_and_routes owner: core::ARCH_WIZARD
     "Approved custom travel appears in prose and routes; dropped objects do not become exits.";
     const source = create($room, #90101, 2);
     const destination = create($room, #90101, 2);
@@ -134,7 +134,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_custom_exit_actions_reject_stale_approval owner: cowbell::ARCH_WIZARD
+  method test_custom_exit_actions_reject_stale_approval owner: core::ARCH_WIZARD
     "Removing, replacing, or transferring a provider invalidates a captured action.";
     const source = create($room, #90101, 2);
     const destination = create($room, #90101, 2);
@@ -168,7 +168,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_broken_exit_provider_preserves_other_exits owner: cowbell::ARCH_WIZARD
+  method test_broken_exit_provider_preserves_other_exits owner: core::ARCH_WIZARD
     "A malformed or conflicting provider is diagnosed without hiding a passage.";
     const area = create($area, #90100, 2);
     const source = create($room, #90101, 2);
@@ -193,7 +193,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_area_lookup_cannot_retrieve_another_principals_grant owner: cowbell::ARCH_WIZARD
+  method test_area_lookup_cannot_retrieve_another_principals_grant owner: core::ARCH_WIZARD
     "An ordinary caller cannot obtain another principal's bearer from the area helper.";
     const room = create($room, #90100, 2);
     try
@@ -210,7 +210,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_building_tools_use_room_names_and_shared_directions owner: cowbell::ARCH_WIZARD
+  method test_building_tools_use_room_names_and_shared_directions owner: core::ARCH_WIZARD
     "Tools reject duplicate names and unknown reverse directions, and can select parallel passages.";
     const area = create($area, #90101, 2);
     const holder = create($room, #90101, 2);
@@ -245,7 +245,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_connection_previews_use_creation_validation owner: cowbell::ARCH_WIZARD
+  method test_connection_previews_use_creation_validation owner: core::ARCH_WIZARD
     "A dry run rejects the same conflicting vocabulary without changing the connection store.";
     const area = create($area, #90101, 2);
     const source = create($room, #90101, 2);
@@ -274,7 +274,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_exit_actions_authenticate_the_actor owner: cowbell::ARCH_WIZARD
+  method test_exit_actions_authenticate_the_actor owner: core::ARCH_WIZARD
     "A reference to a passage does not grant control of another player.";
     const before = #90102.location;
     $test_utils:assert_eq(`this:_as_programmer($room, "use_exit_action", #90102, "go east", []) ! E_PERM => E_PERM', E_PERM, "Foreign players cannot be supplied as the actor");
@@ -282,7 +282,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_reaction_door_actions_share_checked_operations owner: cowbell::ARCH_WIZARD
+  method test_reaction_door_actions_share_checked_operations owner: core::ARCH_WIZARD
     "Declared actions use the named door and retain actor, location, and access checks.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -323,7 +323,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_travel_rechecks_rule_facts_after_pre_exit owner: cowbell::ARCH_WIZARD
+  method test_travel_rechecks_rule_facts_after_pre_exit owner: core::ARCH_WIZARD
     "A departure hook can revoke access without changing the passage or carried objects.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -348,7 +348,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_travel_reports_redirection_during_native_movement owner: cowbell::ARCH_WIZARD
+  method test_travel_reports_redirection_during_native_movement owner: core::ARCH_WIZARD
     "An entry callback can redirect a traveler; the passage must not report arrival at its destination.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -373,7 +373,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_room_look_rejects_departed_viewers owner: cowbell::ARCH_WIZARD
+  method test_room_look_rejects_departed_viewers owner: core::ARCH_WIZARD
     "Arrival presentation must not send a former room after movement, including a yielding capture.";
     const source = create($room, #90100, 2);
     const elsewhere = create($room, #90100, 2);
@@ -410,7 +410,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_configure_cannot_mutate_the_shared_prototype owner: cowbell::ARCH_WIZARD
+  method test_configure_cannot_mutate_the_shared_prototype owner: core::ARCH_WIZARD
     "A public convenience constructor cannot reconfigure the world's shared passage prototype.";
     const before = $passage:configuration($passage);
     $test_utils:assert_eq(`this:_as_programmer($passage, "configure", #90103, "east", {}, "", true, #90110, "west", {}, "", true) ! E_PERM => E_PERM', E_PERM, "Configuring a persistent passage requires its owner or a wizard");
@@ -421,7 +421,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_side_edits_cannot_reconnect_or_change_the_other_side owner: cowbell::ARCH_WIZARD
+  method test_side_edits_cannot_reconnect_or_change_the_other_side owner: core::ARCH_WIZARD
     "Source ownership authorizes local prose, but not another destination or shared door state.";
     const area = create($area, #90100, 2);
     const source = create($room, #90101, 2);
@@ -449,7 +449,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_supplied_bearer_authorizes_only_its_side owner: cowbell::ARCH_WIZARD
+  method test_supplied_bearer_authorizes_only_its_side owner: core::ARCH_WIZARD
     "A supplied dig_from capability works without installing it in the caller's stored grants.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -469,7 +469,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_invalid_pairs_and_values_preserve_connections owner: cowbell::ARCH_WIZARD
+  method test_invalid_pairs_and_values_preserve_connections owner: core::ARCH_WIZARD
     "Same-room requests and invalid replacements cannot remove a neighboring connection.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -490,7 +490,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_passage_actions_preserve_actor_authority owner: cowbell::ARCH_WIZARD
+  method test_passage_actions_preserve_actor_authority owner: core::ARCH_WIZARD
     "An owner can move an NPC through an open passage; another actor cannot supply that authority.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -518,7 +518,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_passage_edits_preserve_messages_and_custom_behavior owner: cowbell::ARCH_WIZARD
+  method test_passage_edits_preserve_messages_and_custom_behavior owner: core::ARCH_WIZARD
     "Ordinary passage edits retain all four door messages, the custom delegate, slots, and contents.";
     const prototype = create($passage, #90100, 2);
     const source = create($room, #90100, 2);
@@ -542,7 +542,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_connections_cross_areas_and_survive_room_transfer owner: cowbell::ARCH_WIZARD
+  method test_connections_cross_areas_and_survive_room_transfer owner: core::ARCH_WIZARD
     "Both endpoints discover a connection; routes continue through a second area's own passages.";
     const left = create($area, #90100, 2);
     const right = create($area, #90100, 2);
@@ -579,7 +579,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_closed_doors_remain_visible_at_both_endpoints owner: cowbell::ARCH_WIZARD
+  method test_closed_doors_remain_visible_at_both_endpoints owner: core::ARCH_WIZARD
     "Closed cross-area doors retain their descriptions and offer opening from either side.";
     const first_area = create($area, #90100, 2);
     const second_area = create($area, #90100, 2);
@@ -628,7 +628,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_parallel_passages_have_independent_state_and_identity owner: cowbell::ARCH_WIZARD
+  method test_parallel_passages_have_independent_state_and_identity owner: core::ARCH_WIZARD
     "Two connections between the same rooms can be edited and removed separately.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -653,7 +653,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_oneway_and_removed_connections_cannot_be_traversed owner: cowbell::ARCH_WIZARD
+  method test_oneway_and_removed_connections_cannot_be_traversed owner: core::ARCH_WIZARD
     "Movement and routes respect direction and reject saved values after removal or reinstallation.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -686,7 +686,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_native_area_admission_respects_stored_and_supplied_grants owner: cowbell::ARCH_WIZARD
+  method test_native_area_admission_respects_stored_and_supplied_grants owner: core::ARCH_WIZARD
     "Owning a room does not permit moving it into a foreign area; an add_room grant does.";
     const area = create($area, #90100, 2);
     const room = create($room, #90101, 2);
@@ -710,7 +710,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_old_passage_stores_can_be_rebuilt_without_partial_conversion owner: cowbell::ARCH_WIZARD
+  method test_old_passage_stores_can_be_rebuilt_without_partial_conversion owner: core::ARCH_WIZARD
     "Validate legacy records before conversion, then index both endpoints and retain a backup.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -746,7 +746,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_far_endpoint_owner_can_disconnect_a_cross_area_passage owner: cowbell::ARCH_WIZARD
+  method test_far_endpoint_owner_can_disconnect_a_cross_area_passage owner: core::ARCH_WIZARD
     "A room owner can withdraw its connection without needing ownership of the other area's store.";
     const store = create($area, #90100, 2);
     const other_area = create($area, #90101, 2);
@@ -768,7 +768,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method test_door_operations_use_passage_scope_and_carried_keys owner: cowbell::ARCH_WIZARD
+  method test_door_operations_use_passage_scope_and_carried_keys owner: core::ARCH_WIZARD
     "Door operations share keyless and keyed policies with traversal, and notify both endpoint rooms.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);
@@ -820,7 +820,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return true;
   endmethod
 
-  method query_door_race owner: cowbell::ARCH_WIZARD
+  method query_door_race owner: core::ARCH_WIZARD
     "A trusted test provider changes the connection during a policy callback.";
     this.policy_probe['principal] = caller_perms();
     const {_, inputs, limit} = args;
@@ -834,7 +834,7 @@ object HEADLESS_PASSAGE_SCENARIOS [
     return ['rows -> {[]}, 'complete -> true];
   endmethod
 
-  method test_door_policy_yields_recheck_connection_and_key_custody owner: cowbell::ARCH_WIZARD
+  method test_door_policy_yields_recheck_connection_and_key_custody owner: core::ARCH_WIZARD
     "A policy callback cannot resurrect an unlinked door or use a key removed during evaluation.";
     const area = create($area, #90100, 2);
     const source = create($room, #90100, 2);

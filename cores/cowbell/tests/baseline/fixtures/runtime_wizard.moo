@@ -13,7 +13,7 @@ object RUNTIME_WIZARD [
   import_export_id -> "runtime_wizard"
 ]
   name: "RUNTIME_WIZARD"
-  parent: cowbell::PLAYER
+  parent: core::PLAYER
   location: RUNTIME_ROOM
   owner: RUNTIME_WIZARD
   player: true

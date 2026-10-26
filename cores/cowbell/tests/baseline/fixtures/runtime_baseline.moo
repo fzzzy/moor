@@ -13,7 +13,7 @@ object RUNTIME_BASELINE [
   import_export_id -> "runtime_baseline"
 ]
   name: "Runtime Baseline Scenarios"
-  parent: cowbell::ROOT
+  parent: core::ROOT
   owner: RUNTIME_WIZARD
   readable: true
 

@@ -4,17 +4,17 @@ object HEADLESS_COLLECTION_SCENARIOS [
   import_export_id -> "headless_collection_scenarios"
 ]
   name: "Headless Collection Scenarios"
-  parent: cowbell::ROOT
-  owner: cowbell::ARCH_WIZARD
+  parent: core::ROOT
+  owner: core::ARCH_WIZARD
   readable: true
 
-  method _as_hacker owner: cowbell::HACKER
+  method _as_hacker owner: core::HACKER
     "Call a collection method as a non-wizard programmer.";
     const {target, name, @arguments} = args;
     return target:(name)(@arguments);
   endmethod
 
-  method test_message_bag_permissions_and_values owner: cowbell::ARCH_WIZARD
+  method test_message_bag_permissions_and_values owner: core::ARCH_WIZARD
     "Object bags enforce property permissions. Flyweight updates preserve the original.";
     const own = create($msg_bag, $hacker);
     const foreign = create($msg_bag, $arch_wizard);
@@ -50,7 +50,7 @@ object HEADLESS_COLLECTION_SCENARIOS [
     return true;
   endmethod
 
-  method _callback_write owner: cowbell::HACKER
+  method _callback_write owner: core::HACKER
     "Attempt a protected write from a non-wizard callback.";
     const {operation} = args;
     if (operation == "reduce")
@@ -62,7 +62,7 @@ object HEADLESS_COLLECTION_SCENARIOS [
     return {1}:(operation)({item} => #90100.runtime_probe = 99);
   endmethod
 
-  method test_callback_write_permissions owner: cowbell::ARCH_WIZARD
+  method test_callback_write_permissions owner: core::ARCH_WIZARD
     "Collection callbacks cannot use the utility owner's wizard authority.";
     const saved = #90100.runtime_probe;
     try

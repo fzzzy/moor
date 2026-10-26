@@ -4,7 +4,7 @@ object HEADLESS_WORLD_ITEM [
   import_export_id -> "headless_world_item"
 ]
   name: "Runtime World Item"
-  parent: cowbell::THING
+  parent: core::THING
   location: fixtures::RUNTIME_PLAYER
   owner: fixtures::RUNTIME_PLAYER
 endobject
