@@ -629,7 +629,8 @@ original evidence stale; refresh before making new decisions.
 ### Bind and create objects
 
 A new object needs an explicit numeric ID before preview. Its objdef constant maps to that ID in
-package configuration. Source cannot select another address or move an existing object.
+package configuration. Source cannot select another address. Changes to an existing object's parent
+or location are separate reviewed rows; see [Parents and locations](#parents-and-locations).
 
 In Meadow:
 
@@ -692,11 +693,32 @@ one changed method does not request deletion of the other methods.
 
 Complete source declares that it lists every member of the managed objects. An omitted installed
 member then appears as an unsupported removal. Apply still preserves that member. Deletion,
-renaming, structural updates to existing objects, and data migrations need separate support.
+renaming, structural updates other than parent and location, and data migrations need separate
+support.
 
 The scope declaration is a package rule. Fetching source cannot change it. Native policy can name
 complete objects individually. Meadow's checkbox declares all managed objects complete or leaves all
 of them partial. Changes to bindings or scope require a fresh review.
+
+### Parents and locations
+
+When source gives an installed object a different parent or location, the review shows an
+`attribute` row for it, with operation `set_parent` or `move_object`. The row compares the live,
+incoming, and accepted values like a program row, so an upstream change defaults to `incoming` and a
+local change or conflict waits for a decision. `incoming` changes the attribute; `local` keeps the
+live value and records the incoming one as accepted. Both record the new accepted value.
+
+A parent change makes the object and its descendants stop inheriting the properties of the old
+ancestors that the new ones do not define. The row lists these properties in `removes`. If the
+object or a descendant has its own value for one of them, the row is blocked with
+`reparent_drops_property_values` and lists each one in `losses`, because the change would delete
+that value. The exception is a property the same source defines on the object itself: its addition
+restores it, so it is not a loss. Such an addition no longer collides with the inherited property,
+and the parent change and the addition must be selected together, or neither. Apply changes parents
+and locations after creating objects and before adding properties.
+
+A parent or location that is not valid, or that would make an object its own ancestor or its own
+container, blocks the row. Native requests include `attribute` in `fields` for these rows.
 
 Native requests include `object` in `fields` for creation. Policy `creations` entries contain an
 explicit `object` and `mode: "absent"`. After apply, the core records the native creation hash as

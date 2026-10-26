@@ -32,6 +32,10 @@ pub(super) struct Context<'a> {
     pub trusted_owners: &'a BTreeSet<Obj>,
     pub policy: &'a super::policy::Policy,
     pub local: &'a ObjectDefinition,
+    /// The new parent, and the properties it stops the object inheriting, when the same
+    /// review changes the object's parent. Additions are then checked against the new
+    /// ancestry, and apply makes the parent change first.
+    pub reparent: Option<(Obj, &'a BTreeSet<Symbol>)>,
 }
 
 impl Context<'_> {
@@ -70,6 +74,13 @@ impl Context<'_> {
                 Err(WorldStateError::PropertyNotFound(_, _)) => None,
                 Err(error) => return Err(error.into()),
             };
+        // A property inherited only from ancestors the parent change leaves behind is gone by
+        // the time this addition is applied.
+        let existing = existing.filter(|(definition, _)| {
+            !self.reparent.is_some_and(|(_, removed)| {
+                definition.definer() != self.object && removed.contains(&property.name)
+            })
+        });
         let retain = local.is_some() && base.is_some();
         if existing.is_some() && !retain {
             blockers.push(v_str("property_name_collision"));
@@ -113,11 +124,25 @@ impl Context<'_> {
                 _ => {}
             }
             let mut inheritance = Vec::new();
-            for object in descendants.iter().chain(
-                self.world
+            let ancestry = match self.reparent {
+                Some((parent, _)) => {
+                    let mut ancestry = vec![self.object];
+                    if self.world.valid(&parent)? {
+                        ancestry.extend(
+                            self.world
+                                .ancestors_of(self.permissions, &parent, true)?
+                                .iter(),
+                        );
+                    }
+                    ancestry
+                }
+                None => self
+                    .world
                     .ancestors_of(self.permissions, &self.object, true)?
-                    .iter(),
-            ) {
+                    .iter()
+                    .collect(),
+            };
+            for object in descendants.iter().chain(ancestry) {
                 let definitions = self.world.properties(self.permissions, &object)?;
                 let mut signatures = Vec::new();
                 for definition in definitions.iter() {

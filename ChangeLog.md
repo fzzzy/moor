@@ -14,6 +14,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Objdef reviews can change an installed object's parent or location. With `attribute` in the
+  request's `fields`, a review shows a row for each changed parent or location, compared with the
+  accepted value like a program. A parent change that would delete property values set on the object
+  or its descendants is refused; one that the same source restores, by defining the property on the
+  object itself, applies together with that property.
 - `preview_objdef_changes()` and `apply_objdef_changes()` read a source unit labelled
   `<dir>/package.moo` as the package of the units under `<dir>/`, so source split into packages
   resolves each file's bare names in its own package. A package record's bindings recorded under

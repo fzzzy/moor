@@ -3584,3 +3584,344 @@ fn a_flat_binding_two_packages_define_is_refused() {
         "{error}"
     );
 }
+
+const CHILD: Obj = Obj::mk_id(2);
+const OTHER: Obj = Obj::mk_id(3);
+
+/// A root defining `description` and `extra`, a child of it with its own description, and a
+/// room-like third object. `child` replaces the child's definition.
+fn reparent_source(child: &str) -> String {
+    format!(
+        r#"object #1 [import_export_id -> "review_root"]
+owner: #1
+wizard: true
+property description (owner: #1, flags: "r") = "root";
+property extra (owner: #1, flags: "r") = 0;
+endobject
+object #3 [import_export_id -> "other"]
+owner: #1
+endobject
+{child}"#
+    )
+}
+
+const CHILD_UNDER_ROOT: &str = r#"object #2 [import_export_id -> "child"]
+parent: #1
+owner: #1
+override description = "a child";
+endobject"#;
+
+const CHILD_ON_ITS_OWN: &str = r#"object #2 [import_export_id -> "child"]
+owner: #1
+property description (owner: #1, flags: "r") = "a child";
+endobject"#;
+
+/// A world imported from `reparent_source(CHILD_UNDER_ROOT)` with field baselines recorded.
+fn reparent_world() -> TxDB {
+    let parse = |text: &str| {
+        ObjDefSet::parse_sources(
+            &CompileOptions::default(),
+            None,
+            None,
+            [ObjDefSource::new("core.moo", text)],
+        )
+        .unwrap()
+    };
+    let base = parse(&reparent_source(CHILD_UNDER_ROOT));
+    let db = TxDB::try_open(None, DatabaseConfig::default()).unwrap().0;
+    let mut loader = db.loader_client().unwrap();
+    ObjectDefinitionLoader::new(loader.as_mut())
+        .load_objdef_set(
+            parse(&reparent_source(CHILD_UNDER_ROOT))
+                .with_baseline(&base, None)
+                .unwrap(),
+            Default::default(),
+        )
+        .unwrap();
+    assert!(matches!(
+        loader.commit().unwrap(),
+        CommitResult::Success { .. }
+    ));
+    db
+}
+
+/// An update request over the three objects, grouping every member of `report` and allowing
+/// `initialize` to be created at absent addresses.
+fn reparent_request(report: Option<&Var>, initialize: &[&str]) -> Var {
+    let members = report
+        .map(|report| {
+            get(report, "rows")
+                .as_list()
+                .unwrap()
+                .iter()
+                .map(|row| get(&row, "member"))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    record(&[
+        ("schema", v_int(1)),
+        ("operation", v_str("update")),
+        (
+            "objects",
+            v_list(&[v_obj(ROOT), v_obj(CHILD), v_obj(OTHER)]),
+        ),
+        ("fields", v_list(&[v_str("attribute"), v_str("property")])),
+        (
+            "policy",
+            record(&[
+                ("schema", v_int(1)),
+                (
+                    "groups",
+                    v_list(&if members.is_empty() {
+                        vec![]
+                    } else {
+                        vec![record(&[
+                            ("name", v_str("reparent")),
+                            ("members", v_list(&members)),
+                            ("requires", v_list(&[])),
+                        ])]
+                    }),
+                ),
+                (
+                    "initialization",
+                    v_list(
+                        &initialize
+                            .iter()
+                            .map(|member| {
+                                record(&[
+                                    ("member", v_str(member)),
+                                    ("mode", v_str("absent")),
+                                    ("descendants", v_bool(false)),
+                                ])
+                            })
+                            .collect::<Vec<_>>(),
+                    ),
+                ),
+            ]),
+        ),
+    ])
+}
+
+fn row_with(report: &Var, id: &str) -> Var {
+    get(report, "rows")
+        .as_list()
+        .unwrap()
+        .iter()
+        .find(|row| get(row, "id") == v_str(id))
+        .unwrap_or_else(|| panic!("no row {id}"))
+}
+
+#[test]
+fn a_parent_change_applies_with_the_properties_it_moves() {
+    let db = reparent_world();
+    let incoming = sources(&reparent_source(CHILD_ON_ITS_OWN));
+    let description = properties::member_key(CHILD, Symbol::mk("description"));
+    let parent_id = format!("attribute/{}", attributes::member_key(CHILD, "parent"));
+    let property_id = format!("property/{description}");
+
+    let world = db.new_world_state().unwrap();
+    let first = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    let parent = row_with(&first, &parent_id);
+    assert_eq!(get(&parent, "classification"), v_str("upstream"));
+    assert_eq!(
+        get(&parent, "removes"),
+        v_list(&[v_str("description"), v_str("extra")])
+    );
+    assert_eq!(
+        get(&parent, "losses"),
+        v_list(&[]),
+        "the child's description is restored"
+    );
+    // Without the parent change this addition would collide with the inherited description.
+    let property = row_with(&first, &property_id);
+    assert!(
+        !get(&property, "blockers")
+            .as_list()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == v_str("property_name_collision"))
+    );
+
+    let request = reparent_request(Some(&first), &[&description]);
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &request,
+        None,
+    )
+    .unwrap();
+    drop(world);
+    let only_parent = v_map(&[(v_str(&parent_id), record(&[("choice", v_str("incoming"))]))]);
+    let mut world = db.new_world_state().unwrap();
+    let refused = apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &request,
+        &get(&report, "evidence"),
+        &only_parent,
+    );
+    let Err(error) = refused else {
+        panic!("a parent change without the property it moves was applied");
+    };
+    assert!(error.to_string().contains("go together"), "{error}");
+    drop(world);
+
+    let mut world = db.new_world_state().unwrap();
+    let receipt = apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &request,
+        &get(&report, "evidence"),
+        &all_incoming(&report),
+    )
+    .unwrap();
+    assert_eq!(get(&receipt, "decisions").as_list().unwrap().len(), 2);
+    assert_eq!(world.parent_of(&permissions(), &CHILD).unwrap(), NOTHING);
+    assert_eq!(
+        world
+            .retrieve_property(&permissions(), &CHILD, Symbol::mk("description"))
+            .unwrap(),
+        v_str("a child")
+    );
+    assert!(
+        world
+            .retrieve_property(&permissions(), &CHILD, Symbol::mk("extra"))
+            .is_err(),
+        "the old parent's other property is gone"
+    );
+    world.commit().unwrap();
+
+    // The accepted parent is recorded, so a later review sees nothing left to change.
+    let world = db.new_world_state().unwrap();
+    let after = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    assert!(
+        !get(&after, "rows")
+            .as_list()
+            .unwrap()
+            .iter()
+            .any(|row| get(&row, "field") == v_str("attribute"))
+    );
+}
+
+#[test]
+fn a_parent_change_that_drops_a_set_value_is_blocked() {
+    let db = reparent_world();
+    let mut world = db.new_world_state().unwrap();
+    world
+        .update_property(&permissions(), &CHILD, Symbol::mk("extra"), &v_int(7))
+        .unwrap();
+    world.commit().unwrap();
+    let world = db.new_world_state().unwrap();
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &sources(&reparent_source(CHILD_ON_ITS_OWN)),
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    let parent = row_with(
+        &report,
+        &format!("attribute/{}", attributes::member_key(CHILD, "parent")),
+    );
+    assert_eq!(get(&parent, "eligible"), v_bool(false));
+    assert!(
+        get(&parent, "blockers")
+            .as_list()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == v_str("reparent_drops_property_values"))
+    );
+    assert_eq!(
+        get(&parent, "losses"),
+        v_list(&[v_list(&[v_obj(CHILD), v_str("extra")])])
+    );
+}
+
+#[test]
+fn a_location_change_moves_the_object() {
+    let db = reparent_world();
+    let moved = CHILD_UNDER_ROOT.replace("parent: #1\n", "parent: #1\nlocation: #3\n");
+    let incoming = sources(&reparent_source(&moved));
+    let world = db.new_world_state().unwrap();
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    let location_id = format!("attribute/{}", attributes::member_key(CHILD, "location"));
+    let row = row_with(&report, &location_id);
+    assert_eq!(get(&row, "operation"), v_str("move_object"));
+    assert_eq!(get(&row, "default"), v_str("incoming"));
+    drop(world);
+    let mut world = db.new_world_state().unwrap();
+    apply(
+        world.as_mut(),
+        &permissions(),
+        &CompileOptions::default(),
+        &incoming,
+        &reparent_request(None, &[]),
+        &get(&report, "evidence"),
+        &v_map(&[(
+            v_str(&location_id),
+            record(&[("choice", v_str("incoming"))]),
+        )]),
+    )
+    .unwrap();
+    assert_eq!(world.location_of(&permissions(), &CHILD).unwrap(), OTHER);
+
+    // A cycle is refused: #3 cannot move into #2 while #2 is inside it.
+    world.commit().unwrap();
+    let cycle = reparent_source(&moved).replace(
+        "object #3 [import_export_id -> \"other\"]\nowner: #1\n",
+        "object #3 [import_export_id -> \"other\"]\nowner: #1\nlocation: #2\n",
+    );
+    let world = db.new_world_state().unwrap();
+    let report = preview(
+        world.as_ref(),
+        &permissions(),
+        &CompileOptions::default(),
+        &sources(&cycle),
+        &reparent_request(None, &[]),
+        None,
+    )
+    .unwrap();
+    let row = row_with(
+        &report,
+        &format!("attribute/{}", attributes::member_key(OTHER, "location")),
+    );
+    assert!(
+        get(&row, "blockers")
+            .as_list()
+            .unwrap()
+            .iter()
+            .any(|blocker| blocker == v_str("invalid_object_location"))
+    );
+}
