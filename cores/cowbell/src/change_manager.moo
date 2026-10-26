@@ -636,8 +636,8 @@ object CHANGE_MANAGER [
         continue;
       endif
       const parts = explode(entry.path, "/", true);
-      "A package's package.moo holds its constants, like a plain directory's constants.moo.";
-      if (strcmp(parts[$], "constants.moo") == 0 || strcmp(parts[$], "package.moo") == 0)
+      "The review reads each package.moo for the package its directory's files belong to. A plain directory's constants.moo is not sent: the package record's constants are the bindings.";
+      if (strcmp(parts[$], "constants.moo") == 0)
         continue;
       endif
       let text = "";
