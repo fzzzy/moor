@@ -1008,7 +1008,12 @@ fn bundled_cores_declare_complete_default_package_bindings() {
         assert_eq!(
             get(&package, "fields"),
             v_list(&if core == "cowbell" {
-                vec![v_str("program"), v_str("property"), v_str("object")]
+                vec![
+                    v_str("program"),
+                    v_str("property"),
+                    v_str("object"),
+                    v_str("attribute"),
+                ]
             } else {
                 vec![v_str("program")]
             })

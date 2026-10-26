@@ -178,7 +178,7 @@ object CHANGE_MANAGER [
         "WIZARD_HELP_TOPICS" -> WIZARD_HELP_TOPICS,
         "WORLD_FACTS" -> WORLD_FACTS
       ],
-      "fields" -> {"program", "property", "object"},
+      "fields" -> {"program", "property", "object", "attribute"},
       "generation" -> 1,
       "objects" -> {
         ACTOR,
@@ -434,7 +434,7 @@ object CHANGE_MANAGER [
     const auth = `this:_entry(caller_perms()) ! E_PERM => {}';
     length(auth) || return ["schema" -> 1, "authorized" -> false];
     set_task_perms(auth[2]);
-    return ["schema" -> 1, "authorized" -> true, "operations" -> {"packages", "history", "configure", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
+    return ["schema" -> 1, "authorized" -> true, "operations" -> {"packages", "history", "configure", "propose_objects", "upstream", "stage", "status", "review", "inspection", "diagnostics", "details", "base_source", "set_group", "initialize_property", "resolve_group", "resolve", "prepare_apply", "apply", "refresh", "recovery", "result", "finish", "discard"}, "fields" -> {"program", "property", "object", "attribute"}, "choices" -> {"incoming", "local", "edited", "defer"}, "transports" -> {"upload", "http", "git"}, "git_authorization" -> "wizard", "authorization" -> "administrator", "default_package" -> this.default_package, "max_source_bytes" -> 4194304, "max_pending_bytes" -> 33554432, "max_packages" -> 32, "page_rows" -> 50, "max_detail_bytes" -> 524288, "max_page_bytes" -> 262144, "receipt_decisions" -> 50, "retained_reviews" -> 64, "max_receipt_bytes" -> 33554432];
   endmethod
 
   method packages owner: ARCH_WIZARD
@@ -498,7 +498,7 @@ object CHANGE_MANAGER [
       length(this.packages) < 32 || raise(E_QUOTA);
     endif
     generation == expected || this:_error("stale_generation", "Package settings changed.");
-    const package = ["schema" -> 1, "generation" -> generation + 1, "objects" -> objects, "fields" -> {"program", "property", "object"}, "constants" -> constants, "trusted_owners" -> trusted_owners, "upstream" -> upstream, "active" -> 0];
+    const package = ["schema" -> 1, "generation" -> generation + 1, "objects" -> objects, "fields" -> {"program", "property", "object", "attribute"}, "constants" -> constants, "trusted_owners" -> trusted_owners, "upstream" -> upstream, "active" -> 0];
     let configured = package;
     if (maphaskey(this.packages, name))
       configured["policy"] = `this.packages[name]["policy"] ! E_RANGE => ["schema" -> 1, "groups" -> {}]';
@@ -708,7 +708,7 @@ object CHANGE_MANAGER [
     const id = this.next_review;
     this.next_review = id + 1;
     let record = ["id" -> id, "generation" -> 1, "actor" -> auth[1], "authority" -> auth[2], "package" -> name, "package_generation" -> package["generation"], "upstream" -> package["upstream"], "status" -> "fetching", "task" -> 0, "error" -> [], "sources" -> {}, "report" -> [], "choices" -> [], "provenance" -> [], "request" -> ["schema" -> 1, "operation" -> operation, "objects" -> package["objects"], "fields" -> package["fields"], "constants" -> package["constants"], "trusted_owners" -> package["trusted_owners"]]];
-    record["request"]["fields"] = {"program", "property", "object"};
+    record["request"]["fields"] = {"program", "property", "object", "attribute"};
     record["request"]["policy"] = `package["policy"] ! E_RANGE => ["schema" -> 1, "groups" -> {}]';
     this.packages[name]["active"] = id;
     this.pending[id] = record;
@@ -884,7 +884,7 @@ object CHANGE_MANAGER [
         continue;
       endif
       const choice = `record["choices"][row["id"]] ! E_RANGE => []';
-      row["label"] = row["field"] == "object" ? this:_command_label(row["object"], names) | row["field"] == "property" ? this:_command_label(row["object"], names) + "." + row["names"][1] | this:_command_label(row["object"], names, row["names"][1]);
+      row["label"] = this:_row_label(row, names);
       row["choice"] = choice ? ["choice" -> choice["choice"], "validated" -> maphaskey(choice, "validation")] | [];
       row["needs_review"] = this:_needs_review(record, row["id"]);
       if (value_bytes(page) + value_bytes(row) > 262144)
@@ -1020,7 +1020,7 @@ object CHANGE_MANAGER [
     for selected in (current["rows"])
       let row = selected;
       if (row["id"] == row_id)
-        row["label"] = row["field"] == "object" ? this:_command_label(row["object"], this:_command_names()) | row["field"] == "property" ? this:_command_label(row["object"], this:_command_names()) + "." + row["names"][1] | this:_command_label(row["object"], this:_command_names(), row["names"][1]);
+        row["label"] = this:_row_label(row, this:_command_names());
         row["base_fetch_available"] = auth[1].wizard && `row["base_source"]["transport"] == "git" ! E_RANGE => false';
         row["choice"] = `record["choices"][row_id] ! E_RANGE => []';
         row["recovery"] = `record["recovery"][row_id] ! E_RANGE => []';
@@ -1402,6 +1402,8 @@ object CHANGE_MANAGER [
           effect = "baseline";
         elseif (operation in {"add_object", "add_property", "add_verb"})
           effect = operation;
+        elseif (operation in {"set_parent", "move_object"})
+          effect = kind == "incoming" ? "attribute" | "baseline";
         elseif (kind == "local" || (kind == "incoming" && row["incoming"] == row["live"]))
           effect = "baseline";
         elseif (kind == "edited")
@@ -1413,7 +1415,7 @@ object CHANGE_MANAGER [
       elseif (row["classification"] in {"unchanged", "local"} && kind == "defer")
         effect = "retained";
       endif
-      const label = row["field"] == "object" ? this:_command_label(row["object"], names) | row["field"] == "property" ? this:_command_label(row["object"], names) + "." + row["names"][1] | this:_command_label(row["object"], names, row["names"][1]);
+      const label = this:_row_label(row, names);
       effects = {@effects, ["id" -> row["id"], "member" -> row["member"], "label" -> label, "field" -> row["field"], "choice" -> kind, "defaulted" -> !saved, "effect" -> effect]};
     endfor
     return effects;
@@ -1430,7 +1432,7 @@ object CHANGE_MANAGER [
     const report = preview_objdef_changes(record["sources"], record["request"], record["choices"]);
     report["evidence"] == record["report"]["evidence"] || this:_error("stale_review", "Live state changed. Refresh before preparing an update.");
     const effects = this:_effects(record, report["validation"]);
-    let counts = ["program" -> 0, "add_verb" -> 0, "add_property" -> 0, "add_object" -> 0, "baseline" -> 0, "retained" -> 0, "deferred" -> 0, "blocked" -> 0];
+    let counts = ["program" -> 0, "add_verb" -> 0, "add_property" -> 0, "add_object" -> 0, "attribute" -> 0, "baseline" -> 0, "retained" -> 0, "deferred" -> 0, "blocked" -> 0];
     for effect in (effects)
       counts[effect["effect"]] = counts[effect["effect"]] + 1;
     endfor
@@ -1893,7 +1895,7 @@ object CHANGE_MANAGER [
       elseif (kind == "defer" && row["classification"] in {"local", "unchanged"})
         decision = "Keep my code";
       endif
-      const label = row["field"] == "object" ? this:_command_label(row["object"], names) | row["field"] == "property" ? this:_command_label(row["object"], names) + "." + row["names"][1] | this:_command_label(row["object"], names, row["names"][1]);
+      const label = this:_row_label(row, names);
       const link = this:_command_review_link(record, label, row["id"]);
       const displayed = $format.paragraph:inline(tostr(i, ". "), link, " — ", descriptions[row["classification"]], ". ", decision, ".");
       value_bytes(change_rows) + value_bytes(displayed) <= 60000 || raise(E_QUOTA, "Review page is too large.");
@@ -2026,7 +2028,19 @@ object CHANGE_MANAGER [
     caller == this || raise(E_PERM);
     const {row} = args;
     const object = this:_command_label(row["object"], this:_command_names());
+    row["field"] == "attribute" && return object + " " + row["names"][1];
     return row["field"] == "object" ? object | object + (row["field"] == "property" ? "." | ":") + row["names"][1];
+  endmethod
+
+  method _row_label owner: ARCH_WIZARD
+    "Name a review row's member as commands do: an object, a property, a verb, or an object's parent or location.";
+    caller == this || raise(E_PERM);
+    const {row, names} = args;
+    const object = this:_command_label(row["object"], names);
+    row["field"] == "object" && return object;
+    row["field"] == "property" && return object + "." + row["names"][1];
+    row["field"] == "attribute" && return object + " " + row["names"][1];
+    return this:_command_label(row["object"], names, row["names"][1]);
   endmethod
 
   method _terminal_key owner: ARCH_WIZARD
@@ -2095,7 +2109,7 @@ object CHANGE_MANAGER [
     "Use the same concrete effect descriptions for plans and committed results.";
     caller == this || raise(E_PERM);
     set_task_perms(caller_perms());
-    return ["program" -> "Replace program", "add_verb" -> "Add verb", "add_property" -> "Create property with its initial value", "add_object" -> "Create object", "baseline" -> "Acknowledge upstream; keep live contents", "retained" -> "Keep live contents", "deferred" -> "Decide later; keep contents and baseline", "blocked" -> "Cannot apply"];
+    return ["program" -> "Replace program", "add_verb" -> "Add verb", "add_property" -> "Create property with its initial value", "add_object" -> "Create object", "attribute" -> "Change parent or location", "baseline" -> "Acknowledge upstream; keep live contents", "retained" -> "Keep live contents", "deferred" -> "Decide later; keep contents and baseline", "blocked" -> "Cannot apply"];
   endmethod
 
   method _terminal_preview owner: ARCH_WIZARD

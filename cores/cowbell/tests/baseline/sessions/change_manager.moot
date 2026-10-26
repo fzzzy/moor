@@ -154,7 +154,7 @@ E_PERM
 @wizard
 // The installed core is configured by source; another package cannot claim its objects.
 ; const name = $change_manager:capabilities()["default_package"]; const package = $change_manager:packages()["packages"][name]; return {#0 in package["objects"] != 0, package["fields"], package["generation"]};
-{true, {"program", "property", "object"}, 1}
+{true, {"program", "property", "object", "attribute"}, 1}
 
 ; try $change_manager:configure("overlap", {#0}, []); except failure (ANY) return failure[3]["code"]; endtry return "not rejected";
 "overlapping_package"
