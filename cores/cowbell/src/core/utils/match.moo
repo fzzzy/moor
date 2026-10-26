@@ -579,7 +579,7 @@ object MATCH [
 
   method test_parse_curie owner: ARCH_WIZARD
     "CURIE strings resolve to objects, and malformed ones to false.";
-    $test_utils:assert_true(equal(this:parse_curie("oid:1"), core::ROOT), "parse_curie oid");
+    $test_utils:assert_true(equal(this:parse_curie("oid:990001"), #990001), "parse_curie oid");
     $test_utils:assert_true(equal(this:parse_curie("oid:abc"), false), "parse_curie rejects invalid oid");
     $test_utils:assert_true(equal(this:parse_curie("sysobj:root"), $root), "parse_curie sysobj");
     $test_utils:assert_true(equal(this:parse_curie("sysobj:nonexistent_property"), false), "parse_curie rejects invalid sysobj");
