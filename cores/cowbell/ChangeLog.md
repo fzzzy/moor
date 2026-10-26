@@ -28,8 +28,9 @@ Cowbell entries.
 - `$package`, the class of package objects. A package object is a child of `$package` tagged with
   its package's `objdef_package` metadata. At startup, and after `@changes` applies an update,
   `$package:sync()` calls `init()` on each package whose `version` changed and then `refresh()` on
-  all of them, each package after those it `depends` on. Its other hooks, for new players,
-  feature objects, help and agent tools, do nothing yet.
+  all of them, each package after those it `depends` on. `player_connected(who, is_new_player)`
+  runs on a player's first connection, before they see their room, so a package can move them
+  first. Its other hooks, for new players, feature objects, help and agent tools, do nothing yet.
 - `$discord_bridge` links a world to one Discord channel through the curl worker. A wizard runs
   `$discord_bridge:configure(webhook_url, bot_token, channel_id, world_name)`, then places a child
   of `$discord_speaker` in a room and registers it with `$discord_bridge:add_speaker(speaker)`.

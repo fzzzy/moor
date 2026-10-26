@@ -232,6 +232,8 @@ object SYSOBJ [
     if (is_new_player)
       `$login:setup_new_player(user) ! E_VERBNF';
     endif
+    "Packages may move the player before the room is shown.";
+    $package:connected(user, is_new_player);
     "Drop to user perms for confunc.";
     set_task_perms(user);
     `user.location:confunc(user, is_new_player, should_announce) ! E_INVIND, E_VERBNF';

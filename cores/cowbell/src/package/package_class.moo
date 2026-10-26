@@ -77,6 +77,11 @@ object PACKAGE_CLASS [
     return;
   endmethod
 
+  method player_connected owner: core::ARCH_WIZARD
+    "A player's first connection has opened, before they see the room they are in, so a package may move them first. who is the player; is_new_player is true when the player was just created. Runs with wizard permissions.";
+    return;
+  endmethod
+
   method player_features owner: core::ARCH_WIZARD
     "The feature objects this package adds to the player's commands and help.";
     return {};
@@ -95,6 +100,19 @@ object PACKAGE_CLASS [
   method agent_resources owner: core::ARCH_WIZARD
     "Resources this package offers external agents.";
     return {};
+  endmethod
+
+  method connected owner: core::ARCH_WIZARD
+    "Tell every installed package, in dependency order, that who's first connection has opened. A package whose hook fails is logged and the rest still run.";
+    callers() && !caller_perms().wizard && raise(E_PERM);
+    const {who, is_new_player} = args;
+    for package in (this:installed())
+      try
+        package:player_connected(who, is_new_player);
+      except error (ANY)
+        server_log(tostr("Package ", package:package_name(), " (", package, ") failed on ", who, "'s connection: ", toliteral(error[1..2])));
+      endtry
+    endfor
   endmethod
 
   method named owner: core::ARCH_WIZARD
@@ -152,6 +170,22 @@ object PACKAGE_CLASS [
     finally
       recycle(package);
       recycle(member);
+    endtry
+    return true;
+  endmethod
+
+  method test_connected_tells_each_package owner: core::ARCH_WIZARD
+    "Each installed package hears of a player's first connection, with whether the player is new.";
+    const package = create(this);
+    try
+      set_object_metadata(package, 'objdef_package, "zz_test_connected");
+      add_property(package, "heard", {}, {$arch_wizard, "r"});
+      add_verb(package, {$arch_wizard, "rxd", "player_connected"}, {"this", "none", "this"});
+      set_verb_code(package, "player_connected", {"this.heard = {@this.heard, args};"});
+      this:connected($test_player, true);
+      $test_utils:assert_eq(package.heard, {{$test_player, true}}, "the hook gets the player and whether they are new");
+    finally
+      recycle(package);
     endtry
     return true;
   endmethod
