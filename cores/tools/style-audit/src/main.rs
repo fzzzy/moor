@@ -13,7 +13,8 @@
 //! Report source-level style debt using the objdef compiler and MOO concrete syntax tree.
 
 use moor_compiler::{
-    CompileOptions, SyntaxKind, lex, parse_program_frontend, parse_to_syntax_node,
+    CompileOptions, NAMESPACE_SEPARATOR, SyntaxKind, lex, parse_program_frontend,
+    parse_to_syntax_node,
 };
 use moor_objdef::ObjDefSet;
 use std::{
@@ -103,6 +104,16 @@ fn run() -> Result<bool, Box<dyn Error>> {
     };
     let definitions = ObjDefSet::read_directory(&options, &directory)
         .map_err(|error| format!("objdef compile failed: {error}"))?;
+    // Bodies are compiled again on their own, so they need the package constants their code names.
+    let mut options = options;
+    options.package_constants = Some(std::sync::Arc::new(
+        definitions
+            .constants()
+            .iter()
+            .filter(|(name, _)| name.as_arc_str().contains(NAMESPACE_SEPARATOR))
+            .filter_map(|(name, value)| Some((*name, value.as_object()?)))
+            .collect(),
+    ));
     let expected_verbs: usize = definitions
         .graph()
         .object_definitions()

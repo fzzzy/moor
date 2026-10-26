@@ -38,6 +38,8 @@ pub enum SyntaxKind {
     ErrorLit,
     SymbolLit,
     BinaryLit,
+    /// A package constant, `pkg::NAME`.
+    QualifiedName,
     TypeConstant,
 
     // Keywords reserved in normal MOO mode.
@@ -186,6 +188,7 @@ impl SyntaxKind {
                 | Self::ErrorLit
                 | Self::SymbolLit
                 | Self::BinaryLit
+                | Self::QualifiedName
                 | Self::TypeConstant
                 | Self::TrueKw
                 | Self::FalseKw

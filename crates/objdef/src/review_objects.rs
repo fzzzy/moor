@@ -34,6 +34,7 @@ fn text(definition: &ObjectDefinition) -> Result<String, ReviewError> {
     let mut bytes = Vec::new();
     crate::write::write_dump_object(
         &HashMap::new(),
+        &HashMap::new(),
         definition,
         ObjectDumpOptions {
             include_baselines: false,

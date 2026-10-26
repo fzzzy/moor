@@ -16,8 +16,8 @@ use moor_common::model::{
     ObjFlag, PrepSpec, VerbArgsSpec, VerbFlag, prop_flags_string, verb_perms_string,
 };
 use moor_compiler::{
-    ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition, PackageDeclaration, program_to_tree,
-    to_literal, to_literal_objsub, unparse,
+    NAMESPACE_SEPARATOR, ObjPropDef, ObjPropOverride, ObjVerbDef, ObjectDefinition,
+    PackageDeclaration, program_to_tree, to_literal, to_literal_objsub, unparse_objsub,
 };
 use moor_var::{NOTHING, Obj, Symbol, Var, program::ProgramType, v_arc_str, v_str, v_string};
 use std::{collections::HashMap, io::Write, path::Path};
@@ -184,26 +184,42 @@ fn write_constant_groups<W: Write>(
 
 pub(crate) fn collect_dump_object_lines(
     index_names: &HashMap<Obj, String>,
+    code_names: &HashMap<Obj, String>,
     o: &ObjectDefinition,
     options: ObjectDumpOptions,
 ) -> Result<DumpLines, ObjectDumpError> {
     let mut collector = LineCollector::new();
-    write_dump_object(index_names, o, options, &mut collector)?;
+    write_dump_object(index_names, code_names, o, options, &mut collector)?;
     collector.finish()
+}
+
+/// The names verb code writes for objects: their qualified package constants, such as
+/// `core::ROOT`. Bare constant names would read as variables there. `#0` and negative numbers
+/// keep their literal form.
+pub(crate) fn code_names(index_names: &HashMap<Obj, String>) -> HashMap<Obj, String> {
+    index_names
+        .iter()
+        .filter(|(oid, name)| {
+            name.contains(NAMESPACE_SEPARATOR) && oid.is_positive() && !oid.is_sysobj()
+        })
+        .map(|(oid, name)| (*oid, name.clone()))
+        .collect()
 }
 
 pub(crate) fn write_dump_object<W: Write>(
     index_names: &HashMap<Obj, String>,
+    code_names: &HashMap<Obj, String>,
     o: &ObjectDefinition,
     options: ObjectDumpOptions,
     writer: &mut W,
 ) -> Result<(), ObjectDumpError> {
     validate_verb_names(o)?;
-    write_validated_dump_object(index_names, o, options, writer)
+    write_validated_dump_object(index_names, code_names, o, options, writer)
 }
 
 pub(crate) fn write_validated_dump_object<W: Write>(
     index_names: &HashMap<Obj, String>,
+    code_names: &HashMap<Obj, String>,
     o: &ObjectDefinition,
     options: ObjectDumpOptions,
     writer: &mut W,
@@ -227,7 +243,7 @@ pub(crate) fn write_validated_dump_object<W: Write>(
     }
     for v in &o.verbs {
         writeln!(writer)?;
-        write_verb(index_names, "  ", v, &o.oid, options, writer)?;
+        write_verb(index_names, code_names, "  ", v, &o.oid, options, writer)?;
     }
     writeln!(writer, "endobject")?;
     Ok(())
@@ -287,6 +303,7 @@ fn write_dump_object_header<W: Write>(
 
 fn write_verb<W: Write>(
     index_names: &HashMap<Obj, String>,
+    code_names: &HashMap<Obj, String>,
     indent: &str,
     v: &ObjVerbDef,
     obj: &Obj,
@@ -321,12 +338,13 @@ fn write_verb<W: Write>(
         verb_name: joined_names.clone(),
         reason: e.to_string(),
     })?;
-    let unparsed =
-        unparse(&decompiled, false, true).map_err(|e| ObjectDumpError::UnparseError {
+    let unparsed = unparse_objsub(&decompiled, false, true, code_names).map_err(|e| {
+        ObjectDumpError::UnparseError {
             obj: *obj,
             verb_name: joined_names.clone(),
             reason: e.to_string(),
-        })?;
+        }
+    })?;
 
     if is_method {
         let default_flags = VerbFlag::rxd();
@@ -654,6 +672,7 @@ mod tests {
         };
         let mut output = Vec::new();
         let error = write_dump_object(
+            &HashMap::new(),
             &HashMap::new(),
             &object,
             ObjectDumpOptions::default(),

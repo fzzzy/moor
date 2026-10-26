@@ -758,9 +758,8 @@ that is not configured, a cycle, or two packages binding one name differently is
 `@changes depends games` with no names removes the dependencies. Settings saved without dependencies
 keep the configured ones.
 
-Verb code cannot use objdef constants yet. A constant name there compiles as a local variable and
-fails at runtime with `E_VARNF`, and `pkg::NAME` does not parse. Use `$name` references in verb
-code, and constants in headers and property values.
+Verb code names another package's objects qualified too, such as `core::ROOT:name()`; see
+[Constants in verb code](objdef-file-format.md#constants-in-verb-code).
 
 ### Review updates with an agent
 

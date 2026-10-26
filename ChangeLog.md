@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Verb code in objdef source can name a package's object constants qualified, such as
+  `core::ROOT:name()`. They compile to object literals, and exporting writes object literals that a
+  package constant binds as their qualified names. Outside objdef source, `pkg::NAME` is refused.
 - Objdef reviews report `bindings`, the qualified constants of the packages the reviewed source
   declares, so a source tree that builds on another can be given that tree's bindings. Objects a
   review creates record their package in `objdef_package` metadata, so an export writes them to that

@@ -110,6 +110,7 @@ impl FeaturesConfig {
             custom_errors: self.custom_errors,
             call_unsupported_builtins: false,
             legacy_type_constants: false,
+            package_constants: None,
         }
     }
 }
