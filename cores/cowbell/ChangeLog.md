@@ -266,6 +266,9 @@ Cowbell entries.
 
 ### Fixed
 
+- Evaluating or linking an object that does not descend from `$root`, such as `$package`, no longer
+  fails with `E_VERBNF` for `reference_kind`. Object references and completion choices use the
+  object's `name` property and the kind `object` when it lacks those verbs.
 - `@changes` no longer treats live data in objects and properties it installed as local edits.
   An installed object whose properties change at runtime, such as a bridge's queue, stays
   unchanged in later reviews, and writes to it no longer make an open review stale. A change group

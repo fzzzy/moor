@@ -392,7 +392,9 @@ object MATCH [
     let result = {};
     for i in [1..length(objects)]
       const object = objects[i];
-      result = {@result, ["id" -> tostr(object), "label" -> object:name(), "value" -> tostr(object), "detail" -> tostr(object), "objectKind" -> object:reference_kind(), "keys" -> keys[i]]};
+      const label = respond_to(object, 'name) ? object:name() | object.name;
+      const kind = respond_to(object, 'reference_kind) ? object:reference_kind() | "object";
+      result = {@result, ["id" -> tostr(object), "label" -> label, "value" -> tostr(object), "detail" -> tostr(object), "objectKind" -> kind, "keys" -> keys[i]]};
     endfor
     return result;
   endmethod
