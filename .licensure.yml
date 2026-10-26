@@ -147,6 +147,7 @@ excludes:
   - \.gitignore
   - \.dockerignore
   - \.gitmodules
+  - \.mailmap
   - \.vscodeignore
   - .*lock
   - \.git/.*
