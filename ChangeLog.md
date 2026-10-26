@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Errors order by code, then by attached value, as `==` compares them; the message never counts. A
+  map keyed by `E_PERM` now finds an `E_PERM` that carries a message, and `<` on errors no longer
+  puts one with a message after other codes.
 - Maps keep an integer and a float as different keys, as `==` does: a map keyed by `1` no longer
   finds `1.0`, and can hold both. A stored map never held both, so existing databases load
   unchanged.

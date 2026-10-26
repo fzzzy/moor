@@ -14,11 +14,12 @@
 use crate::{Symbol, variant::Var};
 use ErrorCode::*;
 use std::{
+    cmp::Ordering,
     fmt::{Debug, Display, Formatter},
     hash::{Hash, Hasher},
 };
 
-#[derive(Clone, Eq, Ord, PartialOrd)]
+#[derive(Clone, Eq)]
 pub struct Error {
     repr: ErrorRepr,
 }
@@ -34,6 +35,23 @@ struct ErrorData {
     err_type: ErrorCode,
     msg: Option<String>,
     value: Option<Var>,
+}
+
+/// Errors order by code, then by attached value, as `==` compares them; the message never counts.
+/// Ordering by the stored form would put an error with a message after every bare code, and keep a
+/// map keyed by `E_PERM` from finding an `E_PERM` that carries a message.
+impl Ord for Error {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.err_type()
+            .cmp(&other.err_type())
+            .then_with(|| self.value().cmp(&other.value()))
+    }
+}
+
+impl PartialOrd for Error {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl Hash for Error {
