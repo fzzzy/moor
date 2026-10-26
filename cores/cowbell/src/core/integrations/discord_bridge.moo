@@ -21,6 +21,7 @@ object DISCORD_BRIDGE [
   property guild_names (owner: ARCH_WIZARD, flags: "") = [];
   property inbound (owner: ARCH_WIZARD, flags: "") = {};
   property inbound_per_minute (owner: ARCH_WIZARD, flags: "") = 20;
+  property last_error (owner: ARCH_WIZARD, flags: "") = [];
   property lookup_seconds (owner: ARCH_WIZARD, flags: "") = 300;
   property max_length (owner: ARCH_WIZARD, flags: "") = 400;
   property outbox (owner: ARCH_WIZARD, flags: "") = {};
@@ -53,6 +54,7 @@ object DISCORD_BRIDGE [
     endif
     this.channel_id = channel_id;
     this.world_name = world_name;
+    this.last_error = [];
     this in $presence_listeners || ($presence_listeners = {@$presence_listeners, this});
     this.enabled = true;
     schedule_stop(this.poll_schedule);
@@ -68,6 +70,12 @@ object DISCORD_BRIDGE [
     this.poll_schedule = 0;
     $presence_listeners = setremove($presence_listeners, this);
     return true;
+  endmethod
+
+  method status owner: ARCH_WIZARD
+    "Report whether the bridge is relaying and polling, and the last failure since it was configured.";
+    caller_perms().wizard || raise(E_PERM);
+    return ["enabled" -> this.enabled, "polling" -> schedule_valid(this.poll_schedule), "channel_id" -> this.channel_id, "speakers" -> this.speakers, "cursor" -> this.cursor, "queued" -> length(this.outbox), "last_error" -> this.last_error];
   endmethod
 
   method add_speaker owner: ARCH_WIZARD
@@ -129,12 +137,12 @@ object DISCORD_BRIDGE [
     try
       response = this:_request("GET", this.api_base + "/channels/" + this.channel_id + "/messages" + query, "", {{"Authorization", "Bot " + this.bot_token}});
     except error (ANY)
-      server_log(tostr("Discord bridge poll failed: ", toliteral(error[1])));
+      this:_report(tostr("Discord bridge poll failed: ", toliteral(error[1])));
       return 0;
     endtry
     const status = `response[1] ! ANY => 0';
     if (status in {401, 403})
-      server_log(tostr("Discord bridge stopped polling: the channel refused the bot token with HTTP ", status));
+      this:_report(tostr("Discord bridge stopped polling: the channel refused the bot token with HTTP ", status));
       schedule_stop(this.poll_schedule);
       this.poll_schedule = 0;
       return 0;
@@ -298,9 +306,17 @@ object DISCORD_BRIDGE [
       response[1] == 200 || return 0;
       return parse_json(response[3]);
     except error (ANY)
-      server_log(tostr("Discord bridge read of ", path, " failed: ", toliteral(error[1])));
+      this:_report(tostr("Discord bridge read of ", path, " failed: ", toliteral(error[1])));
       return 0;
     endtry
+  endmethod
+
+  method _report owner: ARCH_WIZARD
+    "Log a failure and keep it as the last error for status.";
+    caller == this || raise(E_PERM);
+    const {text} = args;
+    server_log(text);
+    this.last_error = ["time" -> time(), "message" -> text];
   endmethod
 
   method _request owner: ARCH_WIZARD
@@ -379,7 +395,7 @@ object DISCORD_BRIDGE [
       try
         response = this:_request("POST", this.webhook_url, body, {{"Content-Type", "application/json"}});
       except error (ANY)
-        server_log(tostr("Discord bridge post failed: ", toliteral(error[1])));
+        this:_report(tostr("Discord bridge post failed: ", toliteral(error[1])));
         return false;
       endtry
       const status = `response[1] ! ANY => 0';
@@ -389,7 +405,7 @@ object DISCORD_BRIDGE [
         suspend(min(10, max(1, toint(wait))));
         continue;
       endif
-      server_log(tostr("Discord bridge post refused with HTTP ", status));
+      this:_report(tostr("Discord bridge post refused with HTTP ", status));
       return false;
     endfor
     return false;

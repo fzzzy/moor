@@ -34,6 +34,8 @@ Cowbell entries.
   the channel. Messages beyond 20 a minute wait for a later poll, and messages more than five
   minutes old when read are skipped. Players can `listen to` a speaker for its latest lines. The
   webhook URL and bot token are stored in wizard-only properties, so database exports contain them.
+  `$discord_bridge:status()` reports whether the bridge is posting and polling, and its last error;
+  polling stops when Discord refuses the bot token, until the bridge is configured again.
 
 - `#0.presence_listeners` lists objects whose `presence_event(user, kind)` is called, each in its
   own task, when a player is created, first connects, or last disconnects.

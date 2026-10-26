@@ -9,6 +9,7 @@ object DISCORD_SCENARIOS [
   property channel (owner: core::ARCH_WIZARD, flags: "r") = {};
   property heard (owner: core::ARCH_WIZARD, flags: "r") = {};
   property posts (owner: core::ARCH_WIZARD, flags: "r") = {};
+  property read_status (owner: core::ARCH_WIZARD, flags: "r") = 200;
   property reads (owner: core::ARCH_WIZARD, flags: "r") = {};
   property responses (owner: core::ARCH_WIZARD, flags: "r") = [];
 
@@ -20,6 +21,7 @@ object DISCORD_SCENARIOS [
       return {204, {}, ""};
     endif
     this.reads = {@this.reads, {url, headers}};
+    this.read_status == 200 || return {this.read_status, {}, ""};
     maphaskey(this.responses, url) && return {200, {}, generate_json(this.responses[url])};
     return {200, {}, generate_json(this.channel)};
   endmethod
@@ -34,7 +36,7 @@ object DISCORD_SCENARIOS [
     "Point the bridge at this fixture, returning what it replaced.";
     const bridge = $discord_bridge;
     let saved = ["listeners" -> $presence_listeners, "location" -> this.location];
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "last_error", "poll_schedule"})
       saved[key] = bridge.(key);
     endfor
     bridge:configure("https://discord.example/api/webhooks/1/token", "bot-token-0123456789abcdef0123456789", "5", "Test World");
@@ -49,6 +51,7 @@ object DISCORD_SCENARIOS [
     bridge.speakers = {};
     this.channel = {};
     this.responses = [];
+    this.read_status = 200;
     this.posts = {};
     this.reads = {};
     this.heard = {};
@@ -62,7 +65,7 @@ object DISCORD_SCENARIOS [
     schedule_stop(bridge.poll_schedule);
     schedule_stop(bridge.flush_schedule);
     bridge.flush_schedule = 0;
-    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "poll_schedule"})
+    for key in ({"webhook_url", "bot_token", "channel_id", "cursor", "world_name", "enabled", "transport", "speakers", "outbox", "presence", "inbound", "channel_members", "guild_id", "guild_names", "guild_lookups", "backlog_seconds", "last_error", "poll_schedule"})
       bridge.(key) = saved[key];
     endfor
     $presence_listeners = saved["listeners"];
@@ -274,6 +277,28 @@ object DISCORD_SCENARIOS [
       this:_teardown(saved);
       recycle(speaker);
       recycle(room);
+    endtry
+    return true;
+  endmethod
+
+  method test_a_refused_token_shows_in_status owner: core::ARCH_WIZARD
+    "A refused bot token stops polling, status says why, and configuring again clears it.";
+    const saved = this:_setup();
+    try
+      $test_utils:assert_eq($discord_bridge:status()["last_error"], [], "configuring starts with no error");
+      $test_utils:assert_true($discord_bridge:status()["polling"], "and polling");
+      this.read_status = 401;
+      $discord_bridge:_poll();
+      const status = $discord_bridge:status();
+      $test_utils:assert_false(status["polling"], "a refused token stops polling");
+      $test_utils:assert_true(status["enabled"], "posting to the webhook goes on");
+      $test_utils:assert_true(index(status["last_error"]["message"], "HTTP 401") > 0, "status says why");
+      this.read_status = 200;
+      $discord_bridge:configure("https://discord.example/api/webhooks/1/token", "bot-token-0123456789abcdef0123456789", "5", "Test World");
+      $test_utils:assert_eq($discord_bridge:status()["last_error"], [], "configuring again clears the error");
+      $test_utils:assert_true($discord_bridge:status()["polling"], "and polls again");
+    finally
+      this:_teardown(saved);
     endtry
     return true;
   endmethod
