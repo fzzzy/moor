@@ -130,6 +130,9 @@ Cowbell entries.
 
 ### Changed
 
+- `@changes` reviews parent and location changes, so an update that gives an object a new parent or
+  location no longer needs it done by hand. This needs a server that reviews attributes; upgrade
+  the server before updating Cowbell past this change.
 - The value prototypes (`$str_proto`, `$list_proto`, `$int_proto`, `$sym_proto`) are a `types`
   package, and the Git client objects (`$git` and its repository, snapshot and entry classes) a
   `git` package. Each depends only on the base package; `core` depends on both. These objects no
