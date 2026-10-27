@@ -1106,7 +1106,12 @@ pub trait AstVisitor {
                 self.visit_expr(location);
                 self.visit_expr(property);
             }
-            Expr::Call { function: _, args } => {
+            Expr::Call { function, args } => {
+                // A call through an expression, such as a lambda in a variable, reads that
+                // expression; a builtin's name reads nothing.
+                if let CallTarget::Expr(callee) = function {
+                    self.visit_expr(callee);
+                }
                 for arg in args {
                     self.walk_arg(arg);
                 }

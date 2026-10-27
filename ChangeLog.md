@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- A lambda captures the variables it calls through. A lambda that called another held in an outer
+  variable, such as `{y} => g(y)` or `{y} => handlers[i](y)`, raised `E_VARNF` for that variable
+  when it ran. Verbs written that way work once recompiled; verbs that work today are unchanged.
 - Add `binary_pack()`, `binary_unpack()`, `binary_field()`, `binary_set_field()` and
   `binary_set_fields()` for unsigned integers packed into binary values at a fixed width of 1 to 32
   bits. MOO code can read and change compact grids, bitmaps and palette indices without working bit

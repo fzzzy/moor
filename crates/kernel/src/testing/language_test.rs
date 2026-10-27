@@ -1833,6 +1833,29 @@ mod tests {
         }
     }
 
+    /// A lambda captures the variables it calls through, not only those it reads otherwise.
+    #[test]
+    fn test_lambda_captures_what_it_calls() {
+        assert_eq!(
+            run_moo("let g = {x} => x * 2; let f = {y} => g(y); return f(3);"),
+            Ok(v_int(6))
+        );
+        assert_eq!(
+            run_moo("let fs = {{x} => x * 2}; let i = 1; let f = {y} => fs[i](y); return f(3);"),
+            Ok(v_int(6))
+        );
+        assert_eq!(
+            run_moo("let g = {x} => x * 2; fn f(y) return g(y); endfn return f(3);"),
+            Ok(v_int(6))
+        );
+        assert_eq!(
+            run_moo(
+                "fn fact(n) if (n <= 1) return 1; endif return n * fact(n - 1); endfn return fact(5);"
+            ),
+            Ok(v_int(120))
+        );
+    }
+
     #[test]
     fn test_lambda_simple_call() {
         assert_eq!(
