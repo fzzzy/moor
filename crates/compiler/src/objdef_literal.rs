@@ -236,9 +236,13 @@ impl<'a> LiteralParser<'a> {
     }
 
     fn starts_with_keyword(&self, keyword: &str) -> bool {
+        // Compare bytes: the text ahead may start with a character wider than one byte, and
+        // slicing it as a str would split that character.
         let remaining = self.remaining();
-        if remaining.len() < keyword.len()
-            || !remaining[..keyword.len()].eq_ignore_ascii_case(keyword)
+        if !remaining
+            .as_bytes()
+            .get(..keyword.len())
+            .is_some_and(|ahead| ahead.eq_ignore_ascii_case(keyword.as_bytes()))
         {
             return false;
         }
@@ -1754,5 +1758,18 @@ mod tests {
         let line_starts = parser.line_starts.get().unwrap().as_ptr();
         assert_eq!(parser.line_col(8), (2, 2));
         assert_eq!(parser.line_starts.get().unwrap().as_ptr(), line_starts);
+    }
+
+    #[test]
+    fn non_ascii_text_ahead_of_a_keyword_check() {
+        let mut context = ObjFileContext::new();
+        let value = parse_literal_value("{\"é─\", [\"│\" -> \"b\"], \"x\"}", &mut context).unwrap();
+        assert_eq!(value.as_list().map(|l| l.len()), Some(3));
+
+        let objdef = "object #1\n  name: \"é\"\n  parent: #-1\n  owner: #1\n  property p (owner: #1, flags: \"rc\") = {\"é─\", [\"│\" -> \"b\"]};\nendobject\n";
+        let mut context = ObjFileContext::new();
+        let objects =
+            compile_object_definitions(objdef, &CompileOptions::default(), &mut context).unwrap();
+        assert_eq!(objects.len(), 1);
     }
 }
