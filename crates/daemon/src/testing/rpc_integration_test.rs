@@ -1353,7 +1353,7 @@ mod tests {
 
         let eval = mk_eval_capture_msg(
             &auth_token,
-            "for b in ({1}) endfor\nreturn {b for b in ({1})};".to_string(),
+            "let b = 1;\nlet b = 2;".to_string(),
             Some(Duration::from_secs(30)),
         )
         .expect("Failed to build captured eval message");
