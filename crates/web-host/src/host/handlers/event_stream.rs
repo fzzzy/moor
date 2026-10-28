@@ -400,6 +400,7 @@ pub async fn session_command_handler(
             host.handler_object,
             auth_token,
             client.client_token.clone(),
+            host.use_boolean_returns().await,
         ) {
             Ok(request) => request,
             Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -532,8 +533,16 @@ mod tests {
                 },
             }))
         }
-        async fn host_call(&self, _: Uuid, _: HostRequest) -> Result<HostReply, RpcError> {
-            panic!("unexpected host request")
+        async fn host_call(&self, _: Uuid, request: HostRequest) -> Result<HostReply, RpcError> {
+            match request {
+                HostRequest::GetServerFeatures => Ok(HostReply::ServerFeatures(
+                    moor_runtime_api::api::ServerFeatures {
+                        use_boolean_returns: true,
+                        ..Default::default()
+                    },
+                )),
+                other => panic!("unexpected host request: {other:?}"),
+            }
         }
     }
     struct Notifications {
@@ -675,7 +684,7 @@ mod tests {
         assert_eq!(*verb, moor_var::Symbol::mk("do_action"));
         assert_eq!(
             args[0],
-            moor_var::json::json_to_var(&serde_json::from_slice(body).unwrap(), false)
+            moor_var::json::json_to_var(&serde_json::from_slice(body).unwrap(), true)
         );
         assert_eq!(client_token, &ClientToken("token".into()));
         assert!(

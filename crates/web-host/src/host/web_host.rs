@@ -363,6 +363,8 @@ pub struct WebHost {
     pub(crate) trusted_proxy_cidrs: Arc<Vec<IpNet>>,
     /// Cached server features response (features don't change at runtime).
     features_cache: Arc<tokio::sync::OnceCell<Vec<u8>>>,
+    /// The server's use_boolean_returns, for turning clients' JSON booleans into values.
+    boolean_returns: Arc<tokio::sync::OnceCell<bool>>,
     pub(crate) webrtc: Option<Arc<WebRtc>>,
     client_data_rate: u32,
 }
@@ -395,6 +397,7 @@ impl WebHost {
             host_services,
             trusted_proxy_cidrs,
             features_cache: Arc::new(tokio::sync::OnceCell::new()),
+            boolean_returns: Arc::new(tokio::sync::OnceCell::new()),
             webrtc,
             client_data_rate,
         }
@@ -585,6 +588,7 @@ impl WebHost {
         daemon_client: Arc<dyn RuntimeClient>,
         peer_addr: SocketAddr,
     ) -> Result<ClientSession, eyre::Error> {
+        let use_boolean_returns = self.use_boolean_returns().await;
         let (narrative_sub, broadcast_sub) = self
             .host_services
             .client_subscriptions(client_id, client_token.clone())
@@ -610,6 +614,7 @@ impl WebHost {
                 std::time::Instant::now(),
             ),
             realtime_reported: false,
+            use_boolean_returns,
         })
     }
 
@@ -668,6 +673,31 @@ impl WebHost {
         };
 
         Ok((client_id, rpc_client, client_token))
+    }
+
+    /// Whether the server returns booleans as BOOL values, so JSON booleans from clients
+    /// should become them too; otherwise they become 1 and 0. Asked once; until the daemon
+    /// answers, 1 and 0.
+    pub(crate) async fn use_boolean_returns(&self) -> bool {
+        let answer = self
+            .boolean_returns
+            .get_or_try_init(|| async {
+                let rpc_client = self.create_daemon_client();
+                match timeout(
+                    Duration::from_secs(5),
+                    rpc_client.host_call(self.host_id, HostRequest::GetServerFeatures),
+                )
+                .await
+                {
+                    Ok(Ok(HostReply::ServerFeatures(features))) => Ok(features.use_boolean_returns),
+                    other => {
+                        warn!(?other, "Could not read the server's use_boolean_returns");
+                        Err(())
+                    }
+                }
+            })
+            .await;
+        answer.copied().unwrap_or(false)
     }
 
     pub async fn fetch_server_features(&self) -> Result<Vec<u8>, StatusCode> {

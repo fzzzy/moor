@@ -122,6 +122,7 @@ impl Harness {
             webrtc_peer: None,
             client_data_limiter: TokenBucket::new(0, std::time::Instant::now()),
             realtime_reported: false,
+            use_boolean_returns: true,
         };
         let session = tokio::spawn(async move {
             session

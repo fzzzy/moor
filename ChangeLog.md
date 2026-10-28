@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- JSON booleans from web clients, in structured actions and client data, follow the server's
+  `use_boolean_returns`. They became `1` and `0` even on servers that return booleans as `true` and
+  `false`.
 - A list comprehension's variable is its own. A verb that used the same name earlier, such as in a
   `for` loop, failed to compile with "Duplicate variable in scope"; it now compiles, and the outer
   variable keeps its value. What a comprehension ranges over is read before its variable exists, so

@@ -73,7 +73,13 @@ impl WireFormat {
 }
 
 /// Decode a client data message into its kind and payload.
-pub(crate) fn decode(format: WireFormat, body: &[u8]) -> Result<(String, Var), &'static str> {
+/// JSON booleans become BOOL values with `use_boolean_returns`, and 1 or 0 without, as the
+/// server's setting of that name says.
+pub(crate) fn decode(
+    format: WireFormat,
+    body: &[u8],
+    use_boolean_returns: bool,
+) -> Result<(String, Var), &'static str> {
     if body.len() > MAX_CLIENT_DATA_BYTES {
         return Err("Client data is too large");
     }
@@ -86,7 +92,7 @@ pub(crate) fn decode(format: WireFormat, body: &[u8]) -> Result<(String, Var), &
                 .and_then(serde_json::Value::as_str)
                 .ok_or("Client data needs a string kind")?;
             let payload = value.get("payload").unwrap_or(&serde_json::Value::Null);
-            Ok((kind.to_string(), json_to_var(payload, false)))
+            Ok((kind.to_string(), json_to_var(payload, use_boolean_returns)))
         }
         WireFormat::FlatBuffers => {
             let message = moor_common_schema::ClientDataMessageRef::read_as_root(body)
@@ -173,7 +179,7 @@ pub(crate) fn event_json(event: &NarrativeEvent) -> Option<Vec<u8>> {
 mod tests {
     use super::*;
     use moor_schema::convert::var_to_flatbuffer;
-    use moor_var::{v_int, v_list, v_str};
+    use moor_var::{IndexMode, v_bool, v_int, v_list, v_str};
 
     fn flatbuffer(kind: &str, payload: &Var) -> Vec<u8> {
         let message = moor_common_schema::ClientDataMessage {
@@ -190,13 +196,13 @@ mod tests {
         let json_body = br#"{"kind":"move","payload":[3,4]}"#;
         assert_eq!(WireFormat::of_frame_body(json_body), WireFormat::Json);
         assert_eq!(
-            decode(WireFormat::Json, json_body),
+            decode(WireFormat::Json, json_body, true),
             Ok(("move".to_string(), payload.clone()))
         );
         let fb_body = flatbuffer("move", &payload);
         assert_eq!(WireFormat::of_frame_body(&fb_body), WireFormat::FlatBuffers);
         assert_eq!(
-            decode(WireFormat::FlatBuffers, &fb_body),
+            decode(WireFormat::FlatBuffers, &fb_body, true),
             Ok(("move".to_string(), payload))
         );
     }
@@ -209,16 +215,27 @@ mod tests {
             b"[]",
             b"{",
         ] {
-            assert!(decode(WireFormat::Json, body).is_err(), "{body:?}");
+            assert!(decode(WireFormat::Json, body, true).is_err(), "{body:?}");
         }
-        assert!(decode(WireFormat::FlatBuffers, b"\x01\x02").is_err());
+        assert!(decode(WireFormat::FlatBuffers, b"\x01\x02", true).is_err());
         let large = format!(
             r#"{{"kind":"k","payload":"{}"}}"#,
             "x".repeat(MAX_CLIENT_DATA_BYTES)
         );
-        assert!(decode(WireFormat::Json, large.as_bytes()).is_err());
+        assert!(decode(WireFormat::Json, large.as_bytes(), true).is_err());
         // A missing payload is null.
-        assert!(decode(WireFormat::Json, br#"{"kind":"ping"}"#).is_ok());
+        assert!(decode(WireFormat::Json, br#"{"kind":"ping"}"#, true).is_ok());
+    }
+
+    #[test]
+    fn json_booleans_follow_the_servers_setting() {
+        let body = br#"{"kind":"toggle","payload":{"on":true}}"#;
+        let on = |use_boolean_returns| {
+            let (_, payload) = decode(WireFormat::Json, body, use_boolean_returns).unwrap();
+            payload.get(&v_str("on"), IndexMode::OneBased).unwrap()
+        };
+        assert_eq!(on(true), v_bool(true));
+        assert_eq!(on(false), v_int(1));
     }
 
     #[test]

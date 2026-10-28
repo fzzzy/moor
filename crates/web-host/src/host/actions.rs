@@ -34,6 +34,7 @@ pub(crate) fn action_request(
     handler: Obj,
     auth_token: AuthToken,
     client_token: ClientToken,
+    use_boolean_returns: bool,
 ) -> Result<ClientRequest, &'static str> {
     if body.len() > MAX_ACTION_BYTES {
         return Err("Action is too large");
@@ -47,7 +48,7 @@ pub(crate) fn action_request(
         auth_token,
         object: ObjectRef::Id(handler),
         verb: Symbol::mk("do_action"),
-        args: vec![json_to_var(&value, false)],
+        args: vec![json_to_var(&value, use_boolean_returns)],
         mode: InvocationMode::Connected { client_token },
     })
 }
@@ -55,7 +56,7 @@ pub(crate) fn action_request(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use moor_var::{Variant, v_str};
+    use moor_var::{IndexMode, Variant, v_bool, v_int, v_str};
 
     #[test]
     fn retains_opaque_context_and_connected_credentials() {
@@ -65,6 +66,7 @@ mod tests {
             Obj::mk_id(7),
             AuthToken("actor".into()),
             ClientToken("connection".into()),
+            false,
         )
         .unwrap();
         let ClientRequest::InvokeVerb {
@@ -94,6 +96,26 @@ mod tests {
     }
 
     #[test]
+    fn json_booleans_follow_the_servers_setting() {
+        let flag = |use_boolean_returns| {
+            let request = action_request(
+                br#"{"flag":true}"#,
+                Obj::mk_id(7),
+                AuthToken("actor".into()),
+                ClientToken("connection".into()),
+                use_boolean_returns,
+            )
+            .unwrap();
+            let ClientRequest::InvokeVerb { args, .. } = request else {
+                panic!("expected verb call")
+            };
+            args[0].get(&v_str("flag"), IndexMode::OneBased).unwrap()
+        };
+        assert_eq!(flag(true), v_bool(true));
+        assert_eq!(flag(false), v_int(1));
+    }
+
+    #[test]
     fn rejects_malformed_and_oversized_actions() {
         for body in [
             b"[]".as_slice(),
@@ -106,7 +128,8 @@ mod tests {
                     body,
                     Obj::mk_id(0),
                     AuthToken("actor".into()),
-                    ClientToken("connection".into())
+                    ClientToken("connection".into()),
+                    false,
                 )
                 .is_err()
             );

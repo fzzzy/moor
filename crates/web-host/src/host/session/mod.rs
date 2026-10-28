@@ -99,6 +99,9 @@ pub struct ClientSession {
     pub(crate) client_data_limiter: TokenBucket,
     /// Whether the core was last told this connection has an open data channel.
     pub(crate) realtime_reported: bool,
+    /// Whether JSON booleans from the client become BOOL values, as the server's
+    /// use_boolean_returns says, rather than 1 and 0.
+    pub(crate) use_boolean_returns: bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -406,6 +409,7 @@ impl ClientSession {
                 self.handler_object,
                 self.auth_token.clone(),
                 self.client_token.clone(),
+                self.use_boolean_returns,
             ) {
                 Ok(request) => request,
                 Err(error) => {
@@ -585,7 +589,7 @@ impl ClientSession {
             trace!("Client data over the rate limit; dropped");
             return;
         }
-        let (kind, payload) = match client_data::decode(format, body) {
+        let (kind, payload) = match client_data::decode(format, body, self.use_boolean_returns) {
             Ok(message) => message,
             Err(error) => {
                 warn!(%error, "Invalid client data");
