@@ -295,7 +295,13 @@ fn mk_builtin_table() -> Vec<Builtin> {
     let start = builtins.len();
     builtins.extend([
         mk_builtin("suspend", Q(0), Q(1), vec![Typed(TYPE_INT)], true),
-        mk_builtin("suspend_if_needed", Q(0), Q(1), vec![AnyNum], true),
+        mk_builtin(
+            "suspend_if_needed",
+            Q(0),
+            Q(3),
+            vec![AnyNum, AnyNum, Any],
+            true,
+        ),
         mk_builtin("queued_tasks", Q(0), Q(0), vec![], true),
         mk_builtin("active_tasks", Q(0), Q(0), vec![], true),
         mk_builtin("queue_info", Q(0), Q(1), vec![Typed(TYPE_OBJ)], true),

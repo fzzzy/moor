@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `suspend_if_needed()` also commits when the task is close to its time limit, not only its tick
+  limit, so work that is slow per tick no longer runs out of time. A second argument sets how many
+  seconds to keep in reserve (default one second, or half the limit if shorter), and a third,
+  `"both"`, `"ticks"` or `"time"`, which limits to watch.
 - The `trace_events` build feature and the daemon's and `moor` server's `--trace-output` option are
   gone, with the Chrome trace output they wrote, the `TRACE_EVENTS` Docker build argument, and the
   traced bacon jobs, npm scripts and Compose override. The feature was no longer maintained, and

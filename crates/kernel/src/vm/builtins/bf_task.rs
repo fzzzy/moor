@@ -69,44 +69,93 @@ fn bf_suspend(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     Ok(VmInstr(ExecutionResult::TaskSuspend(suspend_condition)))
 }
 
-/// Usage: `bool suspend_if_needed([num threshold])`
-/// If remaining ticks are below threshold (default 4000), commits and immediately resumes
-/// in a new transaction, returning true. Otherwise returns false without suspending.
+/// Usage: `bool suspend_if_needed([num ticks [, num seconds [, mode]]])`
+/// If the task is close to its limits, commits and immediately resumes in a new transaction,
+/// which restarts both limits, and returns true. Otherwise returns false without suspending.
+/// It is close when fewer than `ticks` ticks remain (default 4000), or fewer than `seconds`
+/// seconds (default one second, or half the time limit when that is shorter). `mode`, a string
+/// or symbol, says which limits to watch: `both` (the default), `ticks` or `time`.
 fn bf_suspend_if_needed(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
-    if bf_args.args.len() > 1 {
+    if bf_args.args.len() > 3 {
         return Err(ErrValue(
-            E_ARGS.msg("suspend_if_needed() requires 0 or 1 arguments"),
+            E_ARGS.msg("suspend_if_needed() requires 0 to 3 arguments"),
         ));
     }
 
-    let threshold = if bf_args.args.is_empty() {
-        4000
-    } else {
-        match bf_args.args[0].variant() {
-            Variant::Float(threshold) => threshold as i64,
-            Variant::Int(threshold) => threshold,
-            _ => {
-                return Err(ErrValue(E_TYPE.msg(
-                    "suspend_if_needed() requires a number as the first argument",
-                )));
-            }
+    let ticks_threshold = match (!bf_args.args.is_empty()).then(|| bf_args.args[0].variant()) {
+        None => 4000,
+        Some(Variant::Float(threshold)) => threshold as i64,
+        Some(Variant::Int(threshold)) => threshold,
+        Some(_) => {
+            return Err(ErrValue(E_TYPE.msg(
+                "suspend_if_needed() requires a number as the first argument",
+            )));
         }
     };
-
-    if threshold < 0 {
+    if ticks_threshold < 0 {
         return Err(ErrValue(E_INVARG.msg(
             "suspend_if_needed() requires a non-negative number as the first argument",
         )));
     }
 
-    // Calculate remaining ticks
+    let seconds_threshold = match (bf_args.args.len() > 1).then(|| &bf_args.args[1]) {
+        None => None,
+        Some(seconds) => {
+            let Some(seconds) = seconds.as_float_numeric() else {
+                return Err(ErrValue(E_TYPE.msg(
+                    "suspend_if_needed() requires a number as the second argument",
+                )));
+            };
+            if !seconds.is_finite() || seconds < 0.0 {
+                return Err(ErrValue(E_INVARG.msg(
+                    "suspend_if_needed() requires a non-negative number as the second argument",
+                )));
+            }
+            Some(Duration::from_secs_f64(seconds))
+        }
+    };
+
+    let (watch_ticks, watch_time) = match (bf_args.args.len() > 2).then(|| &bf_args.args[2]) {
+        None => (true, true),
+        Some(mode) => {
+            let mode =
+                mode.as_symbol().map_err(|_| {
+                    ErrValue(E_TYPE.msg(
+                        "suspend_if_needed() requires a string or symbol as the third argument",
+                    ))
+                })?;
+            match mode.as_string().to_lowercase().as_str() {
+                "both" => (true, true),
+                "ticks" => (true, false),
+                "time" => (false, true),
+                _ => {
+                    return Err(ErrValue(E_INVARG.msg(
+                        "suspend_if_needed() mode must be \"both\", \"ticks\" or \"time\"",
+                    )));
+                }
+            }
+        }
+    };
+
     let ticks_left = bf_args
         .exec_state
         .max_ticks
         .saturating_sub(bf_args.exec_state.tick_count);
+    let near_ticks = watch_ticks && ticks_left < ticks_threshold as usize;
 
-    // If we're within the threshold, suspend with commit (immediate commit/resume)
-    if ticks_left < threshold as usize {
+    // Without a time limit there is no time to run out of.
+    let near_time = watch_time
+        && bf_args.exec_state.maximum_time.is_some_and(|max_time| {
+            let threshold =
+                seconds_threshold.unwrap_or_else(|| Duration::from_secs(1).min(max_time / 2));
+            // Past the limit, time_left() is None: nothing is left.
+            bf_args
+                .exec_state
+                .time_left()
+                .is_none_or(|left| left < threshold)
+        });
+
+    if near_ticks || near_time {
         let return_value = bf_args.v_bool(true);
         // Set return value for task retry scenarios
         bf_args.exec_state.set_return_value(return_value.clone());
@@ -114,7 +163,6 @@ fn bf_suspend_if_needed(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
             return_value,
         ))))
     } else {
-        // Otherwise, just return without suspending
         Ok(Ret(bf_args.v_bool(false)))
     }
 }

@@ -771,11 +771,16 @@ Linux fields are included when the corresponding operating-system counter is ava
 ### `suspend_if_needed`
 
 **Description:** Conditionally commits and suspends the current task if it is close to running out
-of ticks. Returns true if the task was suspended and immediately resumed in a new transaction,
-otherwise false. **Arguments:**
+of ticks or time. Returns true if the task was suspended and immediately resumed in a new
+transaction, which restarts both limits, otherwise false. **Arguments:**
 
-- `threshold`: Optional tick threshold (default 4000). If remaining ticks are below this value, the
-  task commits and suspends.
+- `ticks`: Optional tick threshold (default 4000). If fewer ticks than this remain, the task commits
+  and suspends.
+- `seconds`: Optional time threshold (default one second, or half the task's time limit if that is
+  shorter). If less time than this remains, the task commits and suspends. Work that is slow per
+  tick, such as large builtin calls, can run out of time long before it runs out of ticks.
+- `mode`: Optional string or symbol saying which limits to watch: `"both"` (the default), `"ticks"`
+  or `"time"`.
 
 ### `resume`
 

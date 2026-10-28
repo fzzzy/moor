@@ -1,0 +1,44 @@
+// Copyright (C) 2026 Ryan Daum <ryan.daum@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+// suspend_if_needed: commit and resume when close to the tick or time limit.
+
+@wizard
+// Argument validation.
+; suspend_if_needed(1, 2, "both", 4);
+E_ARGS
+; suspend_if_needed("x");
+E_TYPE
+; suspend_if_needed(0, "x");
+E_TYPE
+; suspend_if_needed(-1);
+E_INVARG
+; suspend_if_needed(0, -1);
+E_INVARG
+; suspend_if_needed(0, 0, "sometimes");
+E_INVARG
+; suspend_if_needed(0, 0, 1);
+E_TYPE
+
+// Far from both limits, it carries on. (Booleans are 1 and 0 here: use_boolean_returns is off.)
+; return suspend_if_needed();
+0
+
+// A tick threshold above the ticks left is close, unless only time is watched.
+; return suspend_if_needed(ticks_left() + 1000, 0.0, "ticks");
+1
+; return suspend_if_needed(ticks_left() + 1000, 0.0, 'time);
+0
+
+// A time threshold above the time limit is close, unless only ticks are watched.
+; return suspend_if_needed(0, 1000000.0, "time");
+1
+; return suspend_if_needed(0, 1000000.0, 'ticks);
+0
+; return suspend_if_needed(0, 1000000.0);
+1
+
+// Resuming restarts both limits.
+; suspended = suspend_if_needed(0, 1000000.0);
+> return {suspended, seconds_left() > 0, ticks_left() > 4000};
+{1, 1, 1}
