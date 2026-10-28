@@ -18,8 +18,9 @@ use rowan::{NodeOrToken, TextRange, TextSize, ast::AstNode};
 use moor_common::builtins::BUILTINS;
 use moor_common::model::{CompileContext, CompileError, ParseErrorDetails};
 use moor_var::{
-    AnonymousObjid, Obj, SYSTEM_OBJECT, Symbol, UuObjid, Var, VarType, program::DeclType, v_binary,
-    v_float, v_int, v_none, v_obj, v_str,
+    AnonymousObjid, Obj, SYSTEM_OBJECT, Symbol, UuObjid, Var, VarType,
+    program::{DeclType, names::Variable},
+    v_binary, v_float, v_int, v_none, v_obj, v_str,
 };
 
 use crate::{
@@ -1193,61 +1194,94 @@ impl<'a> Lowerer<'a> {
     fn lower_comprehension_expr(&mut self, node: &SyntaxNode) -> Result<Expr, CompileError> {
         let elements = significant_elements(node);
         let variable_ident = expect_token(&elements, 3)?;
+        // What the comprehension ranges over is read in the enclosing scope, before its
+        // variable exists, so `{x * 2 for x in (x)}` reads the outer `x`.
+        enum Source {
+            Range {
+                from: Expr,
+                to: Expr,
+                end_of_range_register: Variable,
+            },
+            List {
+                list: Expr,
+                position_register: Variable,
+                list_register: Variable,
+            },
+        }
+        let source = match elements.get(5) {
+            Some(NodeOrToken::Token(token)) if token.kind() == SyntaxKind::LBracket => {
+                let from = self.lower_expr_element(expect_exprish(&elements, 6)?)?;
+                let to = self.lower_expr_element(expect_exprish(&elements, 8)?)?;
+                Source::Range {
+                    from,
+                    to,
+                    end_of_range_register: self.names.declare_register()?,
+                }
+            }
+            Some(NodeOrToken::Token(token)) if token.kind() == SyntaxKind::LParen => {
+                let list = self.lower_expr_element(expect_exprish(&elements, 6)?)?;
+                Source::List {
+                    list,
+                    position_register: self.names.declare_register()?,
+                    list_register: self.names.declare_register()?,
+                }
+            }
+            _ => {
+                return Err(self.make_parse_error(
+                    node.text_range(),
+                    "frontend lowering comprehension",
+                    "unsupported comprehension clause",
+                ));
+            }
+        };
+        // The variable is the comprehension's own, so it may reuse a name from outside it. It
+        // is stored with the enclosing scope's variables; only its name is scoped.
+        self.enter_scope();
         let Some(variable) = self
             .names
-            .declare_name(variable_ident.text(), DeclType::For)
+            .declare_name_for_inner_scope(variable_ident.text(), DeclType::For)
         else {
             return Err(CompileError::DuplicateVariable(
                 self.compile_context(variable_ident.text_range()),
                 Symbol::mk(variable_ident.text()),
             ));
         };
-        let producer_expr = self.lower_expr_element(expect_exprish(&elements, 1)?)?;
+        let producer_expr = self.lower_expr_element(expect_exprish(&elements, 1)?);
         let filter_idx = elements.iter().position(
             |element| matches!(element, NodeOrToken::Token(token) if token.kind() == SyntaxKind::IfKw),
         );
         let filter = filter_idx
             .map(|idx| self.lower_expr_element(expect_exprish(&elements, idx + 1)?))
-            .transpose()?
-            .map(Box::new);
-
-        match elements.get(5) {
-            Some(NodeOrToken::Token(token)) if token.kind() == SyntaxKind::LBracket => {
-                self.enter_scope();
-                let from = self.lower_expr_element(expect_exprish(&elements, 6)?)?;
-                let to = self.lower_expr_element(expect_exprish(&elements, 8)?)?;
-                let end_of_range_register = self.names.declare_register()?;
-                let _ = self.exit_scope();
-                Ok(Expr::ComprehendRange {
-                    variable,
-                    end_of_range_register,
-                    producer_expr: Box::new(producer_expr),
-                    from: Box::new(from),
-                    to: Box::new(to),
-                    filter,
-                })
-            }
-            Some(NodeOrToken::Token(token)) if token.kind() == SyntaxKind::LParen => {
-                self.enter_scope();
-                let list = self.lower_expr_element(expect_exprish(&elements, 6)?)?;
-                let position_register = self.names.declare_register()?;
-                let list_register = self.names.declare_register()?;
-                let _ = self.exit_scope();
-                Ok(Expr::ComprehendList {
-                    variable,
-                    position_register,
-                    list_register,
-                    producer_expr: Box::new(producer_expr),
-                    list: Box::new(list),
-                    filter,
-                })
-            }
-            _ => Err(self.make_parse_error(
-                node.text_range(),
-                "frontend lowering comprehension",
-                "unsupported comprehension clause",
-            )),
-        }
+            .transpose();
+        let _ = self.exit_scope();
+        let producer_expr = Box::new(producer_expr?);
+        let filter = filter?.map(Box::new);
+        Ok(match source {
+            Source::Range {
+                from,
+                to,
+                end_of_range_register,
+            } => Expr::ComprehendRange {
+                variable,
+                end_of_range_register,
+                producer_expr,
+                from: Box::new(from),
+                to: Box::new(to),
+                filter,
+            },
+            Source::List {
+                list,
+                position_register,
+                list_register,
+            } => Expr::ComprehendList {
+                variable,
+                position_register,
+                list_register,
+                producer_expr,
+                list: Box::new(list),
+                filter,
+            },
+        })
     }
 
     fn single_child_expr(&mut self, node: &SyntaxNode) -> Result<Expr, CompileError> {

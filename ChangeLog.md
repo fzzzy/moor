@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- A list comprehension's variable is its own. A verb that used the same name earlier, such as in a
+  `for` loop, failed to compile with "Duplicate variable in scope"; it now compiles, and the outer
+  variable keeps its value. What a comprehension ranges over is read before its variable exists, so
+  `{x * 2 for x in (x)}` reads the outer `x`.
 - A refused login can tell the host why. When the core's login verb returns a string instead of a
   player, the daemon passes it on as the login result's new `reason`, so a host can show it, such as
   a name that is already taken. Hosts and daemons without the field ignore it.

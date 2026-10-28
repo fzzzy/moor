@@ -1857,6 +1857,55 @@ mod tests {
     }
 
     #[test]
+    fn test_comprehension_variable_is_its_own() {
+        // A name an earlier loop used.
+        assert_eq!(
+            run_moo("for x in ({1}) endfor return {x for x in ({1, 2})};"),
+            Ok(v_list(&[v_int(1), v_int(2)]))
+        );
+        // A name an earlier assignment used, which keeps its value afterwards.
+        assert_eq!(
+            run_moo("x = 7; l = {x * 10 for x in [1..2]}; return {l, x};"),
+            Ok(v_list(&[v_list(&[v_int(10), v_int(20)]), v_int(7)]))
+        );
+        // What it ranges over is read outside it.
+        assert_eq!(
+            run_moo("x = {1, 2}; return {x * 10 for x in (x) if x > 1};"),
+            Ok(v_list(&[v_int(20)]))
+        );
+        // A comprehension inside a lambda.
+        assert_eq!(
+            run_moo("let f = {b} => {r * 2 for r in (b)}; return f({1, 2});"),
+            Ok(v_list(&[v_int(2), v_int(4)]))
+        );
+        // Inside a block with its own variables, reusing one of their names.
+        assert_eq!(
+            run_moo("begin let x = 5; let y = {x + 1 for x in [1..2]}; return {x, y}; end"),
+            Ok(v_list(&[v_int(5), v_list(&[v_int(2), v_int(3)])]))
+        );
+        // Inside a loop body, in a lambda that captures from outside it.
+        assert_eq!(
+            run_moo(
+                "let total = {}; let k = 10; for i in [1..2] let f = {b} => {r * k for r in (b)}; total = {@total, f({i})}; endfor return total;"
+            ),
+            Ok(v_list(&[v_list(&[v_int(10)]), v_list(&[v_int(20)])]))
+        );
+        // Nested comprehensions, the inner one reusing the outer one's name.
+        assert_eq!(
+            run_moo("return {{x * 10 for x in (x)} for x in ({{1}, {2, 3}})};"),
+            Ok(v_list(&[
+                v_list(&[v_int(10)]),
+                v_list(&[v_int(20), v_int(30)])
+            ]))
+        );
+        // Two comprehensions may share a name.
+        assert_eq!(
+            run_moo("return {{x for x in ({1})}, {x for x in ({2})}};"),
+            Ok(v_list(&[v_list(&[v_int(1)]), v_list(&[v_int(2)])]))
+        );
+    }
+
+    #[test]
     fn test_lambda_simple_call() {
         assert_eq!(
             run_moo(

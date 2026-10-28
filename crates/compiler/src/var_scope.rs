@@ -143,11 +143,15 @@ impl VarScope {
         self.scopes.push(Vec::new());
     }
 
-    /// Pop the current scope.
+    /// Pop the current scope, returning how many variables it stores: those it can see, and
+    /// any stored here that only an inner scope could see, such as a comprehension's variable.
     pub fn exit_scope(&mut self) -> usize {
-        let scope = self.scopes.pop().unwrap();
-        self.scope_id_stack.pop().unwrap();
-        scope.len()
+        self.scopes.pop().unwrap();
+        let scope_id = self.scope_id_stack.pop().unwrap();
+        self.variables
+            .iter()
+            .filter(|decl| decl.scope_id == scope_id && !matches!(decl.identifier.nr, Register(_)))
+            .count()
     }
 
     pub fn declare_register(&mut self) -> Result<Variable, CompileError> {
@@ -179,6 +183,37 @@ impl VarScope {
             decl_type,
         )?;
         Some(unbound_name)
+    }
+
+    /// Declare a name that only the current scope can see, stored in the scope around it, so
+    /// the program needs no scope of its own for it at runtime. A comprehension's variable is
+    /// one: visible in the comprehension, and free to reuse a name from outside it.
+    pub fn declare_name_for_inner_scope(
+        &mut self,
+        name: &str,
+        decl_type: DeclType,
+    ) -> Option<Variable> {
+        let name = Symbol::mk(name);
+        let inner = self.scopes.len() - 1;
+        let storage = inner.checked_sub(1)?;
+        if self.scopes[inner].iter().any(|v| v.nr == Named(name)) {
+            return None;
+        }
+        let scope_id = self.scope_id_stack[storage];
+        let vr = Variable {
+            id: self.variables.len() as u16,
+            nr: Named(name),
+            scope_id,
+        };
+        self.variables.push(Decl {
+            identifier: vr,
+            depth: storage,
+            constant: false,
+            decl_type,
+            scope_id,
+        });
+        self.scopes[inner].push(vr);
+        Some(vr)
     }
 
     /// Declare a (mutable) name in the current lexical scope.
@@ -334,7 +369,9 @@ impl VarScope {
             }
         }
 
-        let global_width = self.scopes[0].len();
+        // Everything stored in the outermost scope, including names only an inner scope can
+        // see, such as a comprehension's variable.
+        let global_width = self.variables.iter().filter(|decl| decl.depth == 0).count();
         Names {
             global_width,
             decls,
