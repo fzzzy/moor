@@ -8,6 +8,19 @@ Cowbell entries.
 
 ### Added
 
+- `$wiz_features:grant_wizard(target, ?tools)` makes a player a wizard as `@wizard` does and returns
+  what they had before; `revoke_wizard(target, ?before)` takes wizard status back and, given that
+  record, restores the player.
+- Rooms choose who hears what they announce: `announce` tells `audience(event, excluded)`, everyone
+  here but the excluded by default, and `overhearers(event)`, those elsewhere told the event as it
+  is, no one by default. A world with distances overrides these two instead of `announce`.
+- A player moved by a package's `player_connected` hook no longer sees the room twice. A room with
+  `brief_revisits` shows a player who has been there before only the room panel; its `visitors`
+  records who has.
+- `$player:commands_changed()` tells clients, with an ephemeral `state` `commands` data event, and
+  packages, through `player_commands_changed(who)`, that a player's commands may have changed.
+  Cowbell calls it on moves and when a player's features change; Meadow fetches its command
+  suggestions again when it arrives.
 - `$login:identity_of(who, provider)` gives the external id a player's account is linked to through
   a provider, such as a Minecraft account's UUID, and `$player:connected_through(host_type)` tells
   whether a player has a connection through a host of that type, such as `"telnet"`.
