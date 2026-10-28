@@ -83,6 +83,3 @@ zerocopy.workspace = true
 
 # Testing & Development
 tempfile.workspace = true
-
-[features]
-relbox = []
