@@ -376,7 +376,8 @@ it("reads the current saved draft on reconnect when there is no unsaved text", a
     generation++;
     saved = { choice: "edited", program: "return 42;", validated: true };
     view.rerender(<ChangeReview visible target={target} authToken="token" onClose={vi.fn()} connectionRevision={1} />);
-    await screen.findByText("Saved: Use my edited code");
+    // The row shows the saved edit once the review is read again.
+    await screen.findByText("Use edited");
     await waitFor(() =>
         expect(screen.getByRole("button", { name: "Edit resolution" })).toHaveProperty("disabled", false)
     );
