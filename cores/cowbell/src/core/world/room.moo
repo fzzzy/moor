@@ -240,13 +240,13 @@ object ROOM [
         if (connecting)
           `this:_note_visit(who) ! ANY => 0';
         else
-          `this:show_arrival(who) ! ANY => 0';
+          this:_run_hook(this, 'show_arrival, {who});
         endif
         `who:commands_changed() ! ANY => 0';
         for thing in (this.contents)
           suspend_if_needed();
           if (thing != who)
-            `thing:on_location_enter(who) ! ANY => 0';
+            respond_to(thing, 'on_location_enter) && this:_run_hook(thing, 'on_location_enter, {who});
           endif
         endfor
       endif
@@ -257,9 +257,29 @@ object ROOM [
         endif
         `viewer:emit_room_snapshot_state(viewer, this) ! ANY => 0';
       endfor
-      `this:on_contents_enter(who) ! ANY => 0';
+      this:_run_hook(this, 'on_contents_enter, {who});
     endfork
     `pass(@args) ! E_TYPE, E_VERBNF => 0';
+  endmethod
+
+  method _run_hook owner: ARCH_WIZARD
+    "Call one of the hooks an arrival or departure runs, target:(name)(@arguments). A hook that fails is logged, with where it failed, and does not stop the others.";
+    caller == this || raise(E_PERM);
+    const {target, name, arguments} = args;
+    try
+      return target:(name)(@arguments);
+    except error (ANY)
+      "Name the innermost frame that is a verb, not a builtin such as raise.";
+      let where = "";
+      for frame in (length(error) >= 4 && typeof(error[4]) == TYPE_LIST ? error[4] | {})
+        if (typeof(frame) == TYPE_LIST && length(frame) >= 6 && valid(frame[4]))
+          where = tostr(" at ", frame[4], ":", frame[2], " line ", frame[6]);
+          break;
+        endif
+      endfor
+      server_log(tostr("Room ", this, ": ", target, ":", name, " failed", where, ": ", toliteral(error[1..2])));
+      return false;
+    endtry
   endmethod
 
   method show_arrival owner: HACKER
@@ -303,7 +323,7 @@ object ROOM [
       for item in (this.contents)
         suspend_if_needed();
         if (respond_to(item, 'on_location_exit))
-          `item:on_location_exit(who) ! ANY => 0';
+          this:_run_hook(item, 'on_location_exit, {who});
         endif
       endfor
       for viewer in (this.contents)
@@ -313,7 +333,7 @@ object ROOM [
         endif
         `viewer:emit_room_snapshot_state(viewer, this) ! ANY => 0';
       endfor
-      `this:on_contents_exit(who) ! ANY => 0';
+      this:_run_hook(this, 'on_contents_exit, {who});
     endfork
     `pass(@args) ! E_TYPE, E_VERBNF => 0';
   endmethod

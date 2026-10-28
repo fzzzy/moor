@@ -477,6 +477,36 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
+  method test_failing_room_hooks_do_not_stop_others owner: core::ARCH_WIZARD
+    "A room hook that raises is logged and does not stop the hooks after it: a thing's arrival and departure both run their hooks though each fails.";
+    const room = create($room, #90100, 2);
+    const other = create($room, #90100, 2);
+    const thing = create($thing, #90100, 2);
+    add_property(room, "ran", {}, {#90100, "rw"});
+    add_verb(room, {#90100, "rxd", "announce"}, {"this", "none", "this"});
+    set_verb_code(room, "announce", {"return;"});
+    for hook in ({"on_contents_enter", "on_contents_exit"})
+      add_verb(room, {#90100, "rxd", hook}, {"this", "none", "this"});
+      set_verb_code(room, hook, {"this.ran = {@this.ran, verb};", "raise(E_INVARG, \"failing hook\");"});
+    endfor
+    try
+      move(thing, room);
+      move(thing, other);
+      for attempt in [1..20]
+        if (length(room.ran) >= 2)
+          break;
+        endif
+        suspend(0.05);
+      endfor
+      $test_utils:assert_eq(room.ran, {"on_contents_enter", "on_contents_exit"}, "both hooks run though each raises");
+      $test_utils:assert_eq(thing.location, other, "the move itself stands");
+    finally
+      recycle(thing);
+      recycle(room);
+      recycle(other);
+    endtry
+  endmethod
+
   method test_inspection_transfer_reachability owner: core::ARCH_WIZARD
     "Old inspection actions must neither take remote items nor bypass container access.";
     const room = create($room, #90100, 2);

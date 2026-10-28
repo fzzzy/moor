@@ -317,6 +317,9 @@ Cowbell entries.
 
 ### Fixed
 
+- A room's `show_arrival`, `on_contents_enter` and `on_contents_exit`, and a thing's
+  `on_location_enter` and `on_location_exit`, that raise an error are logged with where they failed.
+  They failed silently before. A failing hook still does not stop the others.
 - Recycling a thing makes it leave its room first, so the room's exit handling runs: its panel drops
   the thing, and its contents and `on_contents_exit` hear of the departure.
 - Recycling an LLM wearable removes it from its wearer's `wearing` list; its recycle verb skipped the
