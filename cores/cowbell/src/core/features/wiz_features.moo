@@ -848,45 +848,7 @@ object WIZ_FEATURES [
       player:inform_current($event:mk_error(player, target:name() + " is already a wizard."));
       return;
     endif
-    was_programmer = target.authoring_features == $prog_features;
-    was_builder = target.authoring_features == $builder_features;
-    "Ensure programmer/builder flags and tools";
-    target.authoring_features = $prog_features;
-    target.programmer = true;
-    target.is_builder = true;
-    owner_name = target:name();
-    if (!was_programmer)
-      if (was_builder)
-        visor = create($data_visor, target);
-        visor.owner = target;
-        visor.name = owner_name + "'s " + $data_visor.name;
-        visor.aliases = $data_visor.aliases;
-        visor:moveto(target);
-      else
-        compass = create($architects_compass, target);
-        compass.owner = target;
-        compass.name = owner_name + "'s " + $architects_compass.name;
-        compass.aliases = $architects_compass.aliases;
-        compass:moveto(target);
-        visor = create($data_visor, target);
-        visor.owner = target;
-        visor.name = owner_name + "'s " + $data_visor.name;
-        visor.aliases = $data_visor.aliases;
-        visor:moveto(target);
-      endif
-    endif
-    "Ensure admin and wizard feature objects are wired";
-    admin_features = target.admin_features;
-    typeof(admin_features) == TYPE_LIST || raise(E_TYPE, "player.admin_features must be a list");
-    admin_feat_obj = $admin_features;
-    if (valid(admin_feat_obj) && !is_member(admin_feat_obj, admin_features))
-      admin_features = {@admin_features, admin_feat_obj};
-    endif
-    if (!is_member(this, admin_features))
-      admin_features = {@admin_features, this};
-    endif
-    target.admin_features = admin_features;
-    target.wizard = true;
+    this:grant_wizard(target);
     if (valid(target.location))
       event = $event:mk_info(target, $sub:thec('actor), " ", $sub:agree('actor, 'name, "have", "has"), " been granted wizard privileges."):with_this(target.location);
       target.location:announce(event);
@@ -894,6 +856,84 @@ object WIZ_FEATURES [
     target:tell($event:mk_info(target, "You have been granted wizard privileges. Your command set now includes programmer, admin, and wizard features."));
     player:inform_current($event:mk_info(player, "You granted ", target:name(), " wizard privileges."));
   endverb
+
+  method grant_wizard owner: ARCH_WIZARD
+    "Make target a wizard: programmer and builder, with the programmer's authoring features and the admin and wizard feature objects. With tools true, the default, a player who was not a programmer also gets the programmer's tools. Returns what target had before, {programmer, is_builder, authoring_features, admin_features}, which revoke_wizard can restore. Requires wizard permissions.";
+    caller_perms().wizard || raise(E_PERM);
+    const {target, ?tools = true} = args;
+    valid(target) && is_player(target) || raise(E_INVARG, tostr(target) + " is not a player.");
+    target.wizard && raise(E_INVARG, target:name() + " is already a wizard.");
+    const admin_features = target.admin_features;
+    typeof(admin_features) == TYPE_LIST || raise(E_TYPE, "player.admin_features must be a list");
+    const before = {target.programmer, target.is_builder, target.authoring_features, admin_features};
+    const was_programmer = target.authoring_features == $prog_features;
+    const was_builder = target.authoring_features == $builder_features;
+    target.authoring_features = $prog_features;
+    target.programmer = true;
+    target.is_builder = true;
+    if (tools && !was_programmer)
+      const owner_name = target:name();
+      for tool in (was_builder ? {$data_visor} | {$architects_compass, $data_visor})
+        const made = create(tool, target);
+        made.owner = target;
+        made.name = owner_name + "'s " + tool.name;
+        made.aliases = tool.aliases;
+        made:moveto(target);
+      endfor
+    endif
+    let wired = admin_features;
+    for features in ({$admin_features, this})
+      valid(features) && !is_member(features, wired) && (wired = {@wired, features});
+    endfor
+    target.admin_features = wired;
+    target.wizard = true;
+    return before;
+  endmethod
+
+  method revoke_wizard owner: ARCH_WIZARD
+    "Take wizard status from target, with the admin and wizard feature objects grant_wizard added. Given before, what grant_wizard returned, target also gets back the flags and authoring features they had; without it, they stay a programmer and builder. Tools are theirs to keep. Requires wizard permissions.";
+    caller_perms().wizard || raise(E_PERM);
+    const {target, ?before = false} = args;
+    valid(target) && is_player(target) || raise(E_INVARG, tostr(target) + " is not a player.");
+    const kept = before ? before[4] | {};
+    let admin_features = {};
+    for features in (target.admin_features)
+      features in {$admin_features, this} && !is_member(features, kept) || (admin_features = {@admin_features, features});
+    endfor
+    target.wizard = false;
+    target.admin_features = admin_features;
+    if (before)
+      const {programmer, builder, authoring, _} = before;
+      target.authoring_features = authoring;
+      target.programmer = programmer;
+      target.is_builder = builder;
+    endif
+  endmethod
+
+  method test_wizards_are_granted_and_revoked owner: ARCH_WIZARD
+    "grant_wizard gives the wizard's flags and features and returns what the player had; revoke_wizard takes them back, restoring that when given it.";
+    const who = $test_player;
+    const saved = {who.wizard, who.programmer, who.is_builder, who.authoring_features, who.admin_features};
+    try
+      who.wizard && raise(E_ASSERT, "The test player should start as a non-wizard.");
+      const before = this:grant_wizard(who, false);
+      before == saved[2..5] || raise(E_ASSERT, tostr("grant_wizard should return what the player had: ", toliteral(before)));
+      who.wizard && who.programmer && who.is_builder && who.authoring_features == $prog_features || raise(E_ASSERT, "A wizard should be a programmer and builder.");
+      this in who.admin_features && $admin_features in who.admin_features || raise(E_ASSERT, "A wizard should have the admin and wizard features.");
+      `this:grant_wizard(who) ! E_INVARG => 0' == 0 || raise(E_ASSERT, "Granting a wizard again should be refused.");
+      this:revoke_wizard(who, before);
+      {who.wizard, who.programmer, who.is_builder, who.authoring_features, who.admin_features} == saved || raise(E_ASSERT, tostr("Revoking with before should restore the player: ", toliteral({who.programmer, who.is_builder, who.authoring_features, who.admin_features})));
+      this:grant_wizard(who, false);
+      this:revoke_wizard(who);
+      !who.wizard && who.programmer && !(this in who.admin_features) || raise(E_ASSERT, "Revoking alone should leave a programmer without wizard features.");
+    finally
+      who.wizard = saved[1];
+      who.programmer = saved[2];
+      who.is_builder = saved[3];
+      who.authoring_features = saved[4];
+      who.admin_features = saved[5];
+    endtry
+  endmethod
 
   method audit_names owner: ARCH_WIZARD
     "Return name and alias findings for one object. Requires wizard caller permissions.";
