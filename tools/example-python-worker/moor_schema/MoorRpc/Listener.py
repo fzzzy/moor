@@ -42,7 +42,14 @@ class Listener(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
-def ListenerStart(builder): builder.StartObject(2)
+    # Listener
+    def Kind(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+def ListenerStart(builder): builder.StartObject(3)
 def Start(builder):
     return ListenerStart(builder)
 def ListenerAddHandlerObject(builder, handlerObject): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(handlerObject), 0)
@@ -51,6 +58,9 @@ def AddHandlerObject(builder, handlerObject):
 def ListenerAddSocketAddr(builder, socketAddr): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(socketAddr), 0)
 def AddSocketAddr(builder, socketAddr):
     return ListenerAddSocketAddr(builder, socketAddr)
+def ListenerAddKind(builder, kind): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(kind), 0)
+def AddKind(builder, kind):
+    return ListenerAddKind(builder, kind)
 def ListenerEnd(builder): return builder.EndObject()
 def End(builder):
     return ListenerEnd(builder)

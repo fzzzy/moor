@@ -57,7 +57,14 @@ class DataEvent(object):
             return obj
         return None
 
-def DataEventStart(builder): builder.StartObject(3)
+    # DataEvent
+    def Ephemeral(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        if o != 0:
+            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+        return False
+
+def DataEventStart(builder): builder.StartObject(4)
 def Start(builder):
     return DataEventStart(builder)
 def DataEventAddDomain(builder, domain): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(domain), 0)
@@ -69,6 +76,9 @@ def AddKind(builder, kind):
 def DataEventAddPayload(builder, payload): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(payload), 0)
 def AddPayload(builder, payload):
     return DataEventAddPayload(builder, payload)
+def DataEventAddEphemeral(builder, ephemeral): builder.PrependBoolSlot(3, ephemeral, 0)
+def AddEphemeral(builder, ephemeral):
+    return DataEventAddEphemeral(builder, ephemeral)
 def DataEventEnd(builder): return builder.EndObject()
 def End(builder):
     return DataEventEnd(builder)

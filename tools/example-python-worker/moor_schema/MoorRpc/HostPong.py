@@ -43,11 +43,24 @@ class HostPong(object):
         return 0
 
     # HostPong
-    def HostType(self):
+    def ListenerKinds(self, j):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
+            a = self._tab.Vector(o)
+            return self._tab.String(a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+        return ""
+
+    # HostPong
+    def ListenerKindsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.VectorLen(o)
         return 0
+
+    # HostPong
+    def ListenerKindsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        return o == 0
 
     # HostPong
     def Listeners(self, j):
@@ -83,9 +96,12 @@ def AddHostId(builder, hostId):
 def HostPongAddTimestamp(builder, timestamp): builder.PrependUint64Slot(1, timestamp, 0)
 def AddTimestamp(builder, timestamp):
     return HostPongAddTimestamp(builder, timestamp)
-def HostPongAddHostType(builder, hostType): builder.PrependUint8Slot(2, hostType, 0)
-def AddHostType(builder, hostType):
-    return HostPongAddHostType(builder, hostType)
+def HostPongAddListenerKinds(builder, listenerKinds): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(listenerKinds), 0)
+def AddListenerKinds(builder, listenerKinds):
+    return HostPongAddListenerKinds(builder, listenerKinds)
+def HostPongStartListenerKindsVector(builder, numElems): return builder.StartVector(4, numElems, 4)
+def StartListenerKindsVector(builder, numElems):
+    return HostPongStartListenerKindsVector(builder, numElems)
 def HostPongAddListeners(builder, listeners): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(listeners), 0)
 def AddListeners(builder, listeners):
     return HostPongAddListeners(builder, listeners)

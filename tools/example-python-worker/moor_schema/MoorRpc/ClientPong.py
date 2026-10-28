@@ -54,20 +54,13 @@ class ClientPong(object):
         return None
 
     # ClientPong
-    def HostType(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
-        if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
-
-    # ClientPong
     def SocketAddr(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
 
-def ClientPongStart(builder): builder.StartObject(5)
+def ClientPongStart(builder): builder.StartObject(4)
 def Start(builder):
     return ClientPongStart(builder)
 def ClientPongAddClientToken(builder, clientToken): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(clientToken), 0)
@@ -79,10 +72,7 @@ def AddClientSysTime(builder, clientSysTime):
 def ClientPongAddPlayer(builder, player): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(player), 0)
 def AddPlayer(builder, player):
     return ClientPongAddPlayer(builder, player)
-def ClientPongAddHostType(builder, hostType): builder.PrependUint8Slot(3, hostType, 0)
-def AddHostType(builder, hostType):
-    return ClientPongAddHostType(builder, hostType)
-def ClientPongAddSocketAddr(builder, socketAddr): builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(socketAddr), 0)
+def ClientPongAddSocketAddr(builder, socketAddr): builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(socketAddr), 0)
 def AddSocketAddr(builder, socketAddr):
     return ClientPongAddSocketAddr(builder, socketAddr)
 def ClientPongEnd(builder): return builder.EndObject()

@@ -36,11 +36,11 @@ class HostBroadcastListen(object):
         return None
 
     # HostBroadcastListen
-    def HostType(self):
+    def Kind(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
+            return self._tab.String(o + self._tab.Pos)
+        return None
 
     # HostBroadcastListen
     def Port(self):
@@ -80,9 +80,9 @@ def Start(builder):
 def HostBroadcastListenAddHandlerObject(builder, handlerObject): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(handlerObject), 0)
 def AddHandlerObject(builder, handlerObject):
     return HostBroadcastListenAddHandlerObject(builder, handlerObject)
-def HostBroadcastListenAddHostType(builder, hostType): builder.PrependUint8Slot(1, hostType, 0)
-def AddHostType(builder, hostType):
-    return HostBroadcastListenAddHostType(builder, hostType)
+def HostBroadcastListenAddKind(builder, kind): builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(kind), 0)
+def AddKind(builder, kind):
+    return HostBroadcastListenAddKind(builder, kind)
 def HostBroadcastListenAddPort(builder, port): builder.PrependUint16Slot(2, port, 0)
 def AddPort(builder, port):
     return HostBroadcastListenAddPort(builder, port)

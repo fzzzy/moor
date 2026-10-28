@@ -31,3 +31,4 @@ class DaemonToClientReplyUnion(object):
     InvocationResponse = 25
     BatchWorldStateReply = 26
     ClientEvents = 27
+    EventStreamState = 28

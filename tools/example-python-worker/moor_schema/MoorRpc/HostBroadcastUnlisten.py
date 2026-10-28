@@ -25,11 +25,11 @@ class HostBroadcastUnlisten(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # HostBroadcastUnlisten
-    def HostType(self):
+    def Kind(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
-        return 0
+            return self._tab.String(o + self._tab.Pos)
+        return None
 
     # HostBroadcastUnlisten
     def Port(self):
@@ -41,9 +41,9 @@ class HostBroadcastUnlisten(object):
 def HostBroadcastUnlistenStart(builder): builder.StartObject(2)
 def Start(builder):
     return HostBroadcastUnlistenStart(builder)
-def HostBroadcastUnlistenAddHostType(builder, hostType): builder.PrependUint8Slot(0, hostType, 0)
-def AddHostType(builder, hostType):
-    return HostBroadcastUnlistenAddHostType(builder, hostType)
+def HostBroadcastUnlistenAddKind(builder, kind): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(kind), 0)
+def AddKind(builder, kind):
+    return HostBroadcastUnlistenAddKind(builder, kind)
 def HostBroadcastUnlistenAddPort(builder, port): builder.PrependUint16Slot(1, port, 0)
 def AddPort(builder, port):
     return HostBroadcastUnlistenAddPort(builder, port)

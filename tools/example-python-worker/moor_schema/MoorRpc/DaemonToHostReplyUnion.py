@@ -8,3 +8,4 @@ class DaemonToHostReplyUnion(object):
     DaemonToHostReject = 2
     DaemonToHostPerfCounters = 3
     ServerFeatures = 4
+    ServerStatus = 5

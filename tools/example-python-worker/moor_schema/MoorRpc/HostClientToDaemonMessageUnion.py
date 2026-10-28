@@ -34,3 +34,6 @@ class HostClientToDaemonMessageUnion(object):
     InvokeWelcomeMessage = 28
     BatchWorldState = 29
     ReplayClientEvents = 30
+    VerifiedOAuthLogin = 31
+    EventStreamRequest = 32
+    ClientData = 33

@@ -67,7 +67,14 @@ class LoginResult(object):
             return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
         return 0
 
-def LoginResultStart(builder): builder.StartObject(5)
+    # LoginResult
+    def Reason(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        if o != 0:
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+def LoginResultStart(builder): builder.StartObject(6)
 def Start(builder):
     return LoginResultStart(builder)
 def LoginResultAddSuccess(builder, success): builder.PrependBoolSlot(0, success, 0)
@@ -85,6 +92,9 @@ def AddPlayer(builder, player):
 def LoginResultAddPlayerFlags(builder, playerFlags): builder.PrependUint16Slot(4, playerFlags, 0)
 def AddPlayerFlags(builder, playerFlags):
     return LoginResultAddPlayerFlags(builder, playerFlags)
+def LoginResultAddReason(builder, reason): builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(reason), 0)
+def AddReason(builder, reason):
+    return LoginResultAddReason(builder, reason)
 def LoginResultEnd(builder): return builder.EndObject()
 def End(builder):
     return LoginResultEnd(builder)

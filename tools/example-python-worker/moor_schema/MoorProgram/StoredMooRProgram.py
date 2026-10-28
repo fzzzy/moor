@@ -444,7 +444,25 @@ class StoredMooRProgram(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(42))
         return o == 0
 
-def StoredMooRProgramStart(builder): builder.StartObject(20)
+    # StoredMooRProgram
+    def SourceDeclarations(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(44))
+        if o != 0:
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from MoorProgram.SourceDeclarations import SourceDeclarations
+            obj = SourceDeclarations()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # StoredMooRProgram
+    def LambdaEntryScopeCount(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(46))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
+        return 0
+
+def StoredMooRProgramStart(builder): builder.StartObject(22)
 def Start(builder):
     return StoredMooRProgramStart(builder)
 def StoredMooRProgramAddVersion(builder, version): builder.PrependUint16Slot(0, version, 0)
@@ -552,6 +570,12 @@ def AddForkMaxScopeDepths(builder, forkMaxScopeDepths):
 def StoredMooRProgramStartForkMaxScopeDepthsVector(builder, numElems): return builder.StartVector(8, numElems, 8)
 def StartForkMaxScopeDepthsVector(builder, numElems):
     return StoredMooRProgramStartForkMaxScopeDepthsVector(builder, numElems)
+def StoredMooRProgramAddSourceDeclarations(builder, sourceDeclarations): builder.PrependUOffsetTRelativeSlot(20, flatbuffers.number_types.UOffsetTFlags.py_type(sourceDeclarations), 0)
+def AddSourceDeclarations(builder, sourceDeclarations):
+    return StoredMooRProgramAddSourceDeclarations(builder, sourceDeclarations)
+def StoredMooRProgramAddLambdaEntryScopeCount(builder, lambdaEntryScopeCount): builder.PrependUint16Slot(21, lambdaEntryScopeCount, 0)
+def AddLambdaEntryScopeCount(builder, lambdaEntryScopeCount):
+    return StoredMooRProgramAddLambdaEntryScopeCount(builder, lambdaEntryScopeCount)
 def StoredMooRProgramEnd(builder): return builder.EndObject()
 def End(builder):
     return StoredMooRProgramEnd(builder)

@@ -13,3 +13,4 @@ class RpcMessageErrorCode(object):
     TaskError = 7
     EntityRetrievalError = 8
     InternalError = 9
+    EventStreamExpired = 10

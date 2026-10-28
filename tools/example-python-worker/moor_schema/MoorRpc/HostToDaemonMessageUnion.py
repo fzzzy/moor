@@ -9,3 +9,4 @@ class HostToDaemonMessageUnion(object):
     RequestPerformanceCounters = 3
     HostPong = 4
     GetServerFeatures = 5
+    GetServerStatus = 6

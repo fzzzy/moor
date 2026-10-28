@@ -14,3 +14,4 @@ class ClientEventUnion(object):
     PlayerSwitchedEvent = 8
     SetConnectionOptionEvent = 9
     CredentialsUpdatedEvent = 10
+    EventsAvailableEvent = 11
