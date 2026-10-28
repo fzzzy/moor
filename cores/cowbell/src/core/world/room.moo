@@ -13,11 +13,13 @@ object ROOM [
   property acoustic_debug_enabled (owner: HACKER, flags: "rc") = 0;
   property acoustic_debug_log (owner: HACKER, flags: "rc") = {};
   property acoustic_neighbors (owner: HACKER, flags: "rc") = [];
+  property brief_revisits (owner: HACKER, flags: "rc") = false;
   property engagements (owner: HACKER, flags: "rc") = [];
   property exit_providers (owner: ARCH_WIZARD, flags: "r") = [];
   property exit_revision (owner: ARCH_WIZARD, flags: "r") = 0;
   property listing_form (owner: HACKER, flags: "rc") = 'indefinite;
   property passage_areas (owner: ARCH_WIZARD, flags: "r") = {};
+  property visitors (owner: ARCH_WIZARD, flags: "") = {};
 
   override description (owner: HACKER, flags: "rc") = "Parent prototype for all rooms in the system, defining room behavior and event broadcasting.";
 
@@ -228,12 +230,18 @@ object ROOM [
     "Show room description to arriving players and refresh room snapshot state.";
     {who} = args;
     valid(who) || return;
+    "A player moved while connecting sees the room when the connection shows it.";
+    const connecting = is_player(who) && `object_metadata(who, 'cowbell_connecting) ! ANY => false' == true;
     "Defer expensive room presentation and fanout until after the move commits.";
     fork (0)
       "The room may be gone by the time this runs.";
       valid(this) || return;
       if (is_player(who))
-        `this:show_arrival(who) ! ANY => 0';
+        if (connecting)
+          `this:_note_visit(who) ! ANY => 0';
+        else
+          `this:show_arrival(who) ! ANY => 0';
+        endif
         for thing in (this.contents)
           suspend_if_needed();
           if (thing != who)
@@ -254,9 +262,23 @@ object ROOM [
   endmethod
 
   method show_arrival owner: HACKER
-    "Show the room to a player who has just arrived. Children may show less, or more.";
+    "Show the room to a player who has just arrived: the full look, or, with brief_revisits, only the room panel for a player who has seen it before. Children may show less, or more.";
     const {who} = args;
+    if (this:_note_visit(who))
+      return who:emit_room_snapshot_state(who, this);
+    endif
     return who:emit_room_look(this);
+  endmethod
+
+  method _note_visit owner: ARCH_WIZARD
+    "With brief_revisits, record that who has seen this room, and return whether they had before. Without it, nothing is kept and the answer is false.";
+    caller == this || caller_perms().wizard || raise(E_PERM);
+    const {who} = args;
+    `this.brief_revisits ! E_PROPNF => false' || return false;
+    const visitors = `this.visitors ! E_PROPNF => {}';
+    who in visitors && return true;
+    this.visitors = {@visitors, who};
+    return false;
   endmethod
 
   method on_contents_enter owner: HACKER

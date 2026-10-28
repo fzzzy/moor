@@ -232,8 +232,13 @@ object SYSOBJ [
     if (is_new_player)
       `$login:setup_new_player(user) ! E_VERBNF';
     endif
-    "Packages may move the player before the room is shown.";
-    $package:connected(user, is_new_player);
+    "Packages may move the player before the room is shown; rooms entered meanwhile leave showing it to confunc.";
+    set_object_metadata(user, 'cowbell_connecting, true);
+    try
+      $package:connected(user, is_new_player);
+    finally
+      clear_object_metadata(user, 'cowbell_connecting);
+    endtry
     "Drop to user perms for confunc.";
     set_task_perms(user);
     `user.location:confunc(user, is_new_player, should_announce) ! E_INVIND, E_VERBNF';

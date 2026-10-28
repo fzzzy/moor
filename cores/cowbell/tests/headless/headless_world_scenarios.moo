@@ -440,6 +440,43 @@ object HEADLESS_WORLD_SCENARIOS [
     endtry
   endmethod
 
+  method test_arrivals_skip_connecting_and_brief_revisits owner: core::ARCH_WIZARD
+    "A player moved while connecting gets no arrival look; with brief_revisits a room shows its full look only on a first visit.";
+    const room = create($room, #90100, 2);
+    const who = player;
+    const prior_location = who.location;
+    add_property(room, "shown", {}, {#90100, "rw"});
+    add_verb(room, {#90100, "rxd", "show_arrival"}, {"this", "none", "this"});
+    set_verb_code(room, "show_arrival", {"this.shown = {@this.shown, args[1]};"});
+    add_verb(room, {#90100, "rxd", "announce"}, {"this", "none", "this"});
+    set_verb_code(room, "announce", {"return;"});
+    try
+      set_object_metadata(who, 'cowbell_connecting, true);
+      move(who, room);
+      clear_object_metadata(who, 'cowbell_connecting);
+      suspend(0.2);
+      $test_utils:assert_eq(room.shown, {}, "a move while connecting shows no arrival look");
+      move(who, prior_location);
+      move(who, room);
+      for attempt in [1..20]
+        if (room.shown)
+          break;
+        endif
+        suspend(0.05);
+      endfor
+      $test_utils:assert_eq(room.shown, {who}, "an ordinary arrival is shown, once, by itself");
+      $test_utils:assert_eq(room:_note_visit(who), false, "without brief_revisits no visit is kept");
+      room.brief_revisits = true;
+      $test_utils:assert_eq(room:_note_visit(who), false, "a first visit is new");
+      $test_utils:assert_eq(room:_note_visit(who), true, "a second visit is a revisit");
+      $test_utils:assert_eq(room.visitors, {who}, "visitors are kept once");
+    finally
+      `clear_object_metadata(who, 'cowbell_connecting) ! ANY => 0';
+      move(who, prior_location);
+      recycle(room);
+    endtry
+  endmethod
+
   method test_inspection_transfer_reachability owner: core::ARCH_WIZARD
     "Old inspection actions must neither take remote items nor bypass container access.";
     const room = create($room, #90100, 2);

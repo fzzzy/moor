@@ -78,7 +78,7 @@ object PACKAGE_CLASS [
   endmethod
 
   method player_connected owner: core::ARCH_WIZARD
-    "A player's first connection has opened, before they see the room they are in, so a package may move them first. who is the player; is_new_player is true when the player was just created. Runs with wizard permissions.";
+    "A player's first connection has opened, before they see the room they are in, so a package may move them first; the room they end up in is shown once, by the connection, not by its arrival look. who is the player; is_new_player is true when the player was just created. Runs with wizard permissions.";
     return;
   endmethod
 
