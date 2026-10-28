@@ -401,6 +401,45 @@ object HEADLESS_WORLD_SCENARIOS [
     return target:(method)(@parameters);
   endmethod
 
+  method test_rooms_choose_their_audience owner: core::ARCH_WIZARD
+    "announce tells the room's audience, everyone here but the excluded by default, and its overhearers elsewhere, unless excluded.";
+    const room = create($room, #90100, 2);
+    const far = create($room, #90100, 2);
+    let listeners = {};
+    for name in ({"near", "deaf", "away"})
+      const who = create($thing, #90100, 2);
+      who.name = name;
+      add_property(who, "heard", {}, {#90100, "rw"});
+      add_verb(who, {#90100, "rxd", "tell"}, {"this", "none", "this"});
+      set_verb_code(who, "tell", {"this.heard = {@this.heard, args[1]};"});
+      listeners = {@listeners, who};
+    endfor
+    const {near, deaf, away} = listeners;
+    try
+      move(near, room);
+      move(deaf, room);
+      move(away, far);
+      room:announce("hello");
+      $test_utils:assert_eq({near.heard, deaf.heard, away.heard}, {{"hello"}, {"hello"}, {}}, "by default everyone here hears, and no one elsewhere");
+      room:announce("psst", {deaf});
+      $test_utils:assert_eq(deaf.heard, {"hello"}, "excluded objects are not told");
+      add_verb(room, {#90100, "rxd", "audience"}, {"this", "none", "this"});
+      set_verb_code(room, "audience", {"return setremove(pass(@args), " + toliteral(deaf) + ");"});
+      add_verb(room, {#90100, "rxd", "overhearers"}, {"this", "none", "this"});
+      set_verb_code(room, "overhearers", {"return {" + toliteral(away) + "};"});
+      room:announce("again");
+      $test_utils:assert_eq({near.heard[$], deaf.heard[$], away.heard}, {"again", "hello", {"again"}}, "audience narrows who here hears, and overhearers adds others");
+      room:announce("quiet", {away});
+      $test_utils:assert_eq(away.heard, {"again"}, "excluded overhearers are not told");
+    finally
+      for who in (listeners)
+        recycle(who);
+      endfor
+      recycle(room);
+      recycle(far);
+    endtry
+  endmethod
+
   method test_inspection_transfer_reachability owner: core::ARCH_WIZARD
     "Old inspection actions must neither take remote items nor bypass container access.";
     const room = create($room, #90100, 2);

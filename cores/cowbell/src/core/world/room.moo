@@ -348,11 +348,31 @@ object ROOM [
     return this:maybe_handle_passage(pc);
   endmethod
 
+  method audience owner: HACKER
+    "Who here is told event: everything here except the excluded objects. A room whose occupants do not all perceive everything, such as one with distances in it, narrows this.";
+    const {event, excluded} = args;
+    excluded || return this:contents();
+    let told = {};
+    for who in (this:contents())
+      who in excluded || (told = {@told, who});
+    endfor
+    return told;
+  endmethod
+
+  method overhearers owner: HACKER
+    "Who outside this room perceives event as if they were here, and is told it as it is: no one, by default. Rooms that share a space, such as parts of one landscape, list those near enough. Sound carried to acoustic neighbors is separate, and changed on the way.";
+    return {};
+  endmethod
+
   method announce owner: HACKER
-    "Tell everyone here, except any objects in the optional excluded list, then propagate sound.";
+    "Tell everyone here, except any objects in the optional excluded list, as audience narrows it, and those elsewhere overhearers adds; then propagate sound.";
     const {event, ?excluded = {}} = args;
     "Local announcement";
-    for who in (this:contents())
+    for who in (this:audience(event, excluded))
+      suspend_if_needed();
+      `who:tell(event) ! E_VERBNF';
+    endfor
+    for who in (this:overhearers(event))
       suspend_if_needed();
       who in excluded || `who:tell(event) ! E_VERBNF';
     endfor
@@ -1033,7 +1053,7 @@ object ROOM [
       event = event:with_metadata('source_room, source_room);
     endif
     "Tell everyone in this room about the distant event";
-    for who in (this:contents())
+    for who in (this:audience(event, {}))
       suspend_if_needed();
       `who:tell(event) ! E_VERBNF';
     endfor
