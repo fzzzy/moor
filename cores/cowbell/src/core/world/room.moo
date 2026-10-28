@@ -242,6 +242,7 @@ object ROOM [
         else
           `this:show_arrival(who) ! ANY => 0';
         endif
+        `who:commands_changed() ! ANY => 0';
         for thing in (this.contents)
           suspend_if_needed();
           if (thing != who)

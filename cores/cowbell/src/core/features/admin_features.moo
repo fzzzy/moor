@@ -116,6 +116,7 @@ object ADMIN_FEATURES [
       endif
     endfor
     target.admin_features = filtered;
+    target:commands_changed();
     this:_append_log(["kind" -> "revoke", "actor" -> player, "subject" -> target, "delegate" -> old_delegate, "allow" -> old_allow]);
     player:inform_current($event:mk_info(player, "Revoked sudo delegation for " + target:name() + "."));
     if (target != player)
@@ -235,6 +236,7 @@ object ADMIN_FEATURES [
     if (!is_member(this, admin_features))
       admin_features = {@admin_features, this};
       target.admin_features = admin_features;
+      target:commands_changed();
     endif
     this:_append_log(["kind" -> "grant", "actor" -> player, "subject" -> target, "delegate" -> delegate, "allow" -> allowed_map[target]]);
     player:inform_current($event:mk_info(player, "Granted sudo delegation for " + target:name() + " as " + delegate:name() + "."));

@@ -77,6 +77,7 @@ object WIZ_FEATURES [
     target.authoring_features = $prog_features;
     target.programmer = true;
     target.is_builder = true;
+    target:commands_changed();
     "Handle tools";
     owner_name = target:name();
     if (is_upgrade)
@@ -169,6 +170,7 @@ object WIZ_FEATURES [
     "Set features and flags";
     dobj.authoring_features = $builder_features;
     dobj.is_builder = true;
+    dobj:commands_changed();
     "Handle tools and flags";
     owner_name = dobj:name();
     if (is_downgrade)
@@ -887,6 +889,7 @@ object WIZ_FEATURES [
     endfor
     target.admin_features = wired;
     target.wizard = true;
+    target:commands_changed();
     return before;
   endmethod
 
@@ -908,6 +911,7 @@ object WIZ_FEATURES [
       target.programmer = programmer;
       target.is_builder = builder;
     endif
+    target:commands_changed();
   endmethod
 
   method test_wizards_are_granted_and_revoked owner: ARCH_WIZARD

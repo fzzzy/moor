@@ -5,6 +5,7 @@
 true
 @nonprogrammer
 @event data:state room_snapshot
+@event data:state commands
 @second
 % assist pick up probe
 @text Checking a few possibilities...

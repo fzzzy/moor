@@ -1526,6 +1526,12 @@ object PLAYER [
     return result;
   endmethod
 
+  method commands_changed owner: ARCH_WIZARD
+    "Tell this player's clients, and the installed packages, that the commands this player can use may have changed, as after moving or gaining features: clients get an ephemeral state commands data event, and packages their player_commands_changed hook. Anyone may call it: it changes nothing, and hooks only bring clients up to date.";
+    `emit_data(this, 'state, 'commands, [], ['ephemeral -> true]) ! ANY => 0';
+    $package:commands_changed(this);
+  endmethod
+
   method verb_suggestions owner: ARCH_WIZARD
     "Return list of verb info for UI suggestion pills.";
     "Each entry: [verb -> name, dobj -> spec, prep -> spec, iobj -> spec, objects -> {objs}, hint -> prompt hint]";

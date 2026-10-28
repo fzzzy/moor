@@ -82,6 +82,11 @@ object PACKAGE_CLASS [
     return;
   endmethod
 
+  method player_commands_changed owner: core::ARCH_WIZARD
+    "The commands who can use may have changed, as after moving or gaining features. Anyone can cause this call, so it should only bring who's clients up to date. Runs with wizard permissions.";
+    return;
+  endmethod
+
   method player_features owner: core::ARCH_WIZARD
     "The feature objects this package adds to the player's commands and help.";
     return {};
@@ -100,6 +105,19 @@ object PACKAGE_CLASS [
   method agent_resources owner: core::ARCH_WIZARD
     "Resources this package offers external agents.";
     return {};
+  endmethod
+
+  method commands_changed owner: core::ARCH_WIZARD
+    "Tell every installed package, in dependency order, that the commands who can use may have changed. A package whose hook fails is logged and the rest still run.";
+    callers() && !caller_perms().wizard && raise(E_PERM);
+    const {who} = args;
+    for package in (this:installed())
+      try
+        package:player_commands_changed(who);
+      except error (ANY)
+        server_log(tostr("Package ", package:package_name(), " (", package, ") failed on ", who, "'s commands: ", toliteral(error[1..2])));
+      endtry
+    endfor
   endmethod
 
   method connected owner: core::ARCH_WIZARD
@@ -185,6 +203,36 @@ object PACKAGE_CLASS [
       this:connected($test_player, true);
       $test_utils:assert_eq(package.heard, {{$test_player, true}}, "the hook gets the player and whether they are new");
     finally
+      recycle(package);
+    endtry
+    return true;
+  endmethod
+
+  method test_commands_changed_tells_each_package owner: core::ARCH_WIZARD
+    "Each installed package hears that a player's commands may have changed, when the player says so and when they move into a room.";
+    const package = create(this);
+    const room = create($room, $arch_wizard);
+    const was = $test_player.location;
+    try
+      set_object_metadata(package, 'objdef_package, "zz_test_commands");
+      add_property(package, "heard", {}, {$arch_wizard, "r"});
+      add_verb(package, {$arch_wizard, "rxd", "player_commands_changed"}, {"this", "none", "this"});
+      set_verb_code(package, "player_commands_changed", {"this.heard = {@this.heard, args[1]};"});
+      $test_player:commands_changed();
+      $test_utils:assert_eq(package.heard, {$test_player}, "the hook gets the player");
+      add_verb(room, {$arch_wizard, "rxd", "announce"}, {"this", "none", "this"});
+      set_verb_code(room, "announce", {"return;"});
+      move($test_player, room);
+      for attempt in [1..20]
+        if (length(package.heard) > 1)
+          break;
+        endif
+        suspend(0.05);
+      endfor
+      $test_utils:assert_eq(package.heard, {$test_player, $test_player}, "moving into a room changes the commands");
+    finally
+      move($test_player, was);
+      recycle(room);
       recycle(package);
     endtry
     return true;
