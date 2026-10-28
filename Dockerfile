@@ -46,7 +46,6 @@ RUN mkdir -p .git/objects
 # Build configuration: Use ARG to allow build-time customization
 ARG BUILD_PROFILE=debug
 ARG CARGO_BUILD_FLAGS=""
-ARG TRACE_EVENTS=false
 ARG CARGO_BUILD_JOBS=6
 
 # Build either debug (fast) or release (optimized) based on BUILD_PROFILE
@@ -57,21 +56,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     if [ "$BUILD_PROFILE" = "release" ] || [ "$BUILD_PROFILE" = "release-fast" ]; then \
         PROFILE_FLAG="--profile $BUILD_PROFILE"; \
         if [ "$BUILD_PROFILE" = "release" ]; then PROFILE_FLAG="--release"; fi; \
-        if [ "$TRACE_EVENTS" = "true" ]; then \
-            cargo build $PROFILE_FLAG --features trace_events -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
-            cp -r target/$BUILD_PROFILE /moor-build/target-final; \
-        else \
-            cargo build $PROFILE_FLAG -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
-            cp -r target/$BUILD_PROFILE /moor-build/target-final; \
-        fi \
+        cargo build $PROFILE_FLAG -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
+        cp -r target/$BUILD_PROFILE /moor-build/target-final; \
     else \
-        if [ "$TRACE_EVENTS" = "true" ]; then \
-            cargo build --features trace_events -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
-            cp -r target/debug /moor-build/target-final; \
-        else \
-            cargo build -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
-            cp -r target/debug /moor-build/target-final; \
-        fi \
+        cargo build -j $CARGO_BUILD_JOBS $CARGO_BUILD_FLAGS && \
+        cp -r target/debug /moor-build/target-final; \
     fi
 
 # Runtime image - slim debian with just the essentials

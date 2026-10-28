@@ -23,8 +23,6 @@ use super::{
     start::HANDLE_UNCAUGHT_ERROR_SYM,
     transaction::{CommitFailure, Renewal, TerminalRollback, YieldCommit},
 };
-#[cfg(feature = "trace_events")]
-use crate::trace_abort_limit_reached;
 use crate::{
     config::FeaturesConfig,
     task_context::{
@@ -34,7 +32,6 @@ use crate::{
         SchedulerOp, TaskStart, sched_counters,
         task_scheduler_client::{TaskLimitDisposition, TaskLimitInfo, TaskSchedulerClient},
     },
-    trace_task_abort, trace_task_complete, trace_task_suspend, trace_task_suspend_with_delay,
     vm::{Fork, TaskInputRequest, TaskSuspend, VMHostResponse, builtins::BuiltinRegistry},
 };
 use moor_common::{
@@ -171,8 +168,6 @@ impl Task {
         self.refresh_retry_state();
         self.vm_host.stop();
 
-        trace_task_suspend!(self.task_id, "Waiting for input");
-
         // Transfer the committed boundary with the task when the loop consumes this request.
         self.suspension_outcome(SuspensionKind::Input(input_request), boundary)
     }
@@ -246,11 +241,6 @@ impl Task {
                 );
                 self.vm_host.stop();
 
-                trace_task_abort!(
-                    self.task_id,
-                    &format!("Exception: {}", original_exception.error.err_type())
-                );
-
                 return self
                     .terminal_outcome(TerminalCompletion::Exception(Box::new(original_exception)));
             }
@@ -276,8 +266,6 @@ impl Task {
 
         self.vm_host.stop();
 
-        trace_task_complete!(self.task_id, &format!("{result:?}"));
-
         self.terminal_outcome(TerminalCompletion::Success {
             value: result,
             mutations_made,
@@ -296,8 +284,6 @@ impl Task {
         }
 
         self.vm_host.stop();
-
-        trace_task_abort!(self.task_id, "Task aborted");
 
         self.terminal_outcome(TerminalCompletion::Cancelled)
     }
@@ -419,11 +405,6 @@ impl Task {
         );
         self.vm_host.stop();
 
-        trace_task_abort!(
-            self.task_id,
-            &format!("Exception: {}", exception.error.err_type())
-        );
-
         self.terminal_outcome(TerminalCompletion::Exception(exception))
     }
 
@@ -470,35 +451,6 @@ impl Task {
             .vm_host
             .line_number()
             .expect("Task has empty activation stack during abort - critical bug");
-
-        // Emit trace event for abort limit
-        #[cfg(feature = "trace_events")]
-        {
-            let (limit_type, limit_value) = match &reason {
-                AbortLimitReason::Ticks(ticks) => ("Ticks".to_string(), format!("{}", ticks)),
-                AbortLimitReason::Time(duration) => (
-                    "Time".to_string(),
-                    format!("{:.3}s", duration.as_secs_f64()),
-                ),
-                AbortLimitReason::OutputEvents(events) => {
-                    ("OutputEvents".to_string(), events.to_string())
-                }
-                AbortLimitReason::OutputBytes(bytes) => {
-                    ("OutputBytes".to_string(), bytes.to_string())
-                }
-            };
-
-            trace_abort_limit_reached!(
-                self.task_id,
-                &limit_type,
-                limit_value,
-                self.vm_host.max_ticks,
-                self.vm_host.tick_count(),
-                verb_name,
-                this.clone(),
-                line_number
-            );
-        }
 
         // Collect traceback information for the handler
         let (stack_list, backtrace_list) = self.vm_host.get_traceback();
@@ -649,8 +601,6 @@ impl Task {
 
         self.refresh_retry_state();
         self.vm_host.stop();
-
-        trace_task_suspend_with_delay!(self.task_id, &delay);
 
         // Let the scheduler know about our suspension, which can be of the form:
         //      * Indefinite, wake-able only with Resume

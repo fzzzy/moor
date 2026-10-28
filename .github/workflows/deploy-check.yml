@@ -38,7 +38,6 @@ jobs:
         run: |
           compose_files=(
             deploy/clustered/docker-compose.tcp.yml
-            deploy/clustered/docker-compose.tracing.yml
             deploy/clustered/telnet-only/docker-compose.yml
             deploy/clustered/web-basic/docker-compose.yml
             deploy/clustered/web-ssl/docker-compose.certbot.yml

@@ -19,7 +19,6 @@ mod metric_entries;
 mod time;
 mod timing_policy;
 mod token_bucket;
-mod trace_events;
 mod xdg;
 
 pub use bitenum::{BitEnum, BitFlag};
@@ -33,7 +32,6 @@ pub use timing_policy::{
     scale_rare_sample_sum_nanos, set_perf_timing_policy,
 };
 pub use token_bucket::TokenBucket;
-pub use trace_events::*;
 pub use xdg::*;
 
 /// Check single verb pattern for matches following LambdaMOO semantics.

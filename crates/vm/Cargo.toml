@@ -14,7 +14,6 @@ description = "Virtual machine types and execution logic for the moor system."
 
 [features]
 default = []
-trace_events = []
 
 [dependencies]
 # Internal Dependencies

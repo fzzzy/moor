@@ -125,8 +125,6 @@ fn main() -> Result<(), Report> {
         num_io_threads: args.num_io_threads,
         workers_enabled: true,
         startup_config,
-        #[cfg(feature = "trace_events")]
-        trace_output_path: args.resolved_trace_output_path(),
     };
     let runtime = DaemonRuntime {
         zmq_context: r0z::Context::new(),

@@ -37,13 +37,7 @@ use crate::{
         task_program_cache::TaskProgramCache,
         task_scheduler_client::TaskSchedulerClient,
     },
-    trace_task_start,
     vm::{builtins::BuiltinRegistry, vm_host::VmHost},
-};
-#[cfg(feature = "trace_events")]
-use crate::{
-    trace_task_create_command, trace_task_create_eval, trace_task_create_exception_handler,
-    trace_task_create_fork, trace_task_create_verb,
 };
 use ahash::AHasher;
 use moor_common::{
@@ -52,8 +46,6 @@ use moor_common::{
     util::{BitEnum, Instant},
 };
 use moor_compiler::to_literal;
-#[cfg(feature = "trace_events")]
-use moor_var::v_str;
 use moor_var::{Error, ErrorCode, Obj};
 use moor_vm::{ExecState, Frame};
 use std::{collections::HashSet, sync::Arc, time::Duration};
@@ -142,50 +134,6 @@ impl Task {
         );
 
         let retry_state = vm_host.snapshot_state();
-
-        // Emit task creation trace event based on task start type
-        #[cfg(feature = "trace_events")]
-        {
-            match &task_start {
-                TaskStart::StartCommandVerb {
-                    command,
-                    handler_object,
-                    ..
-                } => {
-                    trace_task_create_command!(task_id, &player, command, handler_object);
-                }
-                TaskStart::StartDoCommand {
-                    command,
-                    handler_object,
-                    ..
-                } => {
-                    trace_task_create_command!(task_id, &player, command, handler_object);
-                }
-                TaskStart::StartVerb { verb, vloc, .. } => {
-                    trace_task_create_verb!(task_id, &player, &verb.as_string(), vloc);
-                }
-                TaskStart::StartScheduled { verb, .. } => {
-                    trace_task_create_verb!(
-                        task_id,
-                        &player,
-                        &verb.as_string(),
-                        &v_str("scheduled")
-                    );
-                }
-                TaskStart::StartFork { .. } => {
-                    trace_task_create_fork!(task_id, &player);
-                }
-                TaskStart::StartEval { .. } => {
-                    trace_task_create_eval!(task_id, &player);
-                }
-                TaskStart::StartExceptionHandler { .. } => {
-                    trace_task_create_exception_handler!(task_id, &player);
-                }
-                TaskStart::StartBatchWorldState { .. } => {
-                    // No specific trace event for batch world state tasks yet
-                }
-            }
-        }
 
         let creation_time = Instant::now();
         Box::new(Self {
@@ -284,8 +232,6 @@ impl Task {
         config: Arc<Config>,
     ) {
         // Transaction context is already set up by the caller
-
-        trace_task_start!(task.task_id);
 
         while task.vm_host.is_running() {
             let outcome = if task.control.is_cancelled() {

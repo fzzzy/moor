@@ -11,15 +11,12 @@
 // You should have received a copy of the GNU Affero General Public License along
 // with this program. If not, see <https://www.gnu.org/licenses/>.
 
-pub use crate::{
-    tasks::{
-        AbortTaskOutcome, ServerOptions,
-        registry::{SuspendedTask, WakeCondition},
-        scheduler_client::SchedulerClient,
-        task::Task,
-        task_control::TaskControl,
-    },
-    tracing_events::{TraceEventType, emit_trace_event, init_tracing, shutdown_tracing},
+pub use crate::tasks::{
+    AbortTaskOutcome, ServerOptions,
+    registry::{SuspendedTask, WakeCondition},
+    scheduler_client::SchedulerClient,
+    task::Task,
+    task_control::TaskControl,
 };
 pub use moor_common::tasks::TaskId;
 
@@ -46,7 +43,6 @@ pub(crate) fn get_server_symmetric_key() -> Option<&'static [u8; 32]> {
 pub mod config;
 pub mod task_context;
 pub mod tasks;
-pub mod tracing_events;
 pub mod vm;
 
 pub mod testing;

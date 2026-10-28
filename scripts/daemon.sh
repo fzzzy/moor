@@ -13,7 +13,7 @@
 # with this program. If not, see <https://www.gnu.org/licenses/>.
 
 # moor daemon runner
-# Usage: scripts/daemon.sh [--debug] [--traced] [--release] [--clean-slate] [--help]
+# Usage: scripts/daemon.sh [--debug] [--release] [--clean-slate] [--help]
 #
 # Environment variables:
 #   MOOR_DATA_DIR              - Data directory (default: ./moor-data)
@@ -31,7 +31,6 @@ Usage: $0 [OPTIONS]
 Options:
   --debug       Build in debug mode (default: release)
   --release     Build in release mode (default)
-  --traced      Build with trace_events feature (debug mode)
   --clean-slate Wipe the data directory before starting (forces re-import)
   --help        Show this help message
 
@@ -46,7 +45,6 @@ EOF
 }
 
 RELEASE="--release"
-TRACED=false
 CLEAN_SLATE=false
 
 while [[ $# -gt 0 ]]; do
@@ -60,10 +58,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --release)
             RELEASE="--release"
-            shift
-            ;;
-        --traced)
-            TRACED=true
             shift
             ;;
         --clean-slate)
@@ -92,10 +86,6 @@ CARGO_ARGS=()
 if [[ -n "$RELEASE" ]]; then
     CARGO_ARGS+=("$RELEASE")
 fi
-if [[ "$TRACED" == true ]]; then
-    CARGO_ARGS+=(--features trace_events)
-fi
-
 COMMON_ARGS=(
     "$MOOR_DATA_DIR"
     --db "$MOOR_DB"
@@ -106,9 +96,5 @@ COMMON_ARGS=(
     --checkpoint-interval-seconds "$MOOR_CHECKPOINT_INTERVAL"
     --generate-keypair
 )
-
-if [[ "$TRACED" == true ]]; then
-    COMMON_ARGS+=(--trace-output moor-trace.json)
-fi
 
 cargo run "${CARGO_ARGS[@]}" -p moor-daemon -- "${COMMON_ARGS[@]}"

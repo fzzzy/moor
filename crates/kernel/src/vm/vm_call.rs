@@ -18,9 +18,6 @@ use crate::{
 };
 use moor_vm::{Activation, ExecState, FinallyReason, Frame};
 
-#[cfg(feature = "trace_events")]
-use crate::{trace_builtin_begin, trace_builtin_end};
-
 use moor_common::tasks::Session;
 use moor_compiler::{BUILTINS, BuiltinId};
 use moor_var::{List, SYSTEM_OBJECT, VarType::TYPE_NONE, v_int, v_obj};
@@ -63,18 +60,6 @@ impl ExecStateBuiltinExt for ExecState {
         let bf = exec_args.builtin_registry.builtin_for(&bf_id);
         let bf_desc = BUILTINS.description_for(bf_id).expect("Builtin not found");
         let bf_name = bf_desc.name;
-
-        // Emit builtin begin trace event
-        #[cfg(feature = "trace_events")]
-        {
-            // Capture calling line number before pushing builtin activation
-            let calling_line = if !self.stack.is_empty() {
-                self.top().frame.find_line_no()
-            } else {
-                None
-            };
-            trace_builtin_begin!(self.task_id, bf_name, calling_line, &args);
-        }
 
         // TODO: check for $server_options.protect_[func]
         // Check for builtin override at #0.
@@ -158,13 +143,6 @@ impl ExecStateBuiltinExt for ExecState {
         if !has_trampoline {
             let return_value = self.top_mut().frame.return_value();
 
-            // Emit builtin end trace event for non-trampoline builtins
-            #[cfg(feature = "trace_events")]
-            {
-                let bf_desc = BUILTINS.description_for(bf_id).expect("Builtin not found");
-                trace_builtin_end!(self.task_id, bf_desc.name);
-            }
-
             return self.unwind_stack(FinallyReason::Return(return_value));
         }
 
@@ -182,13 +160,6 @@ impl ExecStateBuiltinExt for ExecState {
 
         let bf_result = bf(&mut bf_args);
         // _guard dropped here, records elapsed automatically
-
-        // Emit builtin end trace event
-        #[cfg(feature = "trace_events")]
-        {
-            let bf_desc = BUILTINS.description_for(bf_id).expect("Builtin not found");
-            trace_builtin_end!(self.task_id, bf_desc.name);
-        }
 
         match bf_result {
             Ok(BfRet::Ret(result)) => self.unwind_stack(FinallyReason::Return(result.clone())),

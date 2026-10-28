@@ -232,15 +232,6 @@ struct Args {
 
     #[arg(long, value_name = "address", help = "Web listener bind address")]
     web_listen_address: Option<String>,
-
-    #[cfg(feature = "trace_events")]
-    #[arg(
-        long,
-        value_name = "trace-output",
-        help = "Path to output Chrome trace events JSON file",
-        value_hint = ValueHint::FilePath
-    )]
-    trace_output: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -492,11 +483,6 @@ async fn run() -> Result<(), Report> {
         num_io_threads: args.num_io_threads,
         workers_enabled: services_config.curl_worker.enabled || services_config.git_worker.enabled,
         startup_config,
-        #[cfg(feature = "trace_events")]
-        trace_output_path: args
-            .trace_output
-            .as_ref()
-            .map(|path| resolve_data_path(&args.data_dir, path)),
     };
     let daemon_runtime = DaemonRuntime {
         zmq_context: zmq_context.clone(),

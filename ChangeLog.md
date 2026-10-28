@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- The `trace_events` build feature and the daemon's and `moor` server's `--trace-output` option are
+  gone, with the Chrome trace output they wrote, the `TRACE_EVENTS` Docker build argument, and the
+  traced bacon jobs, npm scripts and Compose override. The feature was no longer maintained, and
+  builds with every feature on, such as CI's, logged a warning for every traced event.
 - Signing in with an external OAuth2 provider shows why an account could not be created or linked,
   such as a name that is already taken, using the reason the core gives. It said only
   "Authentication failed".

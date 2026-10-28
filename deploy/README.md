@@ -85,7 +85,6 @@ components.
 bacon moor            # Run single-process moor with file watching
 bacon daemon          # Run daemon with file watching (release build)
 bacon daemon-debug    # Run daemon with file watching (debug build)
-bacon daemon-debug-traced  # Run daemon with tracing enabled
 bacon telnet          # Run telnet host with file watching
 bacon web             # Run web host with file watching
 bacon test            # Run tests with file watching

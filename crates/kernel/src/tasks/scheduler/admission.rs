@@ -18,17 +18,14 @@
 //! Input delivery resumes an existing task in `transitions::resume` instead.
 
 use super::{ResumeAction, Scheduler, SchedulerState, lifecycle::TaskLifecycle};
-use crate::{
-    tasks::{
-        SchedulerOp, ServerOptions, TaskHandle, TaskNotification, TaskStart,
-        registry::{LiveTaskRegistration, WakeCondition},
-        sched_counters,
-        task::Task,
-        task_control::TaskControl,
-        world_state_action::WorldStateAction,
-        world_state_executor::match_object_ref,
-    },
-    trace_task_create_command, trace_task_create_eval, trace_task_create_verb,
+use crate::tasks::{
+    SchedulerOp, ServerOptions, TaskHandle, TaskNotification, TaskStart,
+    registry::{LiveTaskRegistration, WakeCondition},
+    sched_counters,
+    task::Task,
+    task_control::TaskControl,
+    world_state_action::WorldStateAction,
+    world_state_executor::match_object_ref,
 };
 use flume::Sender;
 use moor_common::{
@@ -121,8 +118,6 @@ impl Scheduler {
         let task_id = lc.next_task_id;
         lc.next_task_id += 1;
 
-        trace_task_create_command!(task_id, &player, &command, &handler_object);
-
         let task_start = TaskStart::StartCommandVerb {
             handler_object,
             player,
@@ -174,8 +169,6 @@ impl Scheduler {
         let mut lc = self.lifecycle.lock();
         let task_id = lc.next_task_id;
         lc.next_task_id += 1;
-
-        trace_task_create_verb!(task_id, &player, &verb.as_string(), &vloc);
 
         let task_start = TaskStart::StartVerb {
             player,
@@ -244,8 +237,6 @@ impl Scheduler {
         let mut lc = self.lifecycle.lock();
         let task_id = lc.next_task_id;
         lc.next_task_id += 1;
-
-        trace_task_create_eval!(task_id, &player);
 
         let task_start = TaskStart::StartEval {
             player,

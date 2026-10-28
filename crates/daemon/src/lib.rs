@@ -129,8 +129,6 @@ pub struct DaemonRuntimeConfig {
     pub num_io_threads: i32,
     pub workers_enabled: bool,
     pub startup_config: Option<Var>,
-    #[cfg(feature = "trace_events")]
-    pub trace_output_path: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -566,8 +564,6 @@ pub fn run(runtime_config: DaemonRuntimeConfig, runtime: DaemonRuntime) -> Resul
         num_io_threads,
         workers_enabled,
         startup_config,
-        #[cfg(feature = "trace_events")]
-        trace_output_path,
     } = runtime_config;
     config.validate().map_err(|e| eyre!(e))?;
     let DaemonKeys {
@@ -609,23 +605,6 @@ pub fn run(runtime_config: DaemonRuntimeConfig, runtime: DaemonRuntime) -> Resul
     moor_common::threading::set_task_pool_affinity_config(affinity_config);
     let reserved_worker_perf_cores = moor_common::threading::worker_performance_core_ids_ref();
     let reserved_service_perf_cores = moor_common::threading::service_performance_core_ids_ref();
-
-    // Initialize tracing if trace output is specified and feature is enabled
-    #[cfg(feature = "trace_events")]
-    {
-        if let Some(trace_path) = trace_output_path {
-            if moor_kernel::init_tracing(Some(trace_path.clone())) {
-                info!(
-                    "Chrome trace events enabled, output will be written to: {:?}",
-                    trace_path
-                );
-            } else {
-                warn!("Failed to initialize Chrome trace events");
-            }
-        } else {
-            info!("Chrome trace events disabled (no --trace-output specified)");
-        }
-    }
 
     info!(
         db_path = ?paths.db_path,
@@ -1061,12 +1040,6 @@ pub fn run(runtime_config: DaemonRuntimeConfig, runtime: DaemonRuntime) -> Resul
 
     if let Err(e) = scheduler_loop_jh.join() {
         error!("Scheduler thread panicked: {:?}", e);
-    }
-
-    // Shutdown tracing to flush any remaining events
-    #[cfg(feature = "trace_events")]
-    {
-        moor_kernel::shutdown_tracing();
     }
 
     info!("Done.");
