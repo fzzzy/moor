@@ -8,6 +8,9 @@ Cowbell entries.
 
 ### Added
 
+- `$login:identity_of(who, provider)` gives the external id a player's account is linked to through
+  a provider, such as a Minecraft account's UUID, and `$player:connected_through(host_type)` tells
+  whether a player has a connection through a host of that type, such as `"telnet"`.
 - `$login:oauth2_create` and `oauth2_connect` return why they refused, such as a name that is
   already taken, as well as showing it to the connection, so hosts that log players in through
   verified identities can show the reason.

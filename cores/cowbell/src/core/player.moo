@@ -1526,6 +1526,22 @@ object PLAYER [
     return result;
   endmethod
 
+  method connected_through owner: ARCH_WIZARD
+    "Whether this player has a connection through a host of host_type, such as \"telnet\" or \"minecraft\", as the host names itself in the connection's host_type option. Wizards, and the player themself, may ask.";
+    caller_perms().wizard || caller_perms() == this || raise(E_PERM);
+    const {host_type} = args;
+    for entry in (`connections(this) ! ANY => {}')
+      "Each entry is {connection, name, idle seconds, content types, options}.";
+      const connection = typeof(entry) == TYPE_LIST ? entry[1] | entry;
+      for option in (`connection_options(connection) ! ANY => {}')
+        if (tostr(option[1]) == "host_type" && option[2] == host_type)
+          return true;
+        endif
+      endfor
+    endfor
+    return false;
+  endmethod
+
   method commands_changed owner: ARCH_WIZARD
     "Tell this player's clients, and the installed packages, that the commands this player can use may have changed, as after moving or gaining features: clients get an ephemeral state commands data event, and packages their player_commands_changed hook. Anyone may call it: it changes nothing, and hooks only bring clients up to date.";
     `emit_data(this, 'state, 'commands, [], ['ephemeral -> true]) ! ANY => 0';

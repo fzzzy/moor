@@ -434,6 +434,33 @@ object LOGIN [
     return {this.bogus_command, @args};
   endmethod
 
+  method identity_of owner: ARCH_WIZARD
+    "The external id who's account is linked to through provider, such as a Minecraft account's UUID, or false when it has none. Wizards, and the player themself, may ask.";
+    const {who, provider} = args;
+    caller_perms().wizard || caller_perms() == who || raise(E_PERM);
+    typeof(provider) == TYPE_STR || raise(E_TYPE, "The provider is a string.");
+    for identity in (`who.oauth2_identities ! E_PROPNF, E_INVIND => {}')
+      if (typeof(identity) == TYPE_LIST && length(identity) == 2 && strcmp(identity[1], provider) == 0)
+        return identity[2];
+      endif
+    endfor
+    return false;
+  endmethod
+
+  method test_identity_of_reads_linked_accounts owner: ARCH_WIZARD
+    "identity_of finds the external id linked through a provider, with the provider's exact spelling, and false without one.";
+    const who = $test_player;
+    const identities = who.oauth2_identities;
+    try
+      who.oauth2_identities = {{"probe", "Known-ID"}};
+      $test_utils:assert_eq(this:identity_of(who, "probe"), "Known-ID", "a linked account is found");
+      $test_utils:assert_eq(this:identity_of(who, "PROBE"), false, "the provider is matched exactly");
+      $test_utils:assert_eq(this:identity_of(who, "other"), false, "no account through another provider");
+    finally
+      who.oauth2_identities = identities;
+    endtry
+  endmethod
+
   method _refuse owner: ARCH_WIZARD
     "Show why a login was refused to the connection, and return it for the daemon to pass on to the host.";
     caller == this || raise(E_PERM);
