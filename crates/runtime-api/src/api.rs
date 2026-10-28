@@ -707,6 +707,8 @@ pub enum ClientReply {
         connect_type: ConnectType,
         player: Option<Obj>,
         player_flags: u16,
+        /// Why the login was refused, when the core's login verb gave a reason.
+        reason: Option<String>,
     },
     AttachResult {
         success: bool,

@@ -8,6 +8,9 @@ Cowbell entries.
 
 ### Added
 
+- `$login:oauth2_create` and `oauth2_connect` return why they refused, such as a name that is
+  already taken, as well as showing it to the connection, so hosts that log players in through
+  verified identities can show the reason.
 - Packages can take client data and calls from their own host processes without changing `#0`.
   `#0:do_client_data` hands each namespace to the installed package of that name, as
   `package:client_data(kind, payload)`, and `#0:invoke_package_handler(name, operation, ...)`, reached

@@ -971,6 +971,7 @@ mod tests {
                     player: None,
                     player_flags: 0,
                     connect_type: ConnectType::Connected,
+                    reason: None,
                 },
                 other => panic!("unexpected OAuth request: {other:?}"),
             };

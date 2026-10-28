@@ -588,6 +588,7 @@ mod tests {
                         })
                         .transpose()?,
                     player_flags: login.player_flags,
+                    reason: login.reason.clone(),
                 })
             }
             moor_rpc::DaemonToClientReplyUnion::TaskSubmitted(task) => {

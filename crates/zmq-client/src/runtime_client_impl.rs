@@ -582,12 +582,14 @@ fn decode_client_reply_ref(
                 .flatten()
                 .and_then(|r| obj_from_ref(r).ok());
             let player_flags = lr.player_flags().unwrap_or(0);
+            let reason = lr.reason().ok().flatten().map(str::to_string);
             ClientReply::LoginResult {
                 success,
                 auth_token,
                 connect_type,
                 player,
                 player_flags,
+                reason,
             }
         }
         U::AttachResult(ar) => {

@@ -1052,13 +1052,19 @@ impl RpcMessageHandler {
             match receiver.recv() {
                 Ok((_, Ok(TaskNotification::Result(v)))) => match v.variant() {
                     Variant::Obj(o) => break o,
-                    _ => {
+                    // A string is the core's reason for refusing; anything else gives none.
+                    other => {
+                        let reason = match other {
+                            Variant::Str(text) => Some(login_reason(text.as_str())),
+                            _ => None,
+                        };
                         return Ok(ClientReply::LoginResult {
                             success: false,
                             auth_token: None,
                             connect_type: ConnectType::Connected,
                             player: None,
                             player_flags: 0,
+                            reason,
                         });
                     }
                 },
@@ -1085,6 +1091,7 @@ impl RpcMessageHandler {
                 connect_type: ConnectType::Connected,
                 player: None,
                 player_flags: 0,
+                reason: None,
             });
         }
 
@@ -1124,6 +1131,7 @@ impl RpcMessageHandler {
             connect_type,
             player: Some(player),
             player_flags,
+            reason: None,
         })
     }
 
@@ -1921,6 +1929,18 @@ fn convert_kernel_ws_result_to_typed(
         R::ObjectFlags(flags) => WorldStateResult::ObjectFlags(flags),
         R::QueriedObjects(objects) => WorldStateResult::QueriedObjects(objects),
     }
+}
+
+/// The longest refusal reason passed on to a host.
+const LOGIN_REASON_LIMIT: usize = 512;
+
+/// A login refusal reason, cut at a character boundary to at most LOGIN_REASON_LIMIT bytes.
+fn login_reason(text: &str) -> String {
+    let mut end = text.len().min(LOGIN_REASON_LIMIT);
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    text[..end].to_string()
 }
 
 #[cfg(test)]

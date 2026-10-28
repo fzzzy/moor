@@ -993,6 +993,8 @@ table LoginResult {
     connect_type: ConnectType;
     player: MoorCommon.Obj;
     player_flags: uint16;  // BitEnum<ObjFlag> for player object
+    // Why a login was refused, when the core says: the login verb returned this string.
+    reason: string;
 }
 
 table AttachResult {

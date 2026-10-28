@@ -1429,6 +1429,7 @@ pub fn encode_client_reply(
             connect_type,
             player,
             player_flags,
+            reason,
         } => moor_rpc::DaemonToClientReply {
             reply: U::LoginResult(Box::new(moor_rpc::LoginResult {
                 success,
@@ -1436,6 +1437,7 @@ pub fn encode_client_reply(
                 connect_type: encode_connect_type(connect_type),
                 player: player.map(|p| obj_fb(&p)),
                 player_flags,
+                reason,
             })),
         },
         ClientReply::AttachResult {

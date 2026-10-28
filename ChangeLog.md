@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- A refused login can tell the host why. When the core's login verb returns a string instead of a
+  player, the daemon passes it on as the login result's new `reason`, so a host can show it, such as
+  a name that is already taken. Hosts and daemons without the field ignore it.
 - A lambda captures the variables it calls through. A lambda that called another held in an outer
   variable, such as `{y} => g(y)` or `{y} => handlers[i](y)`, raised `E_VARNF` for that variable
   when it ran. Verbs written that way work once recompiled; verbs that work today are unchanged.

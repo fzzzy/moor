@@ -261,40 +261,33 @@ object LOGIN [
 
   verb oauth2_create (any none any) owner: ARCH_WIZARD flags: "rxd"
     "$login:oauth2_create(provider, external_id, email, name, username, player_name)";
-    " => 0 (for failed creation)";
+    " => why not, as a string, also shown to the connection (for failed creation)";
     " => objnum (for successful creation)";
     caller == #0 && callers()[1][2] == "do_oauth_login" || raise(E_PERM);
     if (!this.player_creation_enabled)
-      this:_public_output(this.registration_string);
-      return 0;
+      return this:_refuse(this.registration_string);
     endif
     try
       {provider, external_id, email, name, username, player_name} = args;
       player_name = strsub(player_name, " ", "_");
     except (E_ARGS)
-      this:_public_output("OAuth2 create failed: invalid arguments");
-      return 0;
+      return this:_refuse("OAuth2 create failed: invalid arguments");
     endtry
     if (!player_name || player_name == "<>")
-      this:_public_output("You can't have a blank name!");
-      return 0;
+      return this:_refuse("You can't have a blank name!");
     elseif (player_name[1] == "<" && player_name[$] == ">")
-      this:_public_output("Don't use angle brackets in your player name.");
-      return 0;
+      return this:_refuse("Don't use angle brackets in your player name.");
     elseif (index(player_name, " "))
-      this:_public_output("Sorry, no spaces are allowed in player names.  Use dashes or underscores.");
-      return 0;
+      return this:_refuse("Sorry, no spaces are allowed in player names.  Use dashes or underscores.");
     elseif (this:_match_player(player_name) != $failed_match)
-      this:_public_output("Sorry, that name is not available.  Please choose another.");
-      return 0;
+      return this:_refuse("Sorry, that name is not available.  Please choose another.");
     endif
     try
       $str_proto:validate_name(player_name);
     except error (E_INVARG)
-      this:_public_output(error[2]);
-      return 0;
+      return this:_refuse(error[2]);
     endtry
-    valid(this:find_by_oauth2(provider, external_id)) && return 0;
+    valid(this:find_by_oauth2(provider, external_id)) && return this:_refuse("That account already has a player.");
     new = this:_create_player(player_name, 0, email || "", {});
     this:_claim_oauth_identity(new, provider, external_id);
     this:_server_log(tostr("OAUTH2 CREATE: ", player_name, " (", new, ") via ", provider, ":", external_id));
@@ -303,35 +296,29 @@ object LOGIN [
 
   verb oauth2_connect (any none any) owner: ARCH_WIZARD flags: "rxd"
     "$login:oauth2_connect(provider, external_id, email, name, username, existing_name, existing_password)";
-    " => 0 (for failed connection)";
+    " => why not, as a string, also shown to the connection (for failed connection)";
     " => objnum (for successful link)";
     caller == #0 && callers()[1][2] == "do_oauth_login" || raise(E_PERM);
     try
       {provider, external_id, email, name, username, existing_name, existing_password} = args;
       existing_name = strsub(existing_name, " ", "_");
     except (E_ARGS)
-      this:_public_output("OAuth2 connect failed: invalid arguments");
-      return 0;
+      return this:_refuse("OAuth2 connect failed: invalid arguments");
     endtry
     if (!valid(candidate = this:_match_player(existing_name)))
-      this:_public_output("That player does not exist.");
-      return 0;
+      return this:_refuse("That player does not exist.");
     endif
     {status, _} = this:_password_state(candidate, existing_password);
     if (status == 'ok)
       "Password verified for linking.";
     elseif (status == 'external_only)
-      this:_public_output("Set an account password before linking another login identity.");
-      return 0;
+      return this:_refuse("Set an account password before linking another login identity.");
     elseif (status == 'missing)
-      this:_public_output("Invalid password for existing account.");
-      return 0;
+      return this:_refuse("Invalid password for existing account.");
     elseif (status == 'invalid_type)
-      this:_public_output("Cannot link to that account.");
-      return 0;
+      return this:_refuse("Cannot link to that account.");
     else
-      this:_public_output("Invalid password for existing account.");
-      return 0;
+      return this:_refuse("Invalid password for existing account.");
     endif
     this:_claim_oauth_identity(candidate, provider, external_id);
     if (email)
@@ -445,6 +432,14 @@ object LOGIN [
       endfor
     endif
     return {this.bogus_command, @args};
+  endmethod
+
+  method _refuse owner: ARCH_WIZARD
+    "Show why a login was refused to the connection, and return it for the daemon to pass on to the host.";
+    caller == this || raise(E_PERM);
+    const {reason} = args;
+    this:_public_output(reason);
+    return reason;
   endmethod
 
   method find_by_oauth2 owner: ARCH_WIZARD

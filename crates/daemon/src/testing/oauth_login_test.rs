@@ -498,6 +498,39 @@ fn cowbell_oauth_boundary() {
     exercise("cowbell");
 }
 #[test]
+fn cowbell_refused_logins_give_a_reason() {
+    let fixture = Fixture::new("cowbell");
+    success(fixture.login(false, &["create", "OAuthTaken", "correct-password"]));
+    let reply = fixture.login(
+        true,
+        &[
+            "oauth2_create",
+            "probe",
+            "fresh-id",
+            "",
+            "",
+            "",
+            "OAuthTaken",
+        ],
+    );
+    let Ok(ClientReply::LoginResult {
+        success: false,
+        reason: Some(reason),
+        ..
+    }) = reply
+    else {
+        panic!("expected a refusal with a reason, got {reply:?}");
+    };
+    assert!(reason.contains("not available"), "{reason}");
+    // An unknown identity is not a refusal with a reason.
+    let Ok(ClientReply::LoginResult { reason: None, .. }) =
+        fixture.login(true, &["oauth2_check", "probe", "absent"])
+    else {
+        panic!("an unknown identity should give no reason");
+    };
+}
+
+#[test]
 fn lambda_moor_oauth_boundary() {
     exercise("lambda-moor");
 }
