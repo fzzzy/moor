@@ -23,6 +23,7 @@ import { PresentationData } from "../types/presentation";
 
 interface WebSocketContextType {
     stateRevision: number;
+    commandsRevision: number;
     wsState: WebSocketState;
     connect: (mode: "connect" | "create") => Promise<void>;
     disconnect: (reason?: string) => void;
@@ -94,6 +95,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         </WebSocketContext.Provider>
     );
 };
+
+/** Counts the core's signals that the player's commands may have changed; 0 outside a provider. */
+export const useCommandsRevision = (): number => useContext(WebSocketContext)?.commandsRevision ?? 0;
 
 export const useWebSocketContext = (): WebSocketContextType => {
     const context = useContext(WebSocketContext);

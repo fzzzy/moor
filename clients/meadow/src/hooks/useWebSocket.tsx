@@ -82,6 +82,8 @@ export const useWebSocket = (
     });
 
     const [stateRevision, setStateRevision] = useState(0);
+    // Counts the core's signals that the player's commands may have changed.
+    const [commandsRevision, setCommandsRevision] = useState(0);
     const [inputMetadata, setInputMetadata] = useState<InputMetadata | null>(null);
 
     const socketRef = useRef<SessionTransport | null>(null);
@@ -163,6 +165,9 @@ export const useWebSocket = (
                             onDataMessage?.(event);
                             if (event.namespace === "state" && event.eventKind === "room_snapshot") {
                                 setStateRevision(value => value + 1);
+                            }
+                            if (event.namespace === "state" && event.eventKind === "commands") {
+                                setCommandsRevision(value => value + 1);
                             }
                         },
                         onTaskComplete: () => setStateRevision(value => value + 1),
@@ -593,6 +598,7 @@ export const useWebSocket = (
 
     return {
         stateRevision,
+        commandsRevision,
         wsState,
         connect,
         disconnect,

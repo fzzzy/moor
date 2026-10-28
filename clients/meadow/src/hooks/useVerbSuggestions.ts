@@ -14,6 +14,7 @@
 // Hook for fetching verb suggestions from the player object
 
 import { useCallback, useEffect, useState } from "react";
+import { useCommandsRevision } from "../context/WebSocketContext";
 import { invokeVerbFlatBuffer } from "../lib/rpc-fb";
 
 export interface VerbSuggestion {
@@ -45,6 +46,7 @@ export const useVerbSuggestions = (
     const [error, setError] = useState<string | null>(null);
     const [available, setAvailable] = useState(false);
     const [placeholderText, setPlaceholderText] = useState<string | null>(null);
+    const commandsRevision = useCommandsRevision();
 
     const fetchSuggestions = useCallback(async () => {
         if (!authToken || !playerOid) {
@@ -106,9 +108,10 @@ export const useVerbSuggestions = (
         }
     }, [authToken, playerOid]);
 
+    // Fetch again whenever the core says the player's commands may have changed.
     useEffect(() => {
         fetchSuggestions();
-    }, [fetchSuggestions]);
+    }, [fetchSuggestions, commandsRevision]);
 
     return {
         suggestions,
