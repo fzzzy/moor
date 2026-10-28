@@ -140,12 +140,28 @@ async fn call_oauth_login(
         .await
 }
 
-fn oauth_login_success(reply: ClientReply) -> Result<Option<OAuthLoginSuccess>, &'static str> {
+/// A refused login, with the core's reason when it gave one, such as a name that is taken.
+struct OAuthLoginRefused {
+    reason: Option<String>,
+}
+
+impl OAuthLoginRefused {
+    /// What to tell the player: the core's reason, or a general message.
+    fn message(self) -> String {
+        self.reason
+            .unwrap_or_else(|| "Authentication failed".to_string())
+    }
+}
+
+fn oauth_login_success(
+    reply: ClientReply,
+) -> Result<Result<OAuthLoginSuccess, OAuthLoginRefused>, &'static str> {
     let ClientReply::LoginResult {
         success,
         auth_token,
         player,
         player_flags,
+        reason,
         ..
     } = reply
     else {
@@ -153,12 +169,12 @@ fn oauth_login_success(reply: ClientReply) -> Result<Option<OAuthLoginSuccess>, 
     };
 
     if !success {
-        return Ok(None);
+        return Ok(Err(OAuthLoginRefused { reason }));
     }
 
     let auth_token = auth_token.ok_or("Missing auth_token in login result")?;
     let player = player.ok_or("Missing player in login result")?;
-    Ok(Some(OAuthLoginSuccess {
+    Ok(Ok(OAuthLoginSuccess {
         auth_token,
         player,
         player_flags,
@@ -406,7 +422,7 @@ pub async fn oauth2_callback_handler(
             }
         };
 
-    if let Some(login) = match oauth_login_success(reply) {
+    if let Ok(login) = match oauth_login_success(reply) {
         Ok(login) => login,
         Err(e) => {
             error!("{}", e);
@@ -728,9 +744,9 @@ pub async fn oauth2_account_choice_handler(
         };
 
     let login = match oauth_login_success(reply) {
-        Ok(Some(login)) => login,
-        Ok(None) => {
-            error!("Account choice failed");
+        Ok(Ok(login)) => login,
+        Ok(Err(refused)) => {
+            info!(reason = ?refused.reason, "Account choice refused");
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(OAuth2LoginResponse {
@@ -740,7 +756,7 @@ pub async fn oauth2_account_choice_handler(
                     player_flags: None,
                     client_token: None,
                     client_id: None,
-                    error: Some("Authentication failed".to_string()),
+                    error: Some(refused.message()),
                 }),
             )
                 .into_response();
@@ -879,9 +895,9 @@ pub async fn oauth2_app_account_choice_handler(
         };
 
     let login = match oauth_login_success(reply) {
-        Ok(Some(login)) => login,
-        Ok(None) => {
-            error!("Account choice failed");
+        Ok(Ok(login)) => login,
+        Ok(Err(refused)) => {
+            info!(reason = ?refused.reason, "Account choice refused");
             return (
                 StatusCode::UNAUTHORIZED,
                 Json(OAuth2LoginResponse {
@@ -891,7 +907,7 @@ pub async fn oauth2_app_account_choice_handler(
                     player_flags: None,
                     client_token: None,
                     client_id: None,
-                    error: Some("Authentication failed".to_string()),
+                    error: Some(refused.message()),
                 }),
             )
                 .into_response();
@@ -971,7 +987,7 @@ mod tests {
                     player: None,
                     player_flags: 0,
                     connect_type: ConnectType::Connected,
-                    reason: None,
+                    reason: Some("Sorry, that name is not available.".into()),
                 },
                 other => panic!("unexpected OAuth request: {other:?}"),
             };
@@ -1029,6 +1045,9 @@ mod tests {
         }
     }
     async fn choose(state: OAuth2State, code: &str, nonce: &str) -> StatusCode {
+        choose_response(state, code, nonce).await.status()
+    }
+    async fn choose_response(state: OAuth2State, code: &str, nonce: &str) -> Response {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::COOKIE,
@@ -1048,7 +1067,29 @@ mod tests {
         )
         .await
         .into_response()
-        .status()
+    }
+    #[tokio::test]
+    async fn a_refused_account_choice_says_why() {
+        let runtime = Arc::new(RecordingRuntime::default());
+        let state = state(runtime.clone());
+        let identity = PendingOAuth2Code::Identity(ExternalUserInfo {
+            provider: "probe".into(),
+            external_id: "Verified-ID".into(),
+            email: None,
+            name: None,
+            username: None,
+        });
+        let binding = FlowBinding::Cookie {
+            browser_nonce: "browser".into(),
+        };
+        let code = state.pending.store_pending_code(identity, binding).unwrap();
+        let response = choose_response(state, &code, "browser").await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let body = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["error"], "Sorry, that name is not available.");
     }
     #[tokio::test]
     async fn oauth_account_choice_requires_bound_one_time_identity() {

@@ -14,6 +14,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- Signing in with an external OAuth2 provider shows why an account could not be created or linked,
+  such as a name that is already taken, using the reason the core gives. It said only
+  "Authentication failed".
 - JSON booleans from web clients, in structured actions and client data, follow the server's
   `use_boolean_returns`. They became `1` and `0` even on servers that return booleans as `true` and
   `false`.
