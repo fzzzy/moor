@@ -55,6 +55,16 @@ static MAX_NODES_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("max_nodes"
 static FROM_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("from"));
 static TO_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("to"));
 static EDGE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("edge"));
+static LIST_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("list"));
+static ROWS_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("rows"));
+static COMPLETE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("complete"));
+static CONSTRAINTS_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("constraints"));
+static LT_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("lt"));
+static LE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("le"));
+static GT_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("gt"));
+static GE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("ge"));
+static EQ_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("eq"));
+static NE_SYM: LazyLock<Symbol> = LazyLock::new(|| Symbol::mk("ne"));
 
 const DEFAULT_TERM_MAX_DEPTH: usize = 64;
 const DEFAULT_TERM_MAX_BINDINGS: usize = 256;
@@ -181,6 +191,8 @@ struct QueryOptions {
     max_solutions: usize,
     max_steps: usize,
     dedupe: bool,
+    detail: bool,
+    constraints: bool,
 }
 
 impl Default for QueryOptions {
@@ -193,6 +205,8 @@ impl Default for QueryOptions {
             max_solutions: DEFAULT_QUERY_MAX_SOLUTIONS,
             max_steps: DEFAULT_QUERY_MAX_STEPS,
             dedupe: true,
+            detail: false,
+            constraints: false,
         }
     }
 }
@@ -209,6 +223,7 @@ struct MatchOptions {
     max_solutions: usize,
     max_steps: usize,
     dedupe: bool,
+    detail: bool,
 }
 
 impl Default for MatchOptions {
@@ -218,7 +233,50 @@ impl Default for MatchOptions {
             max_solutions: DEFAULT_QUERY_MAX_SOLUTIONS,
             max_steps: DEFAULT_QUERY_MAX_STEPS,
             dedupe: true,
+            detail: false,
         }
+    }
+}
+
+/// How many answers a search keeps: one past the limit when the caller asked whether the
+/// search was complete.
+fn solution_cap(max_solutions: usize, detail: bool) -> usize {
+    if detail {
+        max_solutions.saturating_add(1)
+    } else {
+        max_solutions
+    }
+}
+
+/// The result of a bounded search: the answers, or with detail, the answers within the limit
+/// and whether there were no more.
+fn search_result(
+    mut rows: Vec<Var>,
+    max_solutions: usize,
+    detail: bool,
+    boolean: impl Fn(bool) -> Var,
+) -> Var {
+    if !detail {
+        return v_list(&rows);
+    }
+    let complete = rows.len() <= max_solutions;
+    rows.truncate(max_solutions);
+    v_map(&[
+        (v_sym(*ROWS_SYM), v_list(&rows)),
+        (v_sym(*COMPLETE_SYM), boolean(complete)),
+    ])
+}
+
+fn return_detail_option(value: &Var, builtin: &str) -> Result<bool, BfErr> {
+    let mode = option_value_symbol(value, "return")?;
+    if mode == *LIST_SYM {
+        Ok(false)
+    } else if mode == *DETAIL_SYM {
+        Ok(true)
+    } else {
+        Err(BfErr::ErrValue(E_INVARG.msg(format!(
+            "{builtin} return option must be 'list or 'detail"
+        ))))
     }
 }
 
@@ -394,6 +452,10 @@ fn parse_query_options(value: Option<&Var>) -> Result<QueryOptions, BfErr> {
             options.term.case_sensitive = value.is_true();
         } else if key == *DEDUPE_SYM {
             options.dedupe = value.is_true();
+        } else if key == *RETURN_SYM {
+            options.detail = return_detail_option(value, "term_query()")?;
+        } else if key == *CONSTRAINTS_SYM {
+            options.constraints = value.is_true();
         } else {
             return Err(BfErr::ErrValue(
                 E_INVARG.msg(format!("unknown term_query() option: {key}")),
@@ -429,6 +491,8 @@ fn parse_match_options(value: Option<&Var>) -> Result<MatchOptions, BfErr> {
             options.term.case_sensitive = value.is_true();
         } else if key == *DEDUPE_SYM {
             options.dedupe = value.is_true();
+        } else if key == *RETURN_SYM {
+            options.detail = return_detail_option(value, "term_match()")?;
         } else {
             return Err(BfErr::ErrValue(
                 E_INVARG.msg(format!("unknown term_match() option: {key}")),
@@ -650,6 +714,16 @@ fn load_bindings(value: Option<&Var>, max_bindings: usize) -> Result<TermBinding
     Ok(bindings)
 }
 
+/// One binding map, or a list of them to match each against every value.
+fn load_binding_sets(value: Option<&Var>, max_bindings: usize) -> Result<Vec<TermBindings>, BfErr> {
+    let Some(list) = value.and_then(|value| value.as_list()) else {
+        return Ok(vec![load_bindings(value, max_bindings)?]);
+    };
+    list.iter_ref()
+        .map(|bindings| load_bindings(Some(bindings), max_bindings))
+        .collect()
+}
+
 fn bindings_to_var(bindings: TermBindings) -> Var {
     let pairs = bindings
         .into_iter()
@@ -785,45 +859,49 @@ fn bf_term_unify(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
 fn term_match_values(
     pattern: &Var,
     values: &[Var],
-    initial_bindings: &TermBindings,
+    binding_sets: &[TermBindings],
     options: &MatchOptions,
     mut tick_budget: Option<BuiltinTickBudget<'_>>,
 ) -> Result<Vec<Var>, BfErr> {
+    let cap = solution_cap(options.max_solutions, options.detail);
     let mut steps = 0usize;
     let mut results = Vec::new();
     let mut seen = HashSet::new();
 
-    for value in values {
-        if results.len() >= options.max_solutions {
-            break;
-        }
-        if let Some(tick_budget) = tick_budget.as_mut() {
-            tick_budget.consume_ticks(1)?;
-        }
-        steps += 1;
-        if steps > options.max_steps {
-            return Err(BfErr::ErrValue(
-                E_MAXREC.msg("term_match() exceeded max_steps"),
-            ));
-        }
+    'sets: for initial_bindings in binding_sets {
+        for value in values {
+            if results.len() >= cap {
+                break 'sets;
+            }
+            if let Some(tick_budget) = tick_budget.as_mut() {
+                tick_budget.consume_ticks(1)?;
+            }
+            steps += 1;
+            if steps > options.max_steps {
+                return Err(BfErr::ErrValue(
+                    E_MAXREC.msg("term_match() exceeded max_steps"),
+                ));
+            }
 
-        let mut bindings = initial_bindings.clone();
-        if !term_unify_inner(pattern, value, &mut bindings, &options.term, 0)? {
-            continue;
+            let mut bindings = initial_bindings.clone();
+            if !term_unify_inner(pattern, value, &mut bindings, &options.term, 0)? {
+                continue;
+            }
+            let result = bindings_to_var(bindings);
+            if options.dedupe && !seen.insert(options.term.key(result.clone())) {
+                continue;
+            }
+            results.push(result);
         }
-        let result = bindings_to_var(bindings);
-        if options.dedupe && !seen.insert(options.term.key(result.clone())) {
-            continue;
-        }
-        results.push(result);
     }
 
     Ok(results)
 }
 
-/// Usage: `list term_match(any pattern, list values [, map bindings [, map options]])`
+/// Usage: `list|map term_match(any pattern, list values [, map|list bindings [, map options]])`
 ///
-/// Applies one pattern to each candidate value and returns successful binding maps.
+/// Applies one pattern to each candidate value and returns successful binding maps. Given a
+/// list of binding maps, matches each against every value, in order.
 fn bf_term_match(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     if bf_args.args.len() < 2 || bf_args.args.len() > 4 {
         return Err(BfErr::ErrValue(
@@ -837,17 +915,22 @@ fn bf_term_match(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
         ));
     };
     let options = parse_match_options(bf_args.args.iter_ref().nth(3))?;
-    let initial_bindings =
-        load_bindings(bf_args.args.iter_ref().nth(2), options.term.max_bindings)?;
+    let binding_sets =
+        load_binding_sets(bf_args.args.iter_ref().nth(2), options.term.max_bindings)?;
     let values = values.iter_ref().cloned().collect::<Vec<_>>();
     let results = term_match_values(
         &bf_args.args[0],
         &values,
-        &initial_bindings,
+        &binding_sets,
         &options,
         Some(bf_args.tick_budget()),
     )?;
-    Ok(Ret(v_list(&results)))
+    Ok(Ret(search_result(
+        results,
+        options.max_solutions,
+        options.detail,
+        |complete| bf_args.v_bool(complete),
+    )))
 }
 
 fn term_substitute_inner(
@@ -1459,8 +1542,146 @@ fn canonicalize_query_state_term(
     }
 }
 
+/// Facts by their first and second elements, where those are scalars without variables:
+/// equality on scalars is exactly what unification would test. Facts without such a key are
+/// tried for every goal. Candidates keep the facts' order, so answers keep theirs.
+#[derive(Default)]
+struct FactIndex {
+    by_first: HashMap<TermKey, Vec<usize>>,
+    by_pair: HashMap<(TermKey, TermKey), Vec<usize>>,
+    first_only: HashMap<TermKey, Vec<usize>>,
+    unkeyed: Vec<usize>,
+}
+
+fn index_key(term: &Var, options: &TermOptions) -> Option<TermKey> {
+    match term.variant() {
+        Variant::List(_) | Variant::Map(_) | Variant::Flyweight(_) => None,
+        _ => Some(options.key(term.clone())),
+    }
+}
+
+fn indexed_elements(term: &Var, options: &TermOptions) -> (Option<TermKey>, Option<TermKey>) {
+    let Variant::List(list) = term.variant() else {
+        return (None, None);
+    };
+    let first = list
+        .iter_ref()
+        .next()
+        .and_then(|item| index_key(item, options));
+    let second = first
+        .as_ref()
+        .and(list.iter_ref().nth(1))
+        .and_then(|item| index_key(item, options));
+    (first, second)
+}
+
+impl FactIndex {
+    fn new(facts: &[Var], options: &TermOptions) -> Self {
+        let mut index = Self::default();
+        for (position, fact) in facts.iter().enumerate() {
+            match indexed_elements(fact, options) {
+                (Some(first), second) => {
+                    index
+                        .by_first
+                        .entry(first.clone())
+                        .or_default()
+                        .push(position);
+                    match second {
+                        Some(second) => index
+                            .by_pair
+                            .entry((first, second))
+                            .or_default()
+                            .push(position),
+                        None => index.first_only.entry(first).or_default().push(position),
+                    }
+                }
+                (None, _) => index.unkeyed.push(position),
+            }
+        }
+        index
+    }
+
+    /// The facts that could match a goal whose leading elements are already resolved.
+    fn candidates(&self, goal: &Var, count: usize, options: &TermOptions) -> Vec<usize> {
+        let (first, second) = indexed_elements(goal, options);
+        let Some(first) = first else {
+            return (0..count).collect();
+        };
+        let mut candidates = self.unkeyed.clone();
+        match second {
+            Some(second) => {
+                for group in [
+                    self.by_pair.get(&(first.clone(), second)),
+                    self.first_only.get(&first),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    candidates.extend_from_slice(group);
+                }
+            }
+            None => {
+                if let Some(group) = self.by_first.get(&first) {
+                    candidates.extend_from_slice(group);
+                }
+            }
+        }
+        candidates.sort_unstable();
+        candidates
+    }
+}
+
+/// A comparison goal, when `constraints` is on: `{'lt, a, b}` and its kin.
+fn constraint_goal(goal: &Var) -> Option<(Symbol, Var, Var)> {
+    let Variant::List(list) = goal.variant() else {
+        return None;
+    };
+    if list.len() != 3 {
+        return None;
+    }
+    let Variant::Sym(op) = list[0].variant() else {
+        return None;
+    };
+    [*LT_SYM, *LE_SYM, *GT_SYM, *GE_SYM, *EQ_SYM, *NE_SYM]
+        .contains(&op)
+        .then(|| (op, list[1].clone(), list[2].clone()))
+}
+
+/// Compare as MOO's operators do: exact or MOO equality, and ordering only between like
+/// types, with strings ordered by case when matching is case-sensitive.
+fn constraint_holds(
+    op: Symbol,
+    left: &Var,
+    right: &Var,
+    options: &TermOptions,
+) -> Result<bool, BfErr> {
+    if op == *EQ_SYM {
+        return Ok(options.equal(left, right));
+    }
+    if op == *NE_SYM {
+        return Ok(!options.equal(left, right));
+    }
+    let mut ordering = left
+        .compare(right)
+        .map_err(|_| BfErr::ErrValue(E_TYPE.msg("term_query() cannot order these values")))?;
+    if options.case_sensitive {
+        ordering = left.cmp_case_sensitive(right);
+    }
+    Ok(if op == *LT_SYM {
+        ordering.is_lt()
+    } else if op == *LE_SYM {
+        ordering.is_le()
+    } else if op == *GT_SYM {
+        ordering.is_gt()
+    } else {
+        ordering.is_ge()
+    })
+}
+
 struct QueryEngine<'a> {
     facts: Vec<Var>,
+    fact_ground: Vec<bool>,
+    index: FactIndex,
     rules: Vec<QueryRule>,
     public_variables: &'a [Symbol],
     options: QueryOptions,
@@ -1472,7 +1693,35 @@ struct QueryEngine<'a> {
     active_states: HashSet<TermKey>,
 }
 
-impl QueryEngine<'_> {
+impl<'a> QueryEngine<'a> {
+    fn new(
+        facts: Vec<Var>,
+        rules: Vec<QueryRule>,
+        public_variables: &'a [Symbol],
+        options: QueryOptions,
+        tick_budget: Option<BuiltinTickBudget<'a>>,
+    ) -> Result<Self, BfErr> {
+        let fact_ground = facts
+            .iter()
+            .map(|fact| term_is_ground_inner(fact, &options.term, 0))
+            .collect::<Result<Vec<_>, _>>()?;
+        let index = FactIndex::new(&facts, &options.term);
+        Ok(Self {
+            facts,
+            fact_ground,
+            index,
+            rules,
+            public_variables,
+            options,
+            tick_budget,
+            fresh_scope: 0,
+            steps: 0,
+            solutions: Vec::new(),
+            seen_solutions: HashSet::new(),
+            active_states: HashSet::new(),
+        })
+    }
+
     fn fresh_scope(&mut self) -> usize {
         let scope = self.fresh_scope;
         self.fresh_scope += 1;
@@ -1519,6 +1768,10 @@ impl QueryEngine<'_> {
         Ok(v_list(&resolved_goals))
     }
 
+    fn cap(&self) -> usize {
+        solution_cap(self.options.max_solutions, self.options.detail)
+    }
+
     fn add_solution(&mut self, bindings: &TermBindings) -> Result<(), BfErr> {
         let solution = self.project_solution(bindings)?;
         if self.options.dedupe
@@ -1538,7 +1791,7 @@ impl QueryEngine<'_> {
         bindings: TermBindings,
         depth: usize,
     ) -> Result<(), BfErr> {
-        if self.solutions.len() >= self.options.max_solutions {
+        if self.solutions.len() >= self.cap() {
             return Ok(());
         }
         if depth > self.options.term.max_depth {
@@ -1550,6 +1803,24 @@ impl QueryEngine<'_> {
 
         if goals.is_empty() {
             return self.add_solution(&bindings);
+        }
+
+        if self.options.constraints
+            && let Some((op, left, right)) = constraint_goal(&goals[0])
+        {
+            let left = resolve_query_term(&left, &bindings, &self.options.term, 0)?;
+            let right = resolve_query_term(&right, &bindings, &self.options.term, 0)?;
+            if !term_is_ground_inner(&left, &self.options.term, 0)?
+                || !term_is_ground_inner(&right, &self.options.term, 0)?
+            {
+                return Err(BfErr::ErrValue(E_INVARG.msg(format!(
+                    "term_query() {op} needs bound values; bind them in an earlier goal"
+                ))));
+            }
+            if constraint_holds(op, &left, &right, &self.options.term)? {
+                self.solve(goals[1..].to_vec(), bindings, depth)?;
+            }
+            return Ok(());
         }
 
         let state_key = if self.options.dedupe {
@@ -1569,22 +1840,40 @@ impl QueryEngine<'_> {
 
         let goal = &goals[0];
         let rest = goals[1..].to_vec();
+        let resolved_goal = match goal.variant() {
+            Variant::List(list) if !list.is_empty() => {
+                let leading = list
+                    .iter_ref()
+                    .take(2)
+                    .map(|item| resolve_top_variable(item, &bindings, &self.options.term))
+                    .collect::<Result<Vec<_>, _>>()?;
+                v_list(&leading)
+            }
+            _ => goal.clone(),
+        };
+        let candidates =
+            self.index
+                .candidates(&resolved_goal, self.facts.len(), &self.options.term);
 
-        for fact_index in 0..self.facts.len() {
-            if self.solutions.len() >= self.options.max_solutions {
+        for fact_index in candidates {
+            if self.solutions.len() >= self.cap() {
                 break;
             }
             self.check_search_step()?;
 
-            let scope = self.fresh_scope();
-            let mut renames = TermBindings::default();
-            let fact = freshen_term(
-                &self.facts[fact_index],
-                scope,
-                &mut renames,
-                0,
-                &self.options.term,
-            )?;
+            let fact = if self.fact_ground[fact_index] {
+                self.facts[fact_index].clone()
+            } else {
+                let scope = self.fresh_scope();
+                let mut renames = TermBindings::default();
+                freshen_term(
+                    &self.facts[fact_index],
+                    scope,
+                    &mut renames,
+                    0,
+                    &self.options.term,
+                )?
+            };
             let mut candidate_bindings = bindings.clone();
             if term_query_match_inner(goal, &fact, &mut candidate_bindings, &self.options.term, 0)?
             {
@@ -1593,7 +1882,7 @@ impl QueryEngine<'_> {
         }
 
         for rule_index in 0..self.rules.len() {
-            if self.solutions.len() >= self.options.max_solutions {
+            if self.solutions.len() >= self.cap() {
                 break;
             }
             self.check_search_step()?;
@@ -1628,10 +1917,12 @@ impl QueryEngine<'_> {
     }
 }
 
-/// Usage: `list term_query(any query, list facts [, list rules [, map bindings [, map options]]])`
+/// Usage: `list|map term_query(any query, list facts [, list rules [, map bindings [, map options]]])`
 ///
 /// Evaluates a bounded positive-Horn query over caller-supplied terms. Rules
-/// have shape `{head, body}` and bodies contain positive terms only.
+/// have shape `{head, body}` and bodies contain positive terms only. With the
+/// `constraints` option, `{'lt, a, b}` and `le`, `gt`, `ge`, `eq`, `ne` goals
+/// compare bound values.
 fn bf_term_query(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     if bf_args.args.len() < 2 || bf_args.args.len() > 5 {
         return Err(BfErr::ErrValue(
@@ -1662,20 +1953,23 @@ fn bf_term_query(bf_args: &mut BfCallState<'_>) -> Result<BfRet, BfErr> {
     }
     let query = bf_args.args[0].clone();
 
-    let mut engine = QueryEngine {
+    let mut engine = QueryEngine::new(
         facts,
         rules,
-        public_variables: &public_variables,
+        &public_variables,
         options,
-        tick_budget: Some(bf_args.tick_budget()),
-        fresh_scope: 0,
-        steps: 0,
-        solutions: Vec::new(),
-        seen_solutions: HashSet::new(),
-        active_states: HashSet::new(),
-    };
+        Some(bf_args.tick_budget()),
+    )?;
     engine.solve(vec![query], bindings, 0)?;
-    Ok(Ret(v_list(&engine.solutions)))
+    let QueryEngine {
+        solutions, options, ..
+    } = engine;
+    Ok(Ret(search_result(
+        solutions,
+        options.max_solutions,
+        options.detail,
+        |complete| bf_args.v_bool(complete),
+    )))
 }
 
 struct GridAstarPathArgs<'grid, 'budget> {
@@ -2664,7 +2958,7 @@ pub(crate) fn register_bf_algorithms(builtins: &mut [BuiltinFunction]) {
 
 #[cfg(test)]
 mod tests {
-    use moor_var::{Associative, v_empty_list, v_float, v_int, v_str};
+    use moor_var::{Associative, v_bool, v_empty_list, v_float, v_int, v_str};
 
     use super::*;
 
@@ -2718,18 +3012,7 @@ mod tests {
                 public_variables.push(*name);
             }
         }
-        let mut engine = QueryEngine {
-            facts,
-            rules: parsed_rules,
-            public_variables: &public_variables,
-            options,
-            tick_budget: None,
-            fresh_scope: 0,
-            steps: 0,
-            solutions: Vec::new(),
-            seen_solutions: HashSet::new(),
-            active_states: HashSet::new(),
-        };
+        let mut engine = QueryEngine::new(facts, parsed_rules, &public_variables, options, None)?;
         engine.solve(vec![query], bindings, 0)?;
         Ok(v_list(&engine.solutions))
     }
@@ -2892,18 +3175,14 @@ mod tests {
 
         let mut tick_count = 0;
         let err = {
-            let mut engine = QueryEngine {
+            let mut engine = QueryEngine::new(
                 facts,
-                rules: Vec::new(),
-                public_variables: &public_variables,
-                options: QueryOptions::default(),
-                tick_budget: Some(BuiltinTickBudget::new(&mut tick_count, 2)),
-                fresh_scope: 0,
-                steps: 0,
-                solutions: Vec::new(),
-                seen_solutions: HashSet::new(),
-                active_states: HashSet::new(),
-            };
+                Vec::new(),
+                &public_variables,
+                QueryOptions::default(),
+                Some(BuiltinTickBudget::new(&mut tick_count, 2)),
+            )
+            .unwrap();
             engine.solve(vec![query], TermBindings::default(), 0)
         }
         .unwrap_err();
@@ -3003,7 +3282,7 @@ mod tests {
                 v_list(&[v_sym("edge"), v_int(1), v_int(2)]),
                 v_list(&[v_sym("edge"), v_int(2), v_int(3)]),
             ],
-            &TermBindings::default(),
+            &[TermBindings::default()],
             &MatchOptions::default(),
             None,
         )
@@ -3022,15 +3301,21 @@ mod tests {
             ..MatchOptions::default()
         };
         let values = [v_str("Key"), v_str("key"), v_str("Key")];
-        let exact = term_match_values(&var("X"), &values, &TermBindings::default(), &options, None)
-            .unwrap();
+        let exact = term_match_values(
+            &var("X"),
+            &values,
+            &[TermBindings::default()],
+            &options,
+            None,
+        )
+        .unwrap();
         assert_eq!(exact.len(), 2);
         assert!(exact[0].eq_case_sensitive(&v_map(&[(v_sym("X"), v_str("Key"))])));
         assert!(exact[1].eq_case_sensitive(&v_map(&[(v_sym("X"), v_str("key"))])));
         let ordinary = term_match_values(
             &var("X"),
             &values,
-            &TermBindings::default(),
+            &[TermBindings::default()],
             &MatchOptions::default(),
             None,
         )
@@ -3080,9 +3365,14 @@ mod tests {
                 },
                 ..MatchOptions::default()
             };
-            let results =
-                term_match_values(&var("X"), &values, &TermBindings::default(), &options, None)
-                    .unwrap();
+            let results = term_match_values(
+                &var("X"),
+                &values,
+                &[TermBindings::default()],
+                &options,
+                None,
+            )
+            .unwrap();
             assert_eq!(results.len(), 1);
         }
     }
@@ -3149,7 +3439,7 @@ mod tests {
         let err = term_match_values(
             &var("X"),
             &[v_int(1), v_int(2)],
-            &TermBindings::default(),
+            &[TermBindings::default()],
             &options,
             None,
         )
@@ -3423,5 +3713,270 @@ mod tests {
         ])]);
         let err = parse_query_rules(&rules).unwrap_err();
         assert!(matches!(err, BfErr::ErrValue(error) if error.err_type() == E_INVARG));
+    }
+
+    fn solutions(result: Var) -> Vec<Var> {
+        result.as_list().unwrap().iter_ref().cloned().collect()
+    }
+
+    fn query_options(configure: impl FnOnce(&mut QueryOptions)) -> QueryOptions {
+        let mut options = QueryOptions::default();
+        configure(&mut options);
+        options
+    }
+
+    #[test]
+    fn term_match_takes_each_binding_set_in_order() {
+        let values = [
+            term("near", &[v_int(1), v_int(10)]),
+            term("near", &[v_int(2), v_int(20)]),
+            term("near", &[v_int(1), v_int(30)]),
+        ];
+        let sets = [
+            TermBindings::from_iter([(Symbol::mk("A"), v_int(2))]),
+            TermBindings::from_iter([(Symbol::mk("A"), v_int(1))]),
+            TermBindings::from_iter([(Symbol::mk("A"), v_int(2))]),
+        ];
+        let results = term_match_values(
+            &term("near", &[var("A"), var("S")]),
+            &values,
+            &sets,
+            &MatchOptions::default(),
+            None,
+        )
+        .unwrap();
+        let scores: Vec<Var> = results
+            .iter()
+            .map(|row| row.as_map().unwrap().get(&v_sym("S")).unwrap())
+            .collect();
+        assert_eq!(
+            scores,
+            vec![v_int(20), v_int(10), v_int(30)],
+            "set order, then value order; the repeated set adds nothing"
+        );
+    }
+
+    #[test]
+    fn detail_reports_whether_the_limit_cut_the_search() {
+        let values: Vec<Var> = (1..=3).map(v_int).collect();
+        for (max_solutions, complete) in [(2, false), (3, true), (4, true)] {
+            let options = MatchOptions {
+                max_solutions,
+                detail: true,
+                ..MatchOptions::default()
+            };
+            let rows = term_match_values(
+                &var("X"),
+                &values,
+                &[TermBindings::default()],
+                &options,
+                None,
+            )
+            .unwrap();
+            let result = search_result(rows, max_solutions, true, v_bool);
+            let map = result.as_map().unwrap();
+            assert_eq!(
+                map.get(&v_sym("complete")).unwrap(),
+                v_bool(complete),
+                "limit {max_solutions}"
+            );
+            assert_eq!(
+                map.get(&v_sym("rows")).unwrap().as_list().unwrap().len(),
+                max_solutions.min(3)
+            );
+        }
+        let facts: Vec<Var> = (1..=3).map(|i| term("n", &[v_int(i)])).collect();
+        let options = query_options(|options| {
+            options.max_solutions = 3;
+            options.detail = true;
+        });
+        let found = query_with_options(
+            term("n", &[var("X")]),
+            facts,
+            vec![],
+            TermBindings::default(),
+            options,
+        )
+        .unwrap();
+        assert_eq!(
+            solutions(found).len(),
+            3,
+            "with detail the engine looks one answer past the limit, and finds none"
+        );
+    }
+
+    #[test]
+    fn indexed_queries_find_what_a_full_scan_finds() {
+        let facts = vec![
+            term("edge", &[v_int(1), v_int(2)]),
+            term("edge", &[var("Any"), v_int(9)]),
+            term("edge", &[v_int(1), v_int(3)]),
+            v_list(&[var("F"), v_int(1), v_int(4)]),
+            term("edge", &[v_str("Room"), v_int(5)]),
+            term("edge", &[v_int(2), v_int(6)]),
+            v_int(7),
+            term("edge", &[v_list(&[v_int(1)]), v_int(8)]),
+        ];
+        let expected = |from: Var| {
+            vec![v_int(2), v_int(9), v_int(3), v_int(4)]
+                .into_iter()
+                .filter(|_| from == v_int(1))
+                .collect::<Vec<_>>()
+        };
+        let found =
+            solutions(query(term("edge", &[v_int(1), var("To")]), facts.clone(), vec![]).unwrap());
+        let tos: Vec<Var> = found
+            .iter()
+            .map(|row| row.as_map().unwrap().get(&v_sym("To")).unwrap())
+            .collect();
+        assert_eq!(
+            tos,
+            expected(v_int(1)),
+            "keyed, unkeyed and wildcard facts, in fact order"
+        );
+
+        let room = solutions(
+            query(
+                term("edge", &[v_str("room"), var("To")]),
+                facts.clone(),
+                vec![],
+            )
+            .unwrap(),
+        );
+        assert_eq!(
+            room.len(),
+            2,
+            "case-insensitive keys still find \"Room\", and the wildcard edge"
+        );
+        let exact = query_with_options(
+            term("edge", &[v_str("room"), var("To")]),
+            facts.clone(),
+            vec![],
+            TermBindings::default(),
+            query_options(|options| options.term.case_sensitive = true),
+        )
+        .unwrap();
+        assert_eq!(solutions(exact).len(), 1, "case-sensitive keys do not");
+
+        let open = solutions(
+            query(
+                term("edge", &[var("From"), v_int(8)]),
+                facts.clone(),
+                vec![],
+            )
+            .unwrap(),
+        );
+        assert_eq!(open.len(), 1, "an unbound first argument scans the facts");
+
+        let rules = vec![v_list(&[
+            term("two_step", &[var("A"), var("C")]),
+            v_list(&[
+                term("edge", &[var("A"), var("B")]),
+                term("edge", &[var("B"), var("C")]),
+            ]),
+        ])];
+        let joined =
+            solutions(query(term("two_step", &[v_int(1), var("C")]), facts, rules).unwrap());
+        let ends: Vec<Var> = joined
+            .iter()
+            .map(|row| row.as_map().unwrap().get(&v_sym("C")).unwrap())
+            .collect();
+        assert!(
+            ends.contains(&v_int(6)),
+            "a join through the index binds the second goal from the first: {ends:?}"
+        );
+    }
+
+    #[test]
+    fn constraints_compare_bound_values() {
+        let facts: Vec<Var> = [5, 2, 9]
+            .into_iter()
+            .map(|score| term("score", &[v_int(score)]))
+            .collect();
+        let rules = vec![v_list(&[
+            term("low", &[var("S")]),
+            v_list(&[
+                term("score", &[var("S")]),
+                term("lt", &[var("S"), v_int(6)]),
+            ]),
+        ])];
+        let on = query_options(|options| options.constraints = true);
+        let low = query_with_options(
+            term("low", &[var("S")]),
+            facts.clone(),
+            rules.clone(),
+            TermBindings::default(),
+            on,
+        )
+        .unwrap();
+        let scores: Vec<Var> = solutions(low)
+            .iter()
+            .map(|row| row.as_map().unwrap().get(&v_sym("S")).unwrap())
+            .collect();
+        assert_eq!(scores, vec![v_int(5), v_int(2)]);
+
+        let off = query(term("low", &[var("S")]), facts.clone(), rules).unwrap();
+        assert!(
+            solutions(off).is_empty(),
+            "without the option, lt is an ordinary goal with no facts"
+        );
+
+        let unbound = vec![v_list(&[
+            term("early", &[var("S")]),
+            v_list(&[
+                term("lt", &[var("S"), v_int(6)]),
+                term("score", &[var("S")]),
+            ]),
+        ])];
+        let err = query_with_options(
+            term("early", &[var("S")]),
+            facts.clone(),
+            unbound,
+            TermBindings::default(),
+            on,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, BfErr::ErrValue(ref error) if error.err_type() == E_INVARG),
+            "comparing an unbound value is an error"
+        );
+
+        let mixed = vec![v_list(&[
+            term("bad", &[var("S")]),
+            v_list(&[
+                term("score", &[var("S")]),
+                term("lt", &[var("S"), v_str("6")]),
+            ]),
+        ])];
+        let err = query_with_options(
+            term("bad", &[var("S")]),
+            facts,
+            mixed,
+            TermBindings::default(),
+            on,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, BfErr::ErrValue(ref error) if error.err_type() == E_TYPE),
+            "only like types order"
+        );
+
+        let case = |case_sensitive| {
+            let options = query_options(|options| {
+                options.constraints = true;
+                options.term.case_sensitive = case_sensitive;
+            });
+            let found = query_with_options(
+                term("eq", &[v_str("a"), v_str("A")]),
+                vec![],
+                vec![],
+                TermBindings::default(),
+                options,
+            )
+            .unwrap();
+            !solutions(found).is_empty()
+        };
+        assert!(case(false), "eq follows MOO equality");
+        assert!(!case(true), "and exact equality when case-sensitive");
     }
 }

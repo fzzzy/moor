@@ -173,6 +173,32 @@ mod tests {
     }
 
     #[test]
+    fn term_builtins_take_binding_lists_and_report_completeness() {
+        let program = r#"
+            rows = {{'near, 1, 10}, {'near, 2, 20}, {'near, 1, 30}};
+            pattern = {'near, {'var, 'A}, {'var, 'S}};
+            matched = term_match(pattern, rows, {['A -> 2], ['A -> 1]});
+            first = { r['S] for r in (matched) };
+            cut = term_match(pattern, rows, [], ['max_solutions -> 2, 'return -> 'detail]);
+            whole = term_match(pattern, rows, [], ['max_solutions -> 3, 'return -> 'detail]);
+            rule = {{'low, {'var, 'S}}, {{'near, {'var, 'A}, {'var, 'S}}, {'lt, {'var, 'S}, 25}}};
+            low = term_query({'low, {'var, 'S}}, rows, {rule}, [], ['constraints -> true, 'return -> 'detail]);
+            return {first, length(cut['rows]), cut['complete] ? 1 | 0, whole['complete] ? 1 | 0, { r['S] for r in (low['rows]) }, low['complete] ? 1 | 0};
+        "#;
+        assert_eq!(
+            run_moo(program).unwrap(),
+            v_list(&[
+                v_list(&[v_int(20), v_int(10), v_int(30)]),
+                v_int(2),
+                v_int(0),
+                v_int(1),
+                v_list(&[v_int(10), v_int(20)]),
+                v_int(1),
+            ])
+        );
+    }
+
+    #[test]
     fn parameterless_lambda_captures_block_variable() {
         let sources = [
             "for i in [1..2] let x = i; let f = {} => x; r = f(); endfor return r;",

@@ -176,7 +176,7 @@ under those keys are compared recursively. Non-placeholder values compare with n
 ## `term_match`
 
 ```moo
-LIST term_match(ANY pattern, LIST values [, MAP bindings [, MAP options]])
+LIST | MAP term_match(ANY pattern, LIST values [, MAP | LIST bindings [, MAP options]])
 ```
 
 Applies one pattern to each value in a list and returns the binding maps for successful matches.
@@ -196,10 +196,21 @@ term_match({'edge, #10, {'var, 'To}},
 Initial bindings are applied to each candidate independently. By default duplicate binding maps are
 removed.
 
+`bindings` can also be a list of binding maps. Each one is matched against every value, in order,
+and the results share one duplicate check. This joins a list of partial answers with a list of
+records in one call:
+
+```moo
+term_match({'near, {'var, 'Place}, {'var, 'Who}},
+           {{'near, #1, #10}, {'near, #2, #20}, {'near, #1, #30}},
+           {['Place -> #2], ['Place -> #1]})
+=> {['Place -> #2, 'Who -> #20], ['Place -> #1, 'Who -> #10], ['Place -> #1, 'Who -> #30]}
+```
+
 ## `term_query`
 
 ```moo
-LIST term_query(ANY query, LIST facts [, LIST rules [, MAP bindings [, MAP options]]])
+LIST | MAP term_query(ANY query, LIST facts [, LIST rules [, MAP bindings [, MAP options]]])
 ```
 
 Searches caller-supplied facts and optional rules for every way to satisfy one query. This is useful
@@ -305,13 +316,44 @@ term_query({'reachable, #1, {'var, 'Where}},
 Results are a list of binding maps keyed by the variable symbols from the query and any initial
 bindings. The order is deterministic: facts and rules are tried in the order supplied.
 
+Facts are found through an index on their first two elements when those are numbers, strings,
+symbols, objects, or errors. A goal such as `{'edge, #1, {'var, 'To}}` only tries facts that start
+with `'edge, #1`, and facts with variables in those places. Facts whose leading elements are lists
+or maps are tried for every goal.
+
+With `['constraints -> true]`, goals of the form `{'lt, a, b}`, `{'le, a, b}`, `{'gt, a, b}`,
+`{'ge, a, b}`, `{'eq, a, b}`, and `{'ne, a, b}` compare values instead of matching facts. Both
+values must already be bound when the goal is reached, so put a comparison after the goals that bind
+its variables; otherwise it raises `E_INVARG`. Ordering follows MOO's operators: only numbers of the
+same type, strings, objects, and errors can be ordered, and other values raise `E_TYPE`. `eq` and
+`ne` use the same equality as matching.
+
+```moo
+rules = {
+  {
+    {'cheap, {'var, 'Item}},
+    {
+      {'price, {'var, 'Item}, {'var, 'Cost}},
+      {'lt, {'var, 'Cost}, 10}
+    }
+  }
+};
+
+term_query({'cheap, {'var, 'Item}},
+           {{'price, "bread", 4}, {'price, "lamp", 25}},
+           rules, [], ['constraints -> true])
+=> {['Item -> "bread"]}
+```
+
+Without the option, `{'lt, a, b}` is an ordinary goal that matches facts named `'lt`.
+
 Rules are restricted in v1:
 
 - Positive Horn-style clauses only.
 - No negation.
 - No aggregation.
 - No cuts.
-- No arithmetic or comparison predicates.
+- No arithmetic. Comparisons only with the `constraints` option.
 - No implicit fact providers.
 - No MOO callbacks.
 - No world access or permission checks.
@@ -427,7 +469,8 @@ accept:
   'max_bindings -> 256,
   'max_solutions -> 256,
   'max_steps -> 10000,
-  'dedupe -> true
+  'dedupe -> true,
+  'return -> 'list
 ]
 ```
 
@@ -439,7 +482,9 @@ accept:
   'max_bindings -> 256,
   'max_solutions -> 256,
   'max_steps -> 10000,
-  'dedupe -> true
+  'dedupe -> true,
+  'return -> 'list,
+  'constraints -> false
 ]
 ```
 
@@ -449,6 +494,11 @@ accept:
 of search work before the builtin raises `E_MAXREC`. `term_query()` also consumes the running task's
 normal tick budget as it searches, so expensive queries can raise `E_MAXREC` even before `max_steps`
 is reached. `dedupe` removes duplicate result maps and suppresses repeated active recursive states.
+
+With `'return -> 'detail`, `term_match()` and `term_query()` return
+`['rows -> answers, 'complete -> bool]` instead of a list. `complete` is false when `max_solutions`
+stopped the search before every answer was found. To tell, the search looks for one answer past the
+limit.
 
 The term builtins also accept `['case_sensitive -> true]`. This option makes matching and result
 deduplication preserve string case, including nested values and string map keys. Symbols retain

@@ -1440,7 +1440,7 @@ fn mk_builtin_table() -> Vec<Builtin> {
             "term_match",
             Q(2),
             Q(4),
-            vec![Any, Typed(TYPE_LIST), Typed(TYPE_MAP), Typed(TYPE_MAP)],
+            vec![Any, Typed(TYPE_LIST), Any, Typed(TYPE_MAP)],
             true,
         ),
         mk_builtin(

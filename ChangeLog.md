@@ -14,6 +14,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- `term_match()` takes a list of binding maps as well as one, matching each against every value, so
+  a list of partial answers can be joined with a list of records in one call. `term_query()` finds
+  facts through an index on their first two elements instead of trying every fact for every goal,
+  and with `['constraints -> true]` its goals can compare bound values with `'lt`, `'le`, `'gt`,
+  `'ge`, `'eq` and `'ne`. Both take `['return -> 'detail]` to return their answers with whether
+  `max_solutions` cut the search short.
 - A lambda with no parameters, such as `{} => x`, can read variables declared in an enclosing `for`,
   `if`, `try` or `begin` block. It did not capture them, and calling it aborted the task. Verbs
   compiled before this fix keep the old code until they are compiled again.
