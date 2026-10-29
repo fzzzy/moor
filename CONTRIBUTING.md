@@ -453,8 +453,10 @@ uv tool install gitlint-core==0.19.1
 
 The hook rejects messages that violate `scripts/gitlint.cfg`. It checks Conventional Commit types,
 the 50/70 character limits, the required body, blank-line separation, tabs, and trailing whitespace.
-The body must contain at least 20 characters. Merge, revert, fixup, and squash messages receive the
-same checks. The hook does not assess the meaning of the message.
+The body must contain at least 20 characters. Merge and revert messages receive the same checks.
+Fixup, amend, and squash commits (`git commit --fixup`) pass unchecked, since they are folded into
+other commits before review; fold them with `git rebase --autosquash` before opening a PR. The hook
+does not assess the meaning of the message.
 
 The installer preserves existing hooks and refuses to change a custom `core.hooksPath` directory.
 Run the installer once for each clone. Git does not copy local hooks when you clone a repository.
