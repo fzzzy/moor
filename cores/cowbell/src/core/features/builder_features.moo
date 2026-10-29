@@ -2575,7 +2575,9 @@ object BUILDER_FEATURES [
     "Show a value or reference in the builder command vocabulary without executing object methods.";
     set_task_perms(caller_perms());
     const {expression} = args;
-    if (expression['kind] == 'literal)
+    if (expression['kind] in {'arith, 'neg, 'call, 'count})
+      return $condition:print_value(expression);
+    elseif (expression['kind] == 'literal)
       const value = expression['value];
       if (typeof(value) == TYPE_OBJ)
         return valid(value) ? value.name + " (" + tostr(value) + ")" | tostr(value) + " (removed)";
@@ -2601,6 +2603,8 @@ object BUILDER_FEATURES [
       return "(" + { $builder_features:_author_condition_text(child) for child in (tree['children]) }:join(kind == 'all ? " AND " | " OR ") + ")";
     elseif (kind == 'not)
       return "NOT (" + $builder_features:_author_condition_text(tree['child]) + ")";
+    elseif (kind in {'exists, 'best})
+      return $condition:print(tree);
     elseif (kind == 'compare)
       const ops = ['eq -> "is", 'ne -> "is not", 'lt -> "<", 'le -> "<=", 'gt -> ">", 'ge -> ">="];
       return $builder_features:_author_value_text(tree['left]) + " " + ops[tree['op]] + " " + $builder_features:_author_value_text(tree['right]);

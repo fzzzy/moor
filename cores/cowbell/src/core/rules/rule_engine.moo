@@ -23,6 +23,10 @@ object RULE_ENGINE [
     "A reaction can use parameter.visitors as its relation reference. Relations define their own fields.",
     "Predicate arguments use names from their schemas. Selected outputs require explicit binding names.",
     "Negation requires bound inputs and cannot introduce new bindings.",
+    "Values can be computed: binding.Height - input.Level <= 2, abs(binding.X - input.X) < 8, min(a, b), max(a, b). Arithmetic needs all integers or all floats.",
+    "count(occupants(location: input.Location) -> (object: Visitor)) < 3 counts matches; the search must be complete.",
+    "exists(...) holds when its condition has a match, without exposing that match's bindings.",
+    "best(occupants(location: input.Location) -> (object: Visitor), by: binding.Visitor, limit: 2) keeps the matches with the lowest values; negate the value for the highest.",
     "Use @set-rule, @show-rule, @clear-rule, and @rules for policy properties.",
     "Core programmers register additional predicates with explicit input and output types.",
     "Read the Cowbell behavior model for the complete data and execution contracts."
@@ -48,12 +52,12 @@ object RULE_ENGINE [
     elseif (!(name in {'get_rule, 'drop_rule, 'open_rule, 'close_rule, 'view_rule, 'read_rule, 'write_rule, 'wear_rule, 'remove_rule, 'use_rule, 'consume_rule, 'pet_rule, 'sit_rule, 'stand_rule, 'pass_rule}))
       inputs = [];
     endif
-    return $rule_engine:scope(inputs);
+    return this:scope(inputs);
   endmethod
 
   method passage_scope owner: HACKER
     "Name passage endpoints explicitly. Key is required only when the condition uses it.";
-    return $rule_engine:scope(['Accessor -> 'object, 'From -> 'object, 'To -> 'object, 'Passage -> 'any, 'Key -> 'object]);
+    return this:scope(['Accessor -> 'object, 'From -> 'object, 'To -> 'object, 'Passage -> 'any, 'Key -> 'object]);
   endmethod
 
   method trigger_scope owner: HACKER
@@ -70,7 +74,7 @@ object RULE_ENGINE [
       trigger in {'on_consume, 'on_empty} && (inputs['Amount] = 'integer);
       trigger == 'on_fed && (inputs['Food] = 'object);
     endif
-    return $rule_engine:scope(inputs, [], state_types);
+    return this:scope(inputs, [], state_types);
   endmethod
 
   method schemas owner: HACKER
@@ -88,6 +92,7 @@ object RULE_ENGINE [
     const {name, schema, provider, method} = args;
     $behavior_schema:_name(name, "predicate");
     name != 'relation || raise(E_INVARG, "relation is reserved for explicit relation queries.");
+    !(name in {'abs, 'min, 'max, 'count, 'exists, 'best}) || raise(E_INVARG, tostr(name) + " is reserved by the condition language.");
     !maphaskey($world_facts:schemas(), name) || raise(E_INVARG, "Cannot replace a core predicate");
     typeof(provider) == TYPE_OBJ && valid(provider) && typeof(method) == TYPE_STR || raise(E_INVARG, "Invalid predicate provider");
     $behavior_schema:_vocabulary(['triggers -> [], 'actions -> [], 'predicates -> [name -> schema]]);
@@ -106,8 +111,8 @@ object RULE_ENGINE [
   method parse_expression owner: ARCH_WIZARD
     "Parse and validate one complete condition using explicitly declared inputs.";
     set_task_perms(caller_perms());
-    const {text, ?name = 'parsed_rule, ?scope = $rule_engine:scope(), ?parameters = []} = args;
-    return $rule:mk(name, $condition:parse(text), scope, parameters);
+    const {text, ?name = 'parsed_rule, ?scope = this:scope(), ?parameters = []} = args;
+    return $rule:mk(name, this:conditions():parse(text), scope, parameters);
   endmethod
 
   method validate_rule owner: HACKER
@@ -119,7 +124,7 @@ object RULE_ENGINE [
       for namespace in ({'input, 'parameter, 'state, 'binding})
         $behavior_schema:_types(scope[namespace], "scope." + tostr(namespace));
       endfor
-      const checked = $behavior_schema:condition(rule.condition, scope, $rule_engine:schemas());
+      const checked = $behavior_schema:condition(rule.condition, scope, this:schemas());
       return ['valid -> true, 'warnings -> {}, 'bindings -> checked['bindings]];
     except error (E_INVARG, E_QUOTA)
       return ['valid -> false, 'warnings -> {error[2]}, 'bindings -> []];
@@ -129,28 +134,36 @@ object RULE_ENGINE [
   method decompile_rule owner: HACKER
     "Print the same tree that validation and evaluation consume.";
     const {rule} = args;
-    return $condition:print(rule.condition);
+    return this:conditions():print(rule.condition);
+  endmethod
+
+  method conditions owner: HACKER
+    "The condition evaluator this engine uses. A subclass may answer with a subclass of it.";
+    return $condition;
   endmethod
 
   method evaluate owner: ARCH_WIZARD
-    "Evaluate a rule under the invoking principal; incomplete exhaustive results remain errors.";
+    "Evaluate a rule under the invoking principal; incomplete exhaustive results remain errors. With explain, the result carries an explanation of what held and what failed.";
     set_task_perms(caller_perms());
-    const {rule, ?inputs = [], ?parameters = [], ?state = [], ?preview = false} = args;
-    const validation = $rule_engine:validate_rule(rule);
+    const {rule, ?inputs = [], ?parameters = [], ?state = [], ?preview = false, ?explain = false} = args;
+    const validation = this:validate_rule(rule);
     validation['valid] || raise(E_INVARG, validation['warnings]:join("; "));
     const environment = ['input -> inputs, 'parameter -> parameters, 'state -> state, 'binding -> []];
-    const used = $condition:references(rule.condition);
+    const used = this:conditions():references(rule.condition);
     for namespace in ({'input, 'parameter, 'state})
       for name in (used[namespace])
         maphaskey(environment[namespace], name) || raise(E_INVARG, "Missing " + tostr(namespace) + " " + tostr(name));
         $behavior_schema:_type(environment[namespace][name], rule.scope[namespace][name], tostr(name));
       endfor
     endfor
-    const query = {name, values, limit} => $rule_engine:query(name, values, limit, preview);
-    const result = $condition:evaluate(rule.condition, environment, query);
+    const engine = this;
+    const query = {name, values, limit} => engine:query(name, values, limit, preview);
+    const result = this:conditions():evaluate(rule.condition, environment, query, 256, explain);
     result['complete] || raise(E_QUOTA, "Condition search is incomplete");
     const rows = result['bindings];
-    return ['success -> length(rows) > 0, 'bindings -> length(rows) > 0 ? rows[1] | [], 'alternatives -> length(rows) > 1 ? rows[2..$] | {}, 'warnings -> {}, 'complete -> true];
+    let answer = ['success -> length(rows) > 0, 'bindings -> length(rows) > 0 ? rows[1] | [], 'alternatives -> length(rows) > 1 ? rows[2..$] | {}, 'warnings -> {}, 'complete -> true];
+    explain && (answer['explanation] = result['trace]);
+    return answer;
   endmethod
 
   method query owner: ARCH_WIZARD
@@ -158,7 +171,7 @@ object RULE_ENGINE [
     set_task_perms(caller_perms());
     const {name, values, limit, ?preview = false} = args;
     typeof(limit) == TYPE_INT && limit > 0 && limit <= 256 || raise(E_INVARG, "Query result limit must be between 1 and 256");
-    const schemas = $rule_engine:schemas();
+    const schemas = this:schemas();
     maphaskey(schemas, name) || raise(E_INVARG, "Unknown predicate: " + tostr(name));
     const schema = schemas[name];
     $behavior_schema:bindings(values, schema['inputs], "predicate inputs");
@@ -178,5 +191,29 @@ object RULE_ENGINE [
       $behavior_schema:bindings(row, schema['outputs], "predicate outputs");
     endfor
     return result;
+  endmethod
+
+  method test_condition_words_are_reserved owner: ARCH_WIZARD
+    "Predicates cannot take the names of the condition language's own functions.";
+    const schema = ['description -> "A test predicate.", 'inputs -> [], 'outputs -> []];
+    for name in ({'abs, 'min, 'max, 'count, 'exists, 'best})
+      try
+        this:register_predicate(name, schema, this, "query");
+        raise(E_ASSERT, "Registered a predicate named " + tostr(name));
+      except error (E_INVARG)
+      endtry
+    endfor
+    return true;
+  endmethod
+
+  method test_rules_compute_and_explain owner: HACKER
+    "Rules accept computed values, and an explained evaluation carries the condition's trace.";
+    const rule = this:parse_expression("1 + 2 * 3 == 7 AND max(1, 4) > 9");
+    const result = this:evaluate(rule, [], [], [], false, true);
+    result['success] && raise(E_ASSERT, "A false rule succeeded");
+    const parts = result['explanation]['children];
+    {parts[1]['matches], parts[2]['matches]} == {1, 0} || raise(E_ASSERT, "Explanation: " + toliteral(result['explanation]));
+    !maphaskey(this:evaluate(rule), 'explanation) || raise(E_ASSERT, "An unexplained evaluation carried an explanation");
+    return true;
   endmethod
 endobject

@@ -106,11 +106,26 @@ object BEHAVIOR_SCHEMA [
       const checked = $behavior_schema:condition(node['child], scope, predicates, path + ".child", depth + 1, nodes, true);
       nodes = checked['nodes];
       equal(checked['bindings], bound) || raise(E_INVARG, path + ": negation requires bound inputs and cannot bind outputs");
+    elseif (kind == 'exists)
+      $behavior_schema:_fields(node, {'kind, 'child}, {'source}, path);
+      const checked = $behavior_schema:condition(node['child], scope, predicates, path + ".child", depth + 1, nodes);
+      nodes = checked['nodes];
+    elseif (kind == 'best)
+      $behavior_schema:_fields(node, {'kind, 'child, 'by, 'limit}, {'source}, path);
+      const checked = $behavior_schema:condition(node['child], scope, predicates, path + ".child", depth + 1, nodes, bound_only);
+      nodes = checked['nodes] + 1;
+      let by_scope = scope;
+      by_scope['binding] = checked['bindings];
+      const by_type = $behavior_schema:expression(node['by], by_scope, path + ".by", predicates);
+      by_type in {'integer, 'float, 'string} || raise(E_INVARG, path + ": best orders by a number or a string");
+      $behavior_schema:_type(node['limit], 'integer, path + ".limit");
+      node['limit] >= 1 && node['limit] <= 256 || raise(E_INVARG, path + ".limit: expected 1 through 256");
+      bound = checked['bindings];
     elseif (kind == 'compare)
       $behavior_schema:_fields(node, {'kind, 'op, 'left, 'right}, {'source}, path);
       node['op] in {'eq, 'ne, 'lt, 'le, 'gt, 'ge} || raise(E_INVARG, path + ": unknown comparison");
-      const left_type = $behavior_schema:expression(node['left], scope, path + ".left");
-      const right_type = $behavior_schema:expression(node['right], scope, path + ".right");
+      const left_type = $behavior_schema:expression(node['left], scope, path + ".left", predicates);
+      const right_type = $behavior_schema:expression(node['right], scope, path + ".right", predicates);
       $behavior_schema:_compatible(left_type, right_type, path);
       if (!(node['op] in {'eq, 'ne}))
         left_type in {'integer, 'float, 'string} || raise(E_INVARG, path + ": ordered comparison requires numbers or strings");
@@ -134,7 +149,7 @@ object BEHAVIOR_SCHEMA [
         $behavior_schema:_fields(node, {'kind, 'name, 'arguments, 'bind}, {'source}, path);
         predicate = $behavior_schema:_entry(predicates, node['name], path);
       endif
-      nodes = $behavior_schema:_arguments(node['arguments], predicate['inputs], scope, path, nodes);
+      nodes = $behavior_schema:_arguments(node['arguments], predicate['inputs], scope, path, nodes, predicates);
       $behavior_schema:_fields(node['bind], {}, mapkeys(predicate['outputs]), path + ".bind");
       for output in (mapkeys(node['bind]))
         const name = node['bind][output];
@@ -153,14 +168,45 @@ object BEHAVIOR_SCHEMA [
   endmethod
 
   method expression owner: HACKER
-    "Return the static type of a literal or a reference in an explicit namespace.";
-    const {expression, scope, ?path = "value"} = args;
+    "Return the static type of a literal, a reference in an explicit namespace, or a computed value. Counted conditions need the predicates of an enclosing condition.";
+    const {expression, scope, ?path = "value", ?predicates = 0} = args;
     typeof(expression) == TYPE_MAP || raise(E_INVARG, path + ": expected a value expression");
     maphaskey(expression, 'kind) || raise(E_INVARG, path + ": missing kind");
     const kind = expression['kind];
     if (kind == 'literal)
       $behavior_schema:_fields(expression, {'kind, 'value}, {'source}, path);
       return $behavior_schema:type_of(expression['value]);
+    elseif (kind == 'count)
+      $behavior_schema:_fields(expression, {'kind, 'condition}, {'source}, path);
+      typeof(predicates) == TYPE_MAP || raise(E_INVARG, path + ": count() is only available inside conditions");
+      $behavior_schema:condition(expression['condition], scope, predicates, path + ".condition", 1);
+      return 'integer;
+    elseif (kind in {'arith, 'neg, 'call})
+      let operands;
+      if (kind == 'arith)
+        $behavior_schema:_fields(expression, {'kind, 'op, 'left, 'right}, {'source}, path);
+        expression['op] in {'add, 'sub, 'mul, 'div} || raise(E_INVARG, path + ": unknown arithmetic");
+        operands = {expression['left], expression['right]};
+      elseif (kind == 'neg)
+        $behavior_schema:_fields(expression, {'kind, 'value}, {'source}, path);
+        operands = {expression['value]};
+      else
+        $behavior_schema:_fields(expression, {'kind, 'name, 'arguments}, {'source}, path);
+        expression['name] in {'abs, 'min, 'max} || raise(E_INVARG, path + ": unknown function " + toliteral(expression['name]));
+        $behavior_schema:_type(expression['arguments], 'list, path + ".arguments");
+        operands = expression['arguments];
+        (expression['name] == 'abs ? length(operands) == 1 | length(operands) >= 2) || raise(E_INVARG, path + ": wrong number of values for " + tostr(expression['name]));
+      endif
+      let result = 'any;
+      for i in [1..length(operands)]
+        const type = $behavior_schema:expression(operands[i], scope, path + "[" + tostr(i) + "]", predicates);
+        type in {'integer, 'float, 'any} || raise(E_INVARG, path + ": arithmetic needs numbers, got " + tostr(type));
+        if (type != 'any)
+          result == 'any || result == type || raise(E_INVARG, path + ": arithmetic needs all integers or all floats");
+          result = type;
+        endif
+      endfor
+      return result;
     endif
     kind in {'input, 'parameter, 'state, 'binding} || raise(E_INVARG, path + ": unknown value kind");
     $behavior_schema:_fields(expression, {'kind, 'name}, {'source}, path);
@@ -273,11 +319,11 @@ object BEHAVIOR_SCHEMA [
   endmethod
 
   method _arguments owner: HACKER
-    "Validate named argument expressions against an operation's complete input schema.";
-    const {arguments, inputs, scope, path, count} = args;
+    "Validate named argument expressions against an operation's complete input schema. Inside a condition, values may count conditions.";
+    const {arguments, inputs, scope, path, count, ?predicates = 0} = args;
     $behavior_schema:_fields(arguments, mapkeys(inputs), {}, path + ".arguments");
     for name in (mapkeys(inputs))
-      const actual = $behavior_schema:expression(arguments[name], scope, path + ".arguments." + tostr(name));
+      const actual = $behavior_schema:expression(arguments[name], scope, path + ".arguments." + tostr(name), predicates);
       $behavior_schema:_compatible(actual, inputs[name], path + ".arguments." + tostr(name));
     endfor
     return count + length(inputs);

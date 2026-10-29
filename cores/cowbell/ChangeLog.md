@@ -8,6 +8,13 @@ Cowbell entries.
 
 ### Added
 
+- Rule and reaction conditions can compute values with `+`, `-`, `*`, `/`, `abs`, `min`, and
+  `max`, such as `abs(binding.X - input.X) < 8`. `count(...)` gives the number of matches,
+  `exists(...)` checks for a match without keeping its bindings, and `best(..., by: value, limit: n)`
+  keeps the matches with the lowest values. Predicates can no longer use these names.
+  `$rule_engine:evaluate(..., explain)` returns an explanation of which parts of a condition held.
+  `$condition` and `$rule_engine` call their own methods through `this`, so subclasses can
+  replace how conditions find facts.
 - `$wiz_features:grant_wizard(target, ?tools)` makes a player a wizard as `@wizard` does and returns
   what they had before; `revoke_wizard(target, ?before)` takes wizard status back and, given that
   record, restores the player.
