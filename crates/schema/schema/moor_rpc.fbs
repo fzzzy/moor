@@ -1118,6 +1118,9 @@ table SystemHandlerError {
 
 table SystemHandlerResponseReply {
     response: SystemHandlerResponseUnion (required);
+    // Narrative events the handler addressed to its caller, in the order they were committed.
+    // The host delivers them; the daemon does not publish them.
+    output: [MoorCommon.NarrativeEvent];
 }
 
 union InvocationOutcome {

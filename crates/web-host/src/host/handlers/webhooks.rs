@@ -187,7 +187,8 @@ pub async fn web_hook_handler(
     };
 
     let response = match reply {
-        ClientReply::SystemHandlerResponseReply { response } => {
+        // A webhook has no connection to show narrative output on.
+        ClientReply::SystemHandlerResponseReply { response, .. } => {
             handle_system_handler_response(response)
         }
         _ => internal_server_error("Unexpected daemon to client reply for web hook"),

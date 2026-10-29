@@ -930,27 +930,19 @@ fn decode_client_reply_ref(
                     api::SystemHandlerResponse::Error { error }
                 }
             };
-            ClientReply::SystemHandlerResponseReply { response }
+            // A daemon from before this field sends no output.
+            let output = match shr.output().map_err(|e| {
+                RpcError::CouldNotDecode(format!("Invalid system handler output: {e}"))
+            })? {
+                Some(output) => decode_output(output)?,
+                None => vec![],
+            };
+            ClientReply::SystemHandlerResponseReply { response, output }
         }
         U::InvocationResponse(response) => {
-            // Captured output is the point of the call, so a bad event is an error rather than a
-            // gap the caller cannot see.
-            let output = response
-                .output()
-                .map_err(|e| RpcError::CouldNotDecode(format!("Missing invocation output: {e}")))?
-                .iter()
-                .map(|event| {
-                    event
-                        .map_err(|e| {
-                            RpcError::CouldNotDecode(format!("Missing invocation output: {e}"))
-                        })
-                        .and_then(|event| {
-                            convert::narrative_event_from_ref(event).map_err(|e| {
-                                RpcError::CouldNotDecode(format!("Invalid invocation output: {e}"))
-                            })
-                        })
-                })
-                .collect::<Result<Vec<_>, _>>()?;
+            let output = decode_output(response.output().map_err(|e| {
+                RpcError::CouldNotDecode(format!("Missing invocation output: {e}"))
+            })?)?;
             let outcome = response.outcome().map_err(|e| {
                 RpcError::CouldNotDecode(format!("Missing invocation outcome: {e}"))
             })?;
@@ -999,6 +991,25 @@ fn decode_client_reply_ref(
             ClientReply::BatchWorldStateReply { results }
         }
     })
+}
+
+/// Captured output is the point of the call, so a bad event is an error rather than a gap the
+/// caller cannot see.
+fn decode_output(
+    output: ::planus::Vector<'_, ::planus::Result<moor_schema::common::NarrativeEventRef<'_>>>,
+) -> Result<Vec<moor_common::tasks::NarrativeEvent>, RpcError> {
+    output
+        .iter()
+        .map(|event| {
+            event
+                .map_err(|e| RpcError::CouldNotDecode(format!("Missing captured output: {e}")))
+                .and_then(|event| {
+                    convert::narrative_event_from_ref(event).map_err(|e| {
+                        RpcError::CouldNotDecode(format!("Invalid captured output: {e}"))
+                    })
+                })
+        })
+        .collect()
 }
 
 fn decode_prop_info(
@@ -1632,5 +1643,73 @@ mod tests {
             response.output.as_slice(),
             [event] if matches!(event.event(), Event::Notify { value, .. } if value.as_string() == Some("before failure"))
         ));
+    }
+
+    #[test]
+    fn system_handler_round_trip_preserves_output() {
+        use moor_runtime_api::api::SystemHandlerResponse;
+        let output = NarrativeEvent::notify(
+            v_obj(Obj::mk_id(7)),
+            v_str("welcome"),
+            None,
+            false,
+            false,
+            None,
+        );
+        let bytes = encode_client_success_bytes(ClientReply::SystemHandlerResponseReply {
+            response: SystemHandlerResponse::Success {
+                result: v_str("ok"),
+            },
+            output: vec![output],
+        })
+        .expect("Failed to encode system handler response");
+
+        let ClientReply::SystemHandlerResponseReply { response, output } =
+            decode_client_reply_bytes(&bytes).expect("Failed to decode system handler response")
+        else {
+            panic!("Expected a system handler response");
+        };
+        assert!(matches!(
+            response,
+            SystemHandlerResponse::Success { result } if result == v_str("ok")
+        ));
+        assert!(matches!(
+            output.as_slice(),
+            [event] if matches!(event.event(), Event::Notify { value, .. } if value.as_string() == Some("welcome"))
+        ));
+    }
+
+    /// A daemon from before the output field replies without it.
+    #[test]
+    fn system_handler_reply_without_output_decodes_empty() {
+        use super::moor_rpc;
+        use moor_runtime_api::api::SystemHandlerResponse;
+        let result = moor_schema::convert::var_to_flatbuffer(&v_str("ok")).unwrap();
+        let reply = moor_rpc::ReplyResult {
+            result: moor_rpc::ReplyResultUnion::ClientSuccess(Box::new(moor_rpc::ClientSuccess {
+                reply: Box::new(moor_rpc::DaemonToClientReply {
+                    reply: moor_rpc::DaemonToClientReplyUnion::SystemHandlerResponseReply(
+                        Box::new(moor_rpc::SystemHandlerResponseReply {
+                            response: moor_rpc::SystemHandlerResponseUnion::SystemHandlerSuccess(
+                                Box::new(moor_rpc::SystemHandlerSuccess {
+                                    result: Box::new(result),
+                                }),
+                            ),
+                            output: None,
+                        }),
+                    ),
+                }),
+            })),
+        };
+        let mut builder = planus::Builder::new();
+        let bytes = builder.finish(&reply, None).to_vec();
+
+        let ClientReply::SystemHandlerResponseReply { response, output } =
+            decode_client_reply_bytes(&bytes).expect("Failed to decode system handler response")
+        else {
+            panic!("Expected a system handler response");
+        };
+        assert!(matches!(response, SystemHandlerResponse::Success { .. }));
+        assert!(output.is_empty());
     }
 }
