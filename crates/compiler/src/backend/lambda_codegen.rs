@@ -128,11 +128,13 @@ impl CodegenState {
         let program_offset = self.add_lambda_program(lambda_program, base_line_offset);
         self.control.set_lambda_scope_depth(outer_scope_depth);
 
-        let captured_symbols = analyze_lambda_captures(params, &body, outer_scope_depth)?;
-        let captured_names: Vec<Name> = captured_symbols
-            .iter()
-            .filter_map(|sym| self.var_names.name_for_ident(*sym))
-            .collect();
+        let captured_names = analyze_lambda_captures(
+            params,
+            &body,
+            entry_scope_count,
+            outer_scope_depth,
+            &self.name_for_variable,
+        )?;
 
         for &name in &captured_names {
             self.emit(Op::Capture(name));
@@ -377,57 +379,74 @@ fn assign_expr_lambda_source_lines(expr: &mut Expr) {
     }
 }
 
-struct CaptureAnalyzer {
-    captures: HashSet<Symbol>,
+struct CaptureAnalyzer<'a> {
+    captures: Vec<Name>,
     assigned_captures: Vec<(Symbol, (usize, usize))>,
     param_names: HashSet<Symbol>,
-    outer_scope_level: u8,
+    /// Depth of the lambda's parameter scope; variables stored at shallower depths are outside.
+    param_scope_depth: Option<u8>,
+    outer_scope_level: u16,
+    name_for_variable: &'a [Option<Name>],
     current_line_col: (usize, usize),
 }
 
-impl CaptureAnalyzer {
-    fn new(lambda_params: &[ScatterItem], outer_scope_depth: u8) -> Self {
+impl<'a> CaptureAnalyzer<'a> {
+    fn new(
+        lambda_params: &[ScatterItem],
+        entry_scope_count: u16,
+        outer_scope_depth: u8,
+        name_for_variable: &'a [Option<Name>],
+    ) -> Self {
         let param_names: HashSet<Symbol> = lambda_params
             .iter()
             .map(|param| param.id.to_symbol())
             .collect();
         let outer_scope_level = lambda_params
             .first()
-            .map(|p| p.id.scope_id as u8)
-            .unwrap_or(outer_scope_depth);
+            .map(|p| p.id.scope_id)
+            .unwrap_or(u16::from(outer_scope_depth));
 
         Self {
-            captures: HashSet::new(),
+            captures: Vec::new(),
             assigned_captures: Vec::new(),
             param_names,
+            param_scope_depth: entry_scope_count
+                .checked_sub(1)
+                .and_then(|depth| u8::try_from(depth).ok()),
             outer_scope_level,
+            name_for_variable,
             current_line_col: (0, 0),
         }
     }
 
-    fn should_capture(&self, var: &Variable) -> bool {
-        if self.param_names.contains(&var.to_symbol()) {
-            return false;
-        }
-
-        var.scope_id as u8 <= self.outer_scope_level
+    fn name(&self, var: &Variable) -> Option<Name> {
+        self.name_for_variable
+            .get(var.id as usize)
+            .copied()
+            .flatten()
     }
 
     fn is_outer_scope_variable(&self, var: &Variable) -> bool {
         if self.param_names.contains(&var.to_symbol()) {
             return false;
         }
-
-        var.scope_id as u8 <= self.outer_scope_level
+        match (self.param_scope_depth, self.name(var)) {
+            (Some(depth), Some(name)) => name.1 < depth,
+            // Trees decompiled from programs without entry-layout metadata.
+            _ => var.scope_id <= self.outer_scope_level,
+        }
     }
 }
 
-impl AstVisitor for CaptureAnalyzer {
+impl AstVisitor for CaptureAnalyzer<'_> {
     fn visit_expr(&mut self, expr: &Expr) {
         match expr {
             Expr::Id(var) => {
-                if self.should_capture(var) {
-                    self.captures.insert(var.to_symbol());
+                if self.is_outer_scope_variable(var)
+                    && let Some(name) = self.name(var)
+                    && !self.captures.contains(&name)
+                {
+                    self.captures.push(name);
                 }
             }
             Expr::Assign { left, right: _ } => {
@@ -480,12 +499,20 @@ impl AstVisitor for CaptureAnalyzer {
     }
 }
 
+/// The outer variables a lambda body reads, as the enclosing program names them.
 fn analyze_lambda_captures(
     lambda_params: &[ScatterItem],
     lambda_body: &Stmt,
+    entry_scope_count: u16,
     outer_scope_depth: u8,
-) -> Result<Vec<Symbol>, CompileError> {
-    let mut analyzer = CaptureAnalyzer::new(lambda_params, outer_scope_depth);
+    name_for_variable: &[Option<Name>],
+) -> Result<Vec<Name>, CompileError> {
+    let mut analyzer = CaptureAnalyzer::new(
+        lambda_params,
+        entry_scope_count,
+        outer_scope_depth,
+        name_for_variable,
+    );
     analyzer.visit_stmt(lambda_body);
 
     if let Some((assigned_var, line_col)) = analyzer.assigned_captures.first() {
@@ -495,5 +522,5 @@ fn analyze_lambda_captures(
         ));
     }
 
-    Ok(analyzer.captures.into_iter().collect())
+    Ok(analyzer.captures)
 }

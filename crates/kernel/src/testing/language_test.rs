@@ -173,6 +173,23 @@ mod tests {
     }
 
     #[test]
+    fn parameterless_lambda_captures_block_variable() {
+        let sources = [
+            "for i in [1..2] let x = i; let f = {} => x; r = f(); endfor return r;",
+            "if (1) let x = 2; let f = {} => x; return f(); endif",
+            "try let x = 2; let f = {} => x; return f(); finally endtry",
+            "begin let x = 2; let f = {} => x; return f(); end",
+            "let x = 1; begin let x = 2; let f = {} => x; return f(); end",
+            "let x = 1; begin let x = 2; let f = {y} => x + y; return f(0); end",
+            "begin let x = 1; end begin let x = 2; let f = {} => x; return f(); end",
+            "for i in [1..2] let x = i; let make = {} => {} => x; r = make()(); endfor return r;",
+        ];
+        for source in sources {
+            assert_eq!(run_moo(source).unwrap(), v_int(2), "{source}");
+        }
+    }
+
+    #[test]
     fn stored_parameterless_closure_preserves_scope_layout() {
         use moor_schema::convert::{encode_db_var, var_from_db_flatbuffer_ref};
         use planus::ReadAsRoot;
