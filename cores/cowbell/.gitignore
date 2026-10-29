@@ -1,6 +1,8 @@
 gen.objdir/
 .runtime-headless-src/
 .runtime-test-src/
+.runtime-bench-src/
+gen.bench-rules.log
 gen.objdir.rt/
 gen.objdir.rt.in-progress/
 gen.empty.log

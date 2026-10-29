@@ -18,6 +18,8 @@ HEADLESS_TIMEOUT ?= 10
 TEST_SRC_DIRECTORY ?= .runtime-test-src
 HEADLESS_SRC_DIRECTORY ?= .runtime-headless-src
 HEADLESS_SRC_STAMP = $(HEADLESS_SRC_DIRECTORY)/.prepared
+BENCH_SRC_DIRECTORY ?= .runtime-bench-src
+BENCH_TIMEOUT ?= 300
 TEST_WIZARD ?= 90100
 TEST_PROGRAMMER ?= 90101
 TEST_PLAYER ?= 90102
@@ -44,7 +46,7 @@ TEST_PREREQUISITES = runtime-test-src
 EXPORT_FORBIDDEN_IDS = = \#(900[0-9]+|901[0-9]+);
 CHECK_TARGETS = check-style test test-headless
 INTEGRATION_TARGETS = test-session test-harness roundtrip test-wire test-git-worker test-build-inventory
-CLEAN_EXTRA = $(HEADLESS_SRC_DIRECTORY) $(TEST_SRC_DIRECTORY) gen.empty.log gen.exception.log gen.event-control.log gen.style.log gen.style-strict.log
+CLEAN_EXTRA = $(HEADLESS_SRC_DIRECTORY) $(TEST_SRC_DIRECTORY) $(BENCH_SRC_DIRECTORY) gen.bench-rules.log gen.empty.log gen.exception.log gen.event-control.log gen.style.log gen.style-strict.log
 CORE_HELP = 'make check-full        Run check plus session, restart, export, and worker integration.' \
             'make test-llm          Run the focused LLM regression methods.' \
             'make test-headless      Run headless methods (alias: runtime-headless).' \
@@ -56,7 +58,8 @@ CORE_HELP = 'make check-full        Run check plus session, restart, export, and
             'make test-llm-provider  Run agent scenarios with a local HTTP provider fixture.' \
             'make test-llm-restart   Check LLM jobs and accounting across persistent restarts.' \
             'make test-llm-live      Run bounded OpenRouter scenarios using OPENROUTER_API_KEY.' \
-            'make test-git-worker    Run Git worker integration tests.'
+            'make test-git-worker    Run Git worker integration tests.' \
+            'make bench-rules        Time conditions and rules (report only).'
 include ../make/core.mk
 
 TEST_BIN_DIR = $(MOORC_BIN_DIR)
@@ -71,7 +74,7 @@ MDBOOK ?= mdbook
 EXPECT_FAILURE = $(PYTHON) $(CORE_MAKE_DIR)expect_failure.py
 TEST_TOOL_PACKAGES = moorc core-style-audit core-session-runner moor-server moor-daemon moor-telnet-host moor-git-worker
 
-.PHONY: book book-serve build-test-tools check-style runtime-test-src runtime-headless-src runtime-headless runtime-session test-headless test-session test-tutorial test-harness test-build-inventory test-wire test-git-worker
+.PHONY: bench-rules book book-serve build-test-tools check-style runtime-test-src runtime-headless-src runtime-headless runtime-session test-headless test-session test-tutorial test-harness test-build-inventory test-wire test-git-worker
 
 book:
 	$(MDBOOK) build book
@@ -122,6 +125,15 @@ $(HEADLESS_SRC_STAMP): runtime-test-src
 	touch $(HEADLESS_SRC_STAMP)
 
 runtime-headless-src: $(HEADLESS_SRC_STAMP)
+
+# The bench package is timing only, so the method suite never loads it.
+bench-rules: runtime-test-src
+	rm -rf $(BENCH_SRC_DIRECTORY)
+	cp -r $(TEST_SRC_DIRECTORY) $(BENCH_SRC_DIRECTORY)
+	rsync -a tests/bench/ $(BENCH_SRC_DIRECTORY)/bench/
+	$(CHECKED_METHODS) --log gen.bench-rules.log $(CORE_COMPILER) --src-objdef-dir $(BENCH_SRC_DIRECTORY) \
+		--run-tests true $(TEST_PRINCIPALS) --test-timeout $(BENCH_TIMEOUT) --test-filter "#90300" > /dev/null
+	@sed -n 's/.*BENCH_DATA bench=rules //p' gen.bench-rules.log | column -t
 
 runtime-headless: runtime-headless-src
 	@test -n "$(strip $(HEADLESS_FILTER_IDS) $(HEADLESS_PLAYER_FILTER_IDS) $(HEADLESS_WIZARD_FILTER_IDS))" || { echo "FAIL: no headless filters selected" >&2; exit 1; }
