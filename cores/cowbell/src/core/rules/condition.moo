@@ -557,11 +557,15 @@ object CONDITION [
       explain && (traces = {inner['trace]});
       const rows = inner['bindings];
       let keys = {};
-      for row in (rows)
-        let scope = environment;
-        scope['binding] = row;
-        keys = {@keys, this:_evaluate_value(tree['by], scope, provider, limit, depth + 1)};
-      endfor
+      if (tree['by]['kind] == 'binding)
+        keys = { row[tree['by]['name]] for row in (rows) };
+      else
+        for row in (rows)
+          let scope = environment;
+          scope['binding] = row;
+          keys = {@keys, this:_evaluate_value(tree['by], scope, provider, limit, depth + 1)};
+        endfor
+      endif
       const ordered = length(rows) > 1 ? sort(rows, keys) | rows;
       result = ['bindings -> ordered[1..min(length(ordered), tree['limit])], 'complete -> inner['complete]];
     elseif (kind == 'compare)
@@ -583,27 +587,30 @@ object CONDITION [
       kind in {'all, 'any} || raise(E_INVARG, "Unknown condition kind");
       let bindings = kind == 'all ? {initial} | {};
       let complete = true;
-      for i in [1..length(tree['children])]
-        const child = tree['children][i];
-        let next = kind == 'all ? {} | bindings;
-        const candidates = kind == 'all ? bindings | {initial};
+      for child in (tree['children])
         let child_trace = 0;
-        for candidate in (candidates)
+        if (kind == 'all && !explain && child['kind] in {'predicate, 'relation} && length(this:references(child)['binding]) == 0)
+          const {rows, done} = this:_join(child, bindings, environment, provider, limit, depth + 1);
+          bindings = rows;
+          complete = complete && done;
+          continue;
+        elseif (kind == 'all && !explain && child['kind] == 'compare)
+          bindings = this:_filter(child, bindings, environment, provider, limit, depth + 1);
+          continue;
+        endif
+        let found = kind == 'all ? {} | bindings;
+        for candidate in (kind == 'all ? bindings | {initial})
           let scope = environment;
           scope['binding] = candidate;
           const inner = this:_evaluate(child, scope, provider, limit, depth + 1);
           explain && (child_trace = this:_merge_trace(child_trace, inner['trace]));
           complete = complete && inner['complete];
-          for row in (inner['bindings])
-            next = this:_unique_add(next, row);
-            if (length(next) > limit)
-              next = next[1..limit];
-              complete = false;
-            endif
-          endfor
+          found = {@found, @inner['bindings]};
         endfor
         explain && (traces = {@traces, child_trace ? child_trace | this:_trace(child, 0, {}, false)});
-        bindings = next;
+        const distinct = this:_distinct(found, limit);
+        bindings = distinct['rows];
+        complete = complete && distinct['complete];
       endfor
       result = ['bindings -> bindings, 'complete -> complete];
     endif
@@ -674,13 +681,50 @@ object CONDITION [
     return merged;
   endmethod
 
-  method _unique_add owner: HACKER
-    "Deduplicate binding maps using exact value equality, including string case.";
-    const {rows, candidate} = args;
-    for row in (rows)
-      equal(row, candidate) && return rows;
+  method _distinct owner: HACKER
+    "Keep the first of equal binding maps, comparing string case, up to the limit.";
+    const {rows, limit} = args;
+    length(rows) <= 1 && return ['rows -> rows, 'complete -> true];
+    const kept = term_match({'var, 'row}, rows, [], ['case_sensitive -> true, 'dedupe -> true, 'max_solutions -> limit, 'max_steps -> length(rows), 'return -> 'detail]);
+    return ['rows -> { match['row] for match in (kept['rows]) }, 'complete -> kept['complete]];
+  endmethod
+
+  method _join owner: ARCH_WIZARD
+    "Answer a predicate whose arguments use no bindings once, and match its rows against every binding in one call.";
+    set_task_perms(caller_perms());
+    const {tree, bindings, environment, provider, limit, depth} = args;
+    length(bindings) == 0 && return {{}, true};
+    let arguments = [];
+    for name in (mapkeys(tree['arguments]))
+      arguments[name] = this:_evaluate_value(tree['arguments][name], environment, provider, limit, depth);
     endfor
-    return {@rows, candidate};
+    const found = this:_query(tree, arguments, environment, provider, limit);
+    const outputs = mapkeys(tree['bind]);
+    const pattern = { {'var, tree['bind][output]} for output in (outputs) };
+    const rows = { { row[field] for field in (outputs) } for row in (found['rows]) };
+    length(rows) == 0 && return {{}, found['complete]};
+    const matched = term_match(pattern, rows, bindings, ['case_sensitive -> true, 'dedupe -> true, 'max_solutions -> limit, 'max_steps -> length(rows) * length(bindings), 'return -> 'detail]);
+    return {matched['rows], found['complete] && matched['complete]};
+  endmethod
+
+  method _filter owner: ARCH_WIZARD
+    "Keep the bindings for which a comparison holds, reading plain values directly.";
+    set_task_perms(caller_perms());
+    const {tree, bindings, environment, provider, limit, depth} = args;
+    const plain = {'literal, 'input, 'parameter, 'state, 'binding};
+    const left = tree['left];
+    const right = tree['right];
+    const left_plain = left['kind] in plain;
+    const right_plain = right['kind] in plain;
+    let kept = {};
+    for row in (bindings)
+      let scope = environment;
+      scope['binding] = row;
+      const a = left_plain ? this:resolve(left, scope) | this:_evaluate_value(left, scope, provider, limit, depth);
+      const b = right_plain ? this:resolve(right, scope) | this:_evaluate_value(right, scope, provider, limit, depth);
+      this:_compare(tree['op], a, b) && (kept = {@kept, row});
+    endfor
+    return kept;
   endmethod
   method _test_env owner: HACKER
     "An environment with the given inputs and nothing else.";
