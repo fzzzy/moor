@@ -14,6 +14,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased 2.0 series (`main`) branch
 
+- A system handler's output for its caller reaches the host. When a host invokes a system handler
+  for a player, what the handler `notify()`s or presents to that player now comes back in the reply,
+  for the host to deliver; it was dropped. Hosts and daemons without the reply's new `output` field
+  ignore it.
 - `suspend_if_needed()` also commits when the task is close to its time limit, not only its tick
   limit, so work that is slow per tick no longer runs out of time. A second argument sets how many
   seconds to keep in reserve (default one second, or half the limit if shorter), and a third,

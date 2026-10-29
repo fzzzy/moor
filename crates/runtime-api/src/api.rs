@@ -774,6 +774,8 @@ pub enum ClientReply {
     PropertyUpdated,
     SystemHandlerResponseReply {
         response: SystemHandlerResponse,
+        /// Narrative events the handler addressed to its caller, for the host to deliver.
+        output: Vec<moor_common::tasks::NarrativeEvent>,
     },
     InvocationResponse {
         response: InvocationResponse,

@@ -1323,11 +1323,12 @@ impl RpcMessageHandler {
                 )
             },
         )?;
+        let output = response.output;
         let response = match response.outcome {
             InvocationOutcome::Success { result } => SystemHandlerResponse::Success { result },
             InvocationOutcome::Error { error } => SystemHandlerResponse::Error { error },
         };
-        Ok(ClientReply::SystemHandlerResponseReply { response })
+        Ok(ClientReply::SystemHandlerResponseReply { response, output })
     }
 
     /// Run a task and wait for its result, collecting committed narrative output instead of

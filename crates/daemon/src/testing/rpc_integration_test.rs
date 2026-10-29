@@ -1125,7 +1125,8 @@ mod tests {
             .expect("Command verb arguments should update");
     }
 
-    fn program_system_handler(env: &TestEnvironment, code: &str) {
+    /// Install `code` as `#0:invoke_http_handler`, returning the wizard who programmed it.
+    fn program_system_handler(env: &TestEnvironment, code: &str) -> (AuthToken, Obj) {
         let login_client_id = Uuid::new_v4();
         let (client_token, auth_token, player) = logged_in_wizard(env, login_client_id);
         let add_verb = mk_eval_msg(
@@ -1159,6 +1160,34 @@ mod tests {
                 program,
             )
             .expect("System handler verb should compile");
+        (auth_token, player)
+    }
+
+    /// The response and captured output of a system handler reply.
+    fn system_handler_reply(
+        reply: &moor_rpc::DaemonToClientReply,
+    ) -> (
+        moor_rpc::SystemHandlerResponseUnion,
+        Vec<moor_common::tasks::NarrativeEvent>,
+    ) {
+        let moor_rpc::DaemonToClientReplyUnion::SystemHandlerResponseReply(response) = &reply.reply
+        else {
+            panic!("Expected SystemHandlerResponseReply, got {:?}", reply.reply);
+        };
+        let output = response
+            .output
+            .iter()
+            .flatten()
+            .map(|event| {
+                let mut builder = planus::Builder::new();
+                let bytes = builder.finish(event, None).to_vec();
+                moor_schema::convert::narrative_event_from_ref(
+                    moor_schema::common::NarrativeEventRef::read_as_root(&bytes).unwrap(),
+                )
+                .expect("Failed to decode narrative event")
+            })
+            .collect();
+        (response.response.clone(), output)
     }
 
     fn captured_output(
@@ -1496,6 +1525,68 @@ mod tests {
         )
         .expect("System handler result should decode");
         assert_eq!(result, moor_var::v_str("webhook response"));
+    }
+
+    #[test]
+    fn test_system_handler_returns_output_for_its_caller() {
+        let env = setup_test_environment();
+        let (auth_token, _player) = program_system_handler(
+            &env,
+            "notify(player, \"first\");\nnotify(player, \"second\");\nreturn 1;",
+        );
+
+        let invoke = mk_invoke_system_handler_msg(
+            &Uuid::new_v4(),
+            "http",
+            vec![],
+            Some(&auth_token),
+            Some(Duration::from_secs(30)),
+        )
+        .expect("System handler message should encode");
+        let reply = env
+            .transport
+            .process_client_message(
+                env.message_handler.as_ref(),
+                env.scheduler_client.clone(),
+                Uuid::new_v4(),
+                invoke,
+            )
+            .expect("System handler should run");
+        let (response, output) = system_handler_reply(&reply);
+        let moor_rpc::SystemHandlerResponseUnion::SystemHandlerSuccess(_) = response else {
+            panic!("Expected SystemHandlerSuccess, got {response:?}");
+        };
+        assert_eq!(captured_notify_text(&output), vec!["first", "second"]);
+    }
+
+    #[test]
+    fn test_system_handler_returns_output_with_its_error() {
+        let env = setup_test_environment();
+        let (auth_token, _player) =
+            program_system_handler(&env, "notify(player, \"before\");\nraise(E_INVARG);");
+
+        let invoke = mk_invoke_system_handler_msg(
+            &Uuid::new_v4(),
+            "http",
+            vec![],
+            Some(&auth_token),
+            Some(Duration::from_secs(30)),
+        )
+        .expect("System handler message should encode");
+        let reply = env
+            .transport
+            .process_client_message(
+                env.message_handler.as_ref(),
+                env.scheduler_client.clone(),
+                Uuid::new_v4(),
+                invoke,
+            )
+            .expect("System handler should return its error");
+        let (response, output) = system_handler_reply(&reply);
+        let moor_rpc::SystemHandlerResponseUnion::SystemHandlerError(_) = response else {
+            panic!("Expected SystemHandlerError, got {response:?}");
+        };
+        assert_eq!(captured_notify_text(&output), vec!["before"]);
     }
 
     #[test]

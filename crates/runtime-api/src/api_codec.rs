@@ -1770,7 +1770,8 @@ pub fn encode_client_reply(
         ClientReply::PropertyUpdated => moor_rpc::DaemonToClientReply {
             reply: U::PropertyUpdated(Box::new(moor_rpc::PropertyUpdated {})),
         },
-        ClientReply::SystemHandlerResponseReply { response } => {
+        ClientReply::SystemHandlerResponseReply { response, output } => {
+            let output_fb = encode_narrative_events(output)?;
             let response_fb = match response {
                 api::SystemHandlerResponse::Success { result } => {
                     let result_fb = convert::var_to_flatbuffer(&result).map_err(|e| {
@@ -1800,6 +1801,7 @@ pub fn encode_client_reply(
                 reply: U::SystemHandlerResponseReply(Box::new(
                     moor_rpc::SystemHandlerResponseReply {
                         response: response_fb,
+                        output: Some(output_fb),
                     },
                 )),
             }
@@ -1825,15 +1827,7 @@ pub fn encode_client_reply(
 pub fn encode_invocation_response(
     response: api::InvocationResponse,
 ) -> Result<moor_rpc::InvocationResponse, RpcMessageError> {
-    let output_fb: Vec<moor_rpc::NarrativeEvent> = response
-        .output
-        .into_iter()
-        .map(|event| {
-            convert::narrative_event_to_flatbuffer_struct(&event).map_err(|e| {
-                RpcMessageError::InternalError(format!("Failed to encode narrative event: {e}"))
-            })
-        })
-        .collect::<Result<_, _>>()?;
+    let output_fb = encode_narrative_events(response.output)?;
     let response_fb = match response.outcome {
         api::InvocationOutcome::Success { result } => {
             let result_fb = convert::var_to_flatbuffer(&result).map_err(|e| {
@@ -1856,6 +1850,19 @@ pub fn encode_invocation_response(
         outcome: response_fb,
         output: output_fb,
     })
+}
+
+fn encode_narrative_events(
+    events: Vec<moor_common::tasks::NarrativeEvent>,
+) -> Result<Vec<moor_rpc::NarrativeEvent>, RpcMessageError> {
+    events
+        .into_iter()
+        .map(|event| {
+            convert::narrative_event_to_flatbuffer_struct(&event).map_err(|e| {
+                RpcMessageError::InternalError(format!("Failed to encode narrative event: {e}"))
+            })
+        })
+        .collect()
 }
 
 pub fn encode_client_success_bytes(reply: ClientReply) -> Result<Vec<u8>, RpcMessageError> {
